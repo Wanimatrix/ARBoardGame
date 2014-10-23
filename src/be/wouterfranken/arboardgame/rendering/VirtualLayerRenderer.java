@@ -1,6 +1,9 @@
 package be.wouterfranken.arboardgame.rendering;
 
 import java.nio.Buffer;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
+import java.nio.FloatBuffer;
 
 import javax.microedition.khronos.egl.EGLConfig;
 import javax.microedition.khronos.opengles.GL10;
@@ -23,16 +26,22 @@ import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.Display;
 import android.view.WindowManager;
+import be.wouterfranken.arboardgame.R;
 import be.wouterfranken.arboardgame.app.AppConfig;
 import be.wouterfranken.arboardgame.rendering.meshes.GameBoardOverlayMesh;
 import be.wouterfranken.arboardgame.rendering.tracking.CameraPose;
 import be.wouterfranken.arboardgame.utilities.DebugUtilities;
 import be.wouterfranken.arboardgame.utilities.RenderingUtils;
 
+import com.google.vrtoolkit.cardboard.CardboardActivity;
+import com.google.vrtoolkit.cardboard.CardboardDeviceParams;
+import com.google.vrtoolkit.cardboard.CardboardView;
 import com.google.vrtoolkit.cardboard.CardboardView.StereoRenderer;
+import com.google.vrtoolkit.cardboard.Distortion;
 import com.google.vrtoolkit.cardboard.EyeParams.Eye;
 import com.google.vrtoolkit.cardboard.EyeTransform;
 import com.google.vrtoolkit.cardboard.HeadTransform;
+import com.google.vrtoolkit.cardboard.ScreenParams;
 import com.google.vrtoolkit.cardboard.Viewport;
 
 public class VirtualLayerRenderer implements StereoRenderer, PreviewCallback {
@@ -52,7 +61,7 @@ public class VirtualLayerRenderer implements StereoRenderer, PreviewCallback {
     private float[] glMv = null;
     private Context context = null;
     
-    private GameBoardOverlayMesh gbo = new GameBoardOverlayMesh(new float[]{0.064f,0.064f});
+    private GameBoardOverlayMesh gbo = new GameBoardOverlayMesh(new float[]{6.4f,6.4f});
 	
 	public VirtualLayerRenderer(CameraPose cameraPose, Camera camera, Context context) {
 		this.cameraPose = cameraPose;
@@ -60,8 +69,10 @@ public class VirtualLayerRenderer implements StereoRenderer, PreviewCallback {
 		this.context = context;
 		
 		Matrix.setIdentityM(mv, 0);
-	    Matrix.translateM(mv, 0, 0f, 0f, -3.4f);
-	    Matrix.scaleM(mv, 0, 1f, AppConfig.ASPECT_RATIO, 1f);
+//		Matrix.translateM(mv, 0, 0f, 0f, -3.4f);
+//	    Matrix.scaleM(mv, 0, 1f, AppConfig.ASPECT_RATIO, 1f);
+		Matrix.translateM(mv, 0, 0, 0, -3f);
+//	    Matrix.scaleM(mv, 0, 1f, AppConfig.ASPECT_RATIO, 1f);
 	}
 	
 	private final String vss =
@@ -110,55 +121,121 @@ public class VirtualLayerRenderer implements StereoRenderer, PreviewCallback {
 			GLES20.glUseProgram(programId);
 			GLES20.glEnable(GLES20.GL_BLEND);
 			GLES20.glBlendFunc(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE_MINUS_SRC_ALPHA);
-			
-			GLES20.glVertexAttribPointer(vPositionHandler, 3, GLES20.GL_FLOAT, false, 4*3, vertex);
+		    
+		    Matrix.multiplyMM(mvp, 0, mv, 0, glMv, 0);
+		    
+		    float[][] pts = new float[][]{{-3.2f,3.2f,0,1},{3.2f,3.2f,0,1},{-3.2f,-3.2f,0,1},{3.2f,-3.2f,0,1}};
+		    float[][] res = new float[4][4];
+		    for (int i = 0; i < res.length; i++) {
+		    	Matrix.multiplyMV(res[i], 0, mvp, 0, pts[i], 0);
+		    	res[i][0] = res[i][0]/res[i][3];
+		    	res[i][1] = res[i][1]/res[i][3];
+		    	res[i][2] = res[i][2]/res[i][3];
+		    	res[i][3] = res[i][3]/res[i][3];
+			}
+		    
+//		    vertex = ByteBuffer.allocateDirect(4 * 16).order(ByteOrder.LITTLE_ENDIAN).asFloatBuffer();
+//		    ((FloatBuffer)vertex).put(res[0]);
+//		    ((FloatBuffer)vertex).put(res[1]);
+//		    ((FloatBuffer)vertex).put(res[2]);
+//		    ((FloatBuffer)vertex).put(res[3]);
+//		    vertex.position(0);
+		    
+		    GLES20.glVertexAttribPointer(vPositionHandler, 4, GLES20.GL_FLOAT, false, 4*3, vertex);
 		    GLES20.glEnableVertexAttribArray(vPositionHandler);
 		    
-		    Matrix.multiplyMM(mvp, 0, glProj, 0, glMv, 0);
+//		    DebugUtilities.logGLMatrix("MVP", mvp, 4, 4);
+		    DebugUtilities.logGLMatrix("Results", res[1], 1, 4);
 		    
-//		    float[] pt = new float[]{0.032f,0.032f,0,1};
-//		    float[] res = new float[4];
-//		    Matrix.multiplyMV(res, 0, mvp, 0, pt, 0);
-//		    DebugUtilities.logGLMatrix("Result", res, 1, 4);
+//		    Matrix.multiplyMM(mvp, 0, mv, 0, mvp, 0);
 		    
-		    Matrix.multiplyMM(mvp, 0, mv, 0, mvp, 0);
+//		    DebugUtilities.logGLMatrix("Mv", mv, 4, 4);
+//	        float[] ndc = new float[16];
+//	        float[] persp = new float[16];
+//	        float[] project = new float[16];
+//	        
+//	        float far = 100;
+//	        float near = 0.1f;
+//	        float right = (float)-Math.tan(Math.toRadians(transform.getParams().getFov().getRight())) * near;
+//	        float left = (float)Math.tan(Math.toRadians(transform.getParams().getFov().getLeft())) * near;
+//	        float bottom = (float)-Math.tan(Math.toRadians(transform.getParams().getFov().getBottom())) * near;
+//	        float top = (float)Math.tan(Math.toRadians(transform.getParams().getFov().getTop())) * near;
 	        
-	        float[] ndc = new float[16];
-	        float[] persp = new float[16];
-	        float[] project = new float[16];
-	        
-	        float far = 100;
-	        float near = 0.01f;
-	        float right = (float)-Math.tan(Math.toRadians(transform.getParams().getFov().getRight())) * near;
-	        float left = (float)Math.tan(Math.toRadians(transform.getParams().getFov().getLeft())) * near;
-	        float bottom = (float)-Math.tan(Math.toRadians(transform.getParams().getFov().getBottom())) * near;
-	        float top = (float)Math.tan(Math.toRadians(transform.getParams().getFov().getTop())) * near;
-	        
-	        Mat camMatrix = new Mat();
-	        cameraPose.getCameraCalibration(camMatrix.getNativeObjAddr());
-	        persp[0 + 0*4] = near;
-	        persp[1 + 1*4] = near;
-	        persp[2 + 2*4] = near + far;
-	        persp[2 + 3*4] = near * far;
-	        persp[3 + 2*4] = -1;
-	        
-	        ndc[0 + 0*4] = -2.0f/(right-left);
-	        ndc[1 + 1*4] = 2.0f/(top-bottom);
-	        ndc[2 + 2*4] = -2.0f/(far-near);
-	        ndc[0 + 3*4] = -(right+left)/(right-left);
-	        ndc[1 + 3*4] = -(top+bottom)/(top-bottom);
-	        ndc[2 + 3*4] = -(far+near)/(far-near);
-	        ndc[3 + 3*4] = 1;
-	        Matrix.multiplyMM(project, 0, ndc, 0, persp, 0);
+//	        CardboardView view = (CardboardView) ((CardboardActivity)context).findViewById(R.id.arView);
+//	        CardboardDeviceParams cdp = view.getCardboardDeviceParams();
+//	        Distortion dist = cdp.getDistortion();
+//	        ScreenParams screen = view.getHeadMountedDisplay().getScreen();
+//	        
+//	        float idealFovAngle = (float)Math.toDegrees(Math.atan2(cdp.getLensDiameter() / 2.0F, cdp.getEyeToLensDistance()));
+//			float eyeToScreenDist = cdp.getEyeToLensDistance() + cdp.getScreenToLensDistance();
+//			float outerDist = (screen.getWidthMeters() - cdp.getInterpupillaryDistance()) / 2.0F;
+//			float innerDist = cdp.getInterpupillaryDistance() / 2.0F;
+//			float bottomDist = cdp.getVerticalDistanceToLensCenter() - screen.getBorderSizeMeters();
+//			float topDist = screen.getHeightMeters() + screen.getBorderSizeMeters() - cdp.getVerticalDistanceToLensCenter();
+//	        float outerAngle = (float)Math.toDegrees(Math.atan2(dist.distort(outerDist), eyeToScreenDist));
+//			float innerAngle = (float)Math.toDegrees(Math.atan2(dist.distort(innerDist), eyeToScreenDist));
+//			float bottomAngle = (float)Math.toDegrees(Math.atan2(dist.distort(bottomDist), eyeToScreenDist));
+//			float topAngle = (float)Math.toDegrees(Math.atan2(dist.distort(topDist), eyeToScreenDist));
+//			
+//	        float left = (float)Math.tan(Math.toRadians(idealFovAngle)) * near;
+//	        float right = (float)-Math.tan(Math.toRadians(idealFovAngle)) * near;
+//	        float bottom = (float)-Math.tan(Math.toRadians(idealFovAngle)) * near;
+//	        float top = (float)Math.tan(Math.toRadians(idealFovAngle)) * near;
+//	        
+//	        Mat camMatrix = new Mat();
+//	        cameraPose.getCameraCalibration(camMatrix.getNativeObjAddr());
+//	        persp[0 + 0*4] = near;
+//	        persp[1 + 1*4] = near;
+//	        persp[2 + 2*4] = near + far;
+//	        persp[2 + 3*4] = near * far;
+//	        persp[3 + 2*4] = -1;
+//	        
+//	        ndc[0 + 0*4] = -2.0f/(right-left);
+//	        ndc[1 + 1*4] = 2.0f/(top-bottom);
+//	        ndc[2 + 2*4] = -2.0f/(far-near);
+//	        ndc[0 + 3*4] = -(right+left)/(right-left);
+//	        ndc[1 + 3*4] = -(top+bottom)/(top-bottom);
+//	        ndc[2 + 3*4] = -(far+near)/(far-near);
+//	        ndc[3 + 3*4] = 1;
+//	        Matrix.multiplyMM(project, 0, ndc, 0, persp, 0);
 
-//	        DebugUtilities.logGLMatrix("Perspective", persp, 4, 4);
-//	        DebugUtilities.logGLMatrix("NDC", ndc, 4, 4);
-//	        DebugUtilities.logGLMatrix("Projection", project, 4, 4);
+//	        if(AppConfig.TOUCH_EVENT) {
+//        	Log.d(TAG, "FOVs: "+transform.getParams().getFov().getLeft()+","+transform.getParams().getFov().getRight()+","
+// 				   +transform.getParams().getFov().getBottom()+","+transform.getParams().getFov().getTop());
+//	        	
+//		        DebugUtilities.logGLMatrix("Perspective", persp, 4, 4);
+//		        DebugUtilities.logGLMatrix("NDC", ndc, 4, 4);
+//		        DebugUtilities.logGLMatrix("Projection", project, 4, 4);
+//	        	
+//	        	AppConfig.TOUCH_EVENT = false;
+//	        }
+//	        float[] ortho = new float[16];
+//	        
+//	        float fractionLeft = 
+//	        		transform.getParams().getFov().getLeft()/(transform.getParams().getFov().getLeft()+transform.getParams().getFov().getRight());
+//	        float fractionRight = 
+//	        		transform.getParams().getFov().getRight()/(transform.getParams().getFov().getLeft()+transform.getParams().getFov().getRight());
+//	        float fractionTop = 
+//	        		transform.getParams().getFov().getLeft()/(transform.getParams().getFov().getLeft()+transform.getParams().getFov().getRight());
+//	        float fractionBottom = 
+//	        		transform.getParams().getFov().getRight()/(transform.getParams().getFov().getLeft()+transform.getParams().getFov().getRight());
+//	        
+//	        Matrix.orthoM(ortho, 0, -3.7f*fractionLeft, 3.7f*fractionRight, -3.7f*fractionBottom, 3.7f*fractionTop, near, far);
+	       
+	        
+//	        DebugUtilities.logGLMatrix("Transform Prespective", transform.getPerspective(), 4, 4);
+	        
+//        	Log.d(TAG, "Bounds: "+left+","+right+","
+//			   +bottom+","+top);
 	        
 //	        DebugUtilities.logGLMatrix("Cardboard Perspective", transform.getPerspective(), 4, 4);
 //	        DebugUtilities.logGLMatrix("Own Cardboard Perspective", project, 4, 4);
 	        
-	        Matrix.multiplyMM(mvp, 0, project, 0, mvp, 0);
+//	        Matrix.multiplyMM(mvp, 0, transform.getPerspective(), 0, mvp, 0);
+	        
+//	        Matrix.multiplyMV(res, 0, mvp, 0, pt, 0);
+	        
+		    Matrix.multiplyMM(mvp, 0, glProj, 0, mvp, 0);
 	        
 		    GLES20.glUniformMatrix4fv(mvpHandler, 1, false, mvp, 0);
 		  
@@ -168,6 +245,26 @@ public class VirtualLayerRenderer implements StereoRenderer, PreviewCallback {
 		    GLES20.glDisable(GLES20.GL_BLEND);
 		}
 	}
+	
+	public float[] getOrthoMatrix(float nLeft, float nRight,
+            float nBottom, float nTop, float nNear, float nFar)
+        {
+            float[] nProjMatrix = new float[16];
+            
+            int i;
+            for (i = 0; i < 16; i++)
+                nProjMatrix[i] = 0.0f;
+            
+            nProjMatrix[0] = 2.0f / (nRight - nLeft);
+            nProjMatrix[5] = 2.0f / (nTop - nBottom);
+            nProjMatrix[10] = 2.0f / (nNear - nFar);
+            nProjMatrix[12] = -(nRight + nLeft) / (nRight - nLeft);
+            nProjMatrix[13] = -(nTop + nBottom) / (nTop - nBottom);
+            nProjMatrix[14] = (nFar + nNear) / (nFar - nNear);
+            nProjMatrix[15] = 1.0f;
+            
+            return nProjMatrix;
+        }
 
 	private long renderDataTimer;
 	@Override
@@ -188,6 +285,18 @@ public class VirtualLayerRenderer implements StereoRenderer, PreviewCallback {
 				glProj[i] = (float) proj[i];
 				glMv[i] = (float) mv[i];
 			}
+			
+//			float[] v = new float[] {
+//					-1f,0.9f,0,
+//					1f,0.9f,0,
+//					-1f,-1f,0,
+//					1f,-1f,0,
+//			};
+//			
+//			vertex = ByteBuffer.allocateDirect(4 * v.length).order(ByteOrder.LITTLE_ENDIAN).asFloatBuffer();
+//			((FloatBuffer)vertex).put(v);
+//			vertex.position(0);
+			
 			vertex = gbo.getVertices();
 		} else {
 			glProj = null;

@@ -97,7 +97,7 @@ public class CameraPose {
 	}
 	
 	public double[] getProj() {
-		if(proj.empty()) return null;
+		if(proj == null || proj.empty()) return null;
 		double[] result = new double[16];
 		for (int i = 0; i < result.length; i++) {
 			result[i] = (double) proj.get(i/4, i%4)[0];
@@ -106,7 +106,7 @@ public class CameraPose {
 	}
 	
 	public double[] getMv() {
-		if(mv.empty()) return null;
+		if(mv == null || mv.empty()) return null;
 		double[] result = new double[16];
 		for (int i = 0; i < result.length; i++) {
 			result[i] = (double) mv.get(i/4, i%4)[0];

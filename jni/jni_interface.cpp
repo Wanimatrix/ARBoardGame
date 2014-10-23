@@ -407,7 +407,7 @@ JNIEXPORT jboolean JNICALL Java_be_wouterfranken_arboardgame_rendering_tracking_
 
 //	std::clock_t start = std::clock();
 	aruco::MarkerDetector detector;
-	float markerSize = 0.064f;
+	float markerSize = 6.4f;
 //	camParams.resize(frameImage->size());
 	detector.pyrDown(1);
 //	detector.setDesiredSpeed(2);
@@ -417,7 +417,7 @@ JNIEXPORT jboolean JNICALL Java_be_wouterfranken_arboardgame_rendering_tracking_
 	Size inputImgSize = frameImage->size();
 	aruco::CameraParameters camParams(calibData.intrinsics,calibData.distortion,calibData.imgSize);
 	camParams.resize(inputImgSize);
-	detector.detect(*frameImage,markers,camParams,markerSize);//intrinsics,distortionCoeff,markerSize);
+	detector.detect(*frameImage,markers,camParams.CameraMatrix,Mat(),markerSize);//intrinsics,distortionCoeff,markerSize);
 
 
 
@@ -447,7 +447,7 @@ JNIEXPORT jboolean JNICALL Java_be_wouterfranken_arboardgame_rendering_tracking_
 //		*points = Mat(pointVec,true);
 
 
-
+		__android_log_print(ANDROID_LOG_DEBUG,APPNAME,"(%f,%f)",markers[0][1].x,markers[0][1].y);
 
 		double arucoProj[16];
 		double arucoMv[16];
@@ -467,8 +467,8 @@ JNIEXPORT jboolean JNICALL Java_be_wouterfranken_arboardgame_rendering_tracking_
 //		ownProj[11] = -2*100*0.1/(100 - 0.1);
 //		ownProj[14] = -1;
 
-		camParams.glGetProjectionMatrix(inputImgSize,/*Size(renderImgWidth,renderImgHeight)*//*Size((int)(640.0f/480),1)*/Size(640,480),arucoProj,0.01,100,false);
-		markers[0].calculateExtrinsics(markerSize,camParams,false);
+		camParams.glGetProjectionMatrix(inputImgSize,/*Size(renderImgWidth,renderImgHeight)*//*Size((int)(640.0f/480),1)*/Size(640,480),arucoProj,10,10000,false);
+//		markers[0].calculateExtrinsics(markerSize,camParams,false);
 		markers[0].glGetModelViewMatrix(arucoMv);
 
 		Mat arucoProjMat = Mat::zeros(4,4,CV_64F);
@@ -482,10 +482,10 @@ JNIEXPORT jboolean JNICALL Java_be_wouterfranken_arboardgame_rendering_tracking_
 //		Utilities::logMat(arucoMvMat,"Aruco MV Matrix");
 //		Utilities::logMat(calibData.intrinsics,"Intrinsics");
 //		Utilities::logMat(calibData.distortion,"Distortion");
-
-//		*proj = arucoProjMat;
-//		*mv = arucoMvMat;
-//		return true;
+//
+		*proj = arucoProjMat;
+		*mv = arucoMvMat;
+		return true;
 
 //		Size size = calibData.imgSize;
 //		Point2f focalLength(calibData.intrinsics.at<double>(0,0),calibData.intrinsics.at<double>(1,1));
@@ -532,8 +532,8 @@ JNIEXPORT jboolean JNICALL Java_be_wouterfranken_arboardgame_rendering_tracking_
 //		persp.at<float>(1,1) = 0.01f;
 //		persp.at<float>(2,0) = 0;
 //		persp.at<float>(2,1) = 0;
-		persp.at<float>(2,2) = 0.01f+100;
-		persp.at<float>(3,2) = 0.01f*100;
+		persp.at<float>(2,2) = 10.0f+10000;
+		persp.at<float>(3,2) = 10.0f*10000;
 		persp.at<float>(2,3) = -1;
 
 		Mat ndc = Mat::eye(Size(4,4),CV_32F);
@@ -541,8 +541,8 @@ JNIEXPORT jboolean JNICALL Java_be_wouterfranken_arboardgame_rendering_tracking_
 		float right = calibData.imgSize.width;
 		float top = 0;
 		float bottom = calibData.imgSize.height;
-		float far = 100;
-		float near = 0.01f;
+		float far = 10000;
+		float near = 10.0f;
 		ndc.at<float>(0,0) = 2.0/(right-left);
 		ndc.at<float>(1,1) = 2.0/(top-bottom);
 		ndc.at<float>(2,2) = -2.0/(far-near);
@@ -553,10 +553,79 @@ JNIEXPORT jboolean JNICALL Java_be_wouterfranken_arboardgame_rendering_tracking_
 		ndc.at<float>(3,1) = ty;
 		ndc.at<float>(3,2) = tz;
 
+		Mat ndc2 = Mat::eye(Size(4,4),CV_32F);
+		left = -1;
+		right = 1;
+		top = -1;
+		bottom = 1;
+		far = 1;
+		near = -1;
+		ndc2.at<float>(0,0) = 2.0/(right-left);
+		ndc2.at<float>(1,1) = 2.0/(top-bottom);
+		ndc2.at<float>(2,2) = -2.0/(far-near);
+		tx = -(right+left)/(right-left);
+		ty = -(top+bottom)/(top-bottom);
+		tz = -(far+near)/(far-near);
+		ndc2.at<float>(3,0) = tx;
+		ndc2.at<float>(3,1) = ty;
+		ndc2.at<float>(3,2) = tz;
+
+		Mat persp2 = Mat::zeros(Size(4,4),CV_32F);
+		persp2.at<float>(0,0) = near;
+		persp2.at<float>(1,1) = near;
+		persp2.at<float>(2,2) = near+far;
+		persp2.at<float>(3,2) = near*far;
+		persp2.at<float>(2,3) = -1;
+
 //		Utilities::logMat(persp,"Perspective");
 //		Utilities::logMat(ndc,"NDC");
 
-		*proj = persp*ndc;
+		*proj = (persp*ndc);
+
+		persp = Mat::zeros(Size(4,4),CV_32F);
+		persp.at<float>(0,0) = near;
+		persp.at<float>(1,1) = near;
+//		persp.at<float>(0,0) = 0.01f;
+//		persp.at<float>(1,1) = 0.01f;
+//		persp.at<float>(2,0) = 0;
+//		persp.at<float>(2,1) = 0;
+		persp.at<float>(2,2) = 10.0f+1000;
+		persp.at<float>(3,2) = 10.0f*1000;
+		persp.at<float>(2,3) = -1;
+
+		ndc = Mat::eye(Size(4,4),CV_32F);
+		left = std::tan(38.341793*(3.141592/180.0)) * near;
+		right = -std::tan(31.633959*(3.141592/180.0)) * near;
+		top = -std::tan(41.097733*(3.141592/180.0)) * near;
+		bottom = std::tan(38.169544*(3.141592/180.0)) * near;
+		ndc.at<float>(0,0) = 2.0/(right-left);
+		ndc.at<float>(1,1) = 2.0/(top-bottom);
+		ndc.at<float>(2,2) = -2.0/(far-near);
+		tx = -(right+left)/(right-left);
+		ty = -(top+bottom)/(top-bottom);
+		tz = -(far+near)/(far-near);
+		ndc.at<float>(3,0) = tx;
+		ndc.at<float>(3,1) = ty;
+		ndc.at<float>(3,2) = tz;
+
+		Mat mv2 = Mat::eye(Size(4,4),CV_32F);
+		mv2.at<float>(3,2) = -3.4f;
+		mv2.at<float>(1,1) = 480.0f/640.0f;
+
+		Mat t = persp*ndc;
+		Utilities::logMat(t,"Perspective");
+		Utilities::logMat(mv2,"mv");
+
+		Mat projTransp;
+		Mat mvTransp;
+		Mat perspTransp;
+		transpose(*proj,projTransp);
+		transpose(mv2,mvTransp);
+		transpose(persp*ndc,perspTransp);
+
+		*proj = perspTransp*mvTransp*projTransp;
+
+//		10-22 23:07:59.714: D/VirtualLayerRenderer(28167): FOVs: 38.341793,31.633959,41.097733,38.169544;
 
 		Utilities::logMat(*proj,"Projection");
 
@@ -621,12 +690,12 @@ JNIEXPORT jboolean JNICALL Java_be_wouterfranken_arboardgame_rendering_tracking_
 		modelview_matrix.at<float>(3,2) = -Tvec.at<float>(2,0);
 		modelview_matrix.at<float>(3,3) = 1.0;
 
-//		Mat drawing;
-//		cvtColor(*frameImage, drawing, CV_GRAY2RGB);
-//		aruco::CvDrawingUtils::draw3dCube(drawing, markers[0],camParams);
-//		markers[0].draw(drawing,Scalar(0,0,255),2);
+		Mat drawing;
+		cvtColor(*frameImage, drawing, CV_GRAY2RGB);
+		aruco::CvDrawingUtils::draw3dCube(drawing, markers[0],camParams);
+		markers[0].draw(drawing,Scalar(0,0,255),2);
 
-//		cv::imwrite("/sdcard/nonfree/cubeTest.png",drawing);
+		cv::imwrite("/sdcard/nonfree/cubeTest.png",drawing);
 
 //		Mat testVector(Size(4,1),CV_32F);
 //		testVector.at<float>(0) = 0.032f;

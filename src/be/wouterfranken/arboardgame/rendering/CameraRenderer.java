@@ -104,11 +104,33 @@ public class CameraRenderer implements StereoRenderer, OnFrameAvailableListener 
         Matrix.multiplyMM(mvp, 0, transform.getPerspective(), 0,
                 mv, 0);
         
+        Matrix.multiplyMM(mvp, 0, getOrthoMatrix(-1, 1, -1, 1, -1, 1), 0, mvp, 0);
+        
 	    GLES20.glUniformMatrix4fv(mvpHandler, 1, false, mvp, 0);
 	  
 	    GLES20.glDrawArrays(GLES20.GL_TRIANGLE_STRIP, 0, 4);
 	    GLES20.glFlush();
 	}
+	
+	public float[] getOrthoMatrix(float nLeft, float nRight,
+            float nBottom, float nTop, float nNear, float nFar)
+        {
+            float[] nProjMatrix = new float[16];
+            
+            int i;
+            for (i = 0; i < 16; i++)
+                nProjMatrix[i] = 0.0f;
+            
+            nProjMatrix[0] = 2.0f / (nRight - nLeft);
+            nProjMatrix[5] = 2.0f / (nTop - nBottom);
+            nProjMatrix[10] = 2.0f / (nNear - nFar);
+            nProjMatrix[12] = -(nRight + nLeft) / (nRight - nLeft);
+            nProjMatrix[13] = -(nTop + nBottom) / (nTop - nBottom);
+            nProjMatrix[14] = (nFar + nNear) / (nFar - nNear);
+            nProjMatrix[15] = 1.0f;
+            
+            return nProjMatrix;
+        }
 	
 	@Override
 	public void onFinishFrame(Viewport arg0) {

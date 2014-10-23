@@ -10,6 +10,7 @@ import android.view.SurfaceHolder.Callback;
 import android.view.SurfaceView;
 import be.wouterfranken.arboardgame.rendering.CameraViewRenderer;
 
+import com.google.vrtoolkit.cardboard.CardboardDeviceParams;
 import com.google.vrtoolkit.cardboard.CardboardView;
 
 public class CameraView extends CardboardView implements Callback{
@@ -25,15 +26,13 @@ public class CameraView extends CardboardView implements Callback{
 	public CameraView(Context context, AttributeSet attrs) {
 		super(context, attrs);
 		renderer = new CameraViewRenderer(this);
-		this.setFovY(33.242531f);
+//		this.setFovY(33.242531f);
 		setEGLContextClientVersion(2);
 		setRenderer(renderer);
 		
-		
-		
 //		setVRModeEnabled(false);
 //		setRenderMode(GLSurfaceView.RENDERMODE_WHEN_DIRTY);
-//		setDistortionCorrectionEnabled(false);
+		setDistortionCorrectionEnabled(true);
 //		getHolder().addCallback(this);
 //		inPreview = false;
 	}
@@ -94,6 +93,7 @@ public class CameraView extends CardboardView implements Callback{
 	public boolean onTouchEvent(MotionEvent event) {
 		Log.d(TAG, "Touch noticed");
 		AppConfig.TOUCH_EVENT = true;
+		Log.d(TAG,"STL: "+getHeadMountedDisplay().getCardboard().getScreenToLensDistance());
 		return super.onTouchEvent(event);
 	}
 	
