@@ -24,14 +24,18 @@ public class MainActivity extends CardboardActivity implements OnSharedPreferenc
 	
     static
 	{
-		try {
-			System.loadLibrary("gnustl_shared");
-			System.loadLibrary("opencv_java");
-//			System.loadLibrary("nonfree");
-			System.loadLibrary("aruco_opencv");
-			System.loadLibrary("jni_interface");
-		} catch(UnsatisfiedLinkError e) {
-			System.err.println("Native code library failed to load.\n" + e);
+		if(OpenCVLoader.initDebug()) {
+			try {
+				System.loadLibrary("gnustl_shared");
+				//System.loadLibrary("opencv_java");
+	//			System.loadLibrary("nonfree");
+				System.loadLibrary("aruco_opencv");
+				System.loadLibrary("jni_interface");
+			} catch (UnsatisfiedLinkError e) {
+				System.err.println("Native code library failed to load.\n"+e);
+			}
+		} else {
+			System.err.println("Native code library failed to load.\n");
 		}
 	}
 	
@@ -70,7 +74,7 @@ public class MainActivity extends CardboardActivity implements OnSharedPreferenc
 	protected void onResume() {
 		super.onResume();
 		
-		OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_2_4_9, this, mLoaderCallback);
+//		OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_2_4_9, this, mLoaderCallback);
 //		sensorHandler.resume();
 	}
 	
@@ -107,20 +111,20 @@ public class MainActivity extends CardboardActivity implements OnSharedPreferenc
 			String key) {	
 	}
 	
-	private BaseLoaderCallback mLoaderCallback = new BaseLoaderCallback(this) {
-        @Override
-        public void onManagerConnected(int status) {
-            switch (status) {
-                case LoaderCallbackInterface.SUCCESS:
-                {
-                    Log.i("Main", "OpenCV loaded successfully");
-//                    NonfreeJNILib.setOpenCvLoaded(true);
-                } break;
-                default:
-                {
-                    super.onManagerConnected(status);
-                } break;
-            }
-        }
-    };
+//	private BaseLoaderCallback mLoaderCallback = new BaseLoaderCallback(this) {
+//        @Override
+//        public void onManagerConnected(int status) {
+//            switch (status) {
+//                case LoaderCallbackInterface.SUCCESS:
+//                {
+//                    Log.i("Main", "OpenCV loaded successfully");
+////                    NonfreeJNILib.setOpenCvLoaded(true);
+//                } break;
+//                default:
+//                {
+//                    super.onManagerConnected(status);
+//                } break;
+//            }
+//        }
+//    };
 }

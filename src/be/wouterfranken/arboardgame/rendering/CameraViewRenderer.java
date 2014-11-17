@@ -1,10 +1,9 @@
 package be.wouterfranken.arboardgame.rendering;
 
 import javax.microedition.khronos.egl.EGLConfig;
-import javax.microedition.khronos.opengles.GL10;
 
-import android.opengl.GLSurfaceView.Renderer;
 import android.util.Log;
+import be.wouterfranken.arboardgame.app.AppConfig;
 import be.wouterfranken.arboardgame.app.CameraView;
 import be.wouterfranken.arboardgame.rendering.tracking.CameraPose;
 
@@ -17,84 +16,101 @@ public class CameraViewRenderer implements StereoRenderer{
 	
 	private static final String TAG = CameraViewRenderer.class.getSimpleName();
 	
-	private CameraRenderer cameraRenderer;
-	private VirtualLayerRenderer virtualLayerRenderer;
+	private FinalRenderer finalRenderer;
+	private ArRenderer arRenderer;
 	private CameraView view;
+	private long renderDataTimer;
 	
 	public CameraViewRenderer(CameraView view) {
 		this.view = view;
-		cameraRenderer = new CameraRenderer(view);
-		virtualLayerRenderer = new VirtualLayerRenderer(new CameraPose(this.view.getContext()), cameraRenderer.getCamera(), view.getContext());
-		
+		arRenderer = new ArRenderer(this.view.getContext(),new CameraPose(this.view.getContext()));
+		finalRenderer = new FinalRenderer(view);
 	}
 	
+	/**
+	 ***********
+	 * GETTERS *
+	 ***********
+	 */
+	
+	public FinalRenderer getFinalRenderer() {
+		return finalRenderer;
+	}
+
+	public ArRenderer getArRenderer() {
+		return arRenderer;
+	}
+
+	/**
+	 **************************
+	 * SURFACE INIT FUNCTIONS *
+	 **************************
+	 */
+	
 	@Override
-	public void onDrawEye(EyeTransform transform) {
+	public void onSurfaceCreated(EGLConfig config) {
+		if(AppConfig.DEBUG_LOGGING) Log.d(TAG, "onSurfaceCreated");
 		
-		if(cameraRenderer.getCamera() != null) {
-//			transform.getParams().getFov().setLeft((transform.getParams().getFov().getLeft()+transform.getParams().getFov().getRight())/2);
-//			transform.getParams().getFov().setRight((transform.getParams().getFov().getLeft()+transform.getParams().getFov().getRight())/2);
-//			transform.getParams().getFov().setBottom((transform.getParams().getFov().getTop()+transform.getParams().getFov().getBottom())/2);
-//			transform.getParams().getFov().setTop((transform.getParams().getFov().getTop()+transform.getParams().getFov().getBottom())/2);
-			
-//			transform.getParams().getFov().setLeft(45);
-//			transform.getParams().getFov().setRight(45);
-//			transform.getParams().getFov().setBottom(45);
-//			transform.getParams().getFov().setTop(45);
-			
-			cameraRenderer.onDrawEye(transform);
-			virtualLayerRenderer.onDrawEye(transform);
+		if(arRenderer.getCamera() != null) {
+			arRenderer.onSurfaceCreated(null,config);
+			finalRenderer.setTexHandler(arRenderer.getTextureId());
+			finalRenderer.onSurfaceCreated(config);
 		}
 	}
 
 	@Override
 	public void onSurfaceChanged(int width, int height) {
-		if(cameraRenderer.getCamera() != null) {
-			cameraRenderer.onSurfaceChanged(width, height);
-			virtualLayerRenderer.onSurfaceChanged(width, height);
-			
-			cameraRenderer.getCamera().setPreviewCallbackWithBuffer(virtualLayerRenderer);
+		if(AppConfig.DEBUG_LOGGING) Log.d(TAG, "onSurfaceChanged");
+		
+		if(arRenderer.getCamera() != null) {
+			arRenderer.onSurfaceChanged(null, width, height);
+			finalRenderer.onSurfaceChanged(width, height);
 		} else {
-			Log.w(TAG, "Preview Callback not attached");
+			Log.e(TAG, "Preview Callback not attached");
+		}
+	}
+	
+	/**
+	 ******************************
+	 * RENDERER CONTROL FUNCTIONS *
+	 ******************************
+	 */
+
+	@Override
+	public void onNewFrame(HeadTransform ht) {
+		if(AppConfig.DEBUG_LOGGING) Log.d(TAG, "onNewFrame");
+		renderDataTimer = System.currentTimeMillis();
+		if(arRenderer.getCamera() != null) {
+			arRenderer.onDrawFrame(null);
+			finalRenderer.onNewFrame(ht);
 		}
 	}
 
 	@Override
-	public void onSurfaceCreated(EGLConfig config) {
-		if(cameraRenderer.getCamera() != null) {
-			cameraRenderer.onSurfaceCreated(config);
-			virtualLayerRenderer.onSurfaceCreated(config);
+	public void onDrawEye(EyeTransform transform) {
+		if(AppConfig.DEBUG_LOGGING) Log.d(TAG, "OnDrawEye");
+		
+		if(arRenderer.getCamera() != null) {
+			finalRenderer.onDrawEye(transform);
 		}
 	}
 
 	@Override
 	public void onFinishFrame(Viewport vp) {
-		if(cameraRenderer.getCamera() != null) {
-			cameraRenderer.onFinishFrame(vp);
-			virtualLayerRenderer.onFinishFrame(vp);
+		if(AppConfig.DEBUG_LOGGING) Log.d(TAG, "onFinishFrame");
+		
+		if(arRenderer.getCamera() != null) {
+			finalRenderer.onFinishFrame(vp);
 		}
-	}
-
-	@Override
-	public void onNewFrame(HeadTransform ht) {
-		if(cameraRenderer.getCamera() != null) {
-			cameraRenderer.onNewFrame(ht);
-			virtualLayerRenderer.onNewFrame(ht);
-		}
+		
+		if(AppConfig.DEBUG_TIMING) Log.d(TAG, "Rendering done in "+(System.currentTimeMillis()-renderDataTimer)+"ms");
 	}
 
 	@Override
 	public void onRendererShutdown() {
-		cameraRenderer.onRendererShutdown();
-		virtualLayerRenderer.onRendererShutdown();
-	}
-	
-	public CameraRenderer getCameraRenderer() {
-		return cameraRenderer;
-	}
-	
-	public VirtualLayerRenderer getVirtualLayerRenderer() {
-		return virtualLayerRenderer;
+		if(AppConfig.DEBUG_LOGGING) Log.d(TAG, "onRendererShutdown");
+		
+		finalRenderer.onRendererShutdown();
 	}
 	
 }

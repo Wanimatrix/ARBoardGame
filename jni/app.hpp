@@ -8,13 +8,8 @@
 #ifndef APP_HPP_
 #define APP_HPP_
 
-//#include "pattern.hpp"
-//#include "pattern_detector.hpp"
 #include <cameraparameters.h>
 
-//Pattern p;
-//PatternDetector pd;
-//PatternTrackingInfo pti;
 
 struct CalibrationData {
 	cv::Mat intrinsics;

@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.text.DecimalFormat;
 
 import android.content.Context;
@@ -29,6 +30,26 @@ public class AndroidUtils {
 		is.close();
 		os.close();
 		return context.getFilesDir() + "/" + fileName;
+	}
+	
+	public static void copyFileFromAssets(Context ctx, final String f) {
+		InputStream in;
+		try {
+			in = ctx.getAssets().open(f);
+			final File of = new File(ctx.getDir("execdir",Context.MODE_PRIVATE), f);
+
+			final OutputStream out = new FileOutputStream(of);
+
+			final byte b[] = new byte[65535];
+			int sz = 0;
+			while ((sz = in.read(b)) > 0) {
+				out.write(b, 0, sz);
+			}
+			in.close();
+			out.close();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
 	}
 	
 	public static void logHeap(Context context) {

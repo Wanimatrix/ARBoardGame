@@ -1,11 +1,6 @@
 package be.wouterfranken.arboardgame.utilities;
 
-import org.opencv.core.Mat;
-import org.opencv.core.Point;
-
-import be.wouterfranken.arboardgame.app.AppConfig;
 import android.opengl.GLES20;
-import android.opengl.Matrix;
 import android.util.Log;
 
 public class RenderingUtils {
@@ -83,27 +78,5 @@ public class RenderingUtils {
                 TAG,
                 "After operation " + op + " got glError 0x"
                     + Integer.toHexString(error));
-    }
-    
-    
-    public static float[] toOpenGLArray(Point[] points) {
-//    	if(points.length == 4) {
-//    		Log.d(TAG,"Corners: ("
-//        			+ points[0].x+","
-//        			+ points[0].y+") ("
-//        			+ points[1].x+","
-//        			+ points[1].y+") ("
-//        			+ points[2].x+","
-//        			+ points[2].y+") ("
-//        			+ points[3].x+","
-//        			+ points[3].y+")");
-//    	} 
-    	
-    	float[] result = new float[points.length*2];
-    	for (int i = 0; i < result.length; i+=2) {
-			result[i] = (float)((float)points[i/2].x/AppConfig.PREVIEW_RESOLUTION[0]);
-			result[i+1] = (float)((float)points[i/2].y/AppConfig.PREVIEW_RESOLUTION[1]);
-		}
-    	return result;
     }
 }

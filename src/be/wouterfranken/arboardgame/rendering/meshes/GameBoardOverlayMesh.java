@@ -33,7 +33,7 @@ public class GameBoardOverlayMesh extends MeshObject
 					 -targetSize[0]/2,-targetSize[1]/2,0,
 					targetSize[0]/2,-targetSize[1]/2,0};
     	
-    	DebugUtilities.logGLMatrix("Vertices", vertices, 4, 3);
+    	//DebugUtilities.logGLMatrix("Vertices", vertices, 4, 3);
     	
         mVertBuff = fillBuffer(vertices);
         verticesNumber = vertices.length / 3;
