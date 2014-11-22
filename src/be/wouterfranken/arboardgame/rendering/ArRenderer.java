@@ -5,12 +5,17 @@ import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.IntBuffer;
+import java.util.ArrayList;
+import java.util.List;
 
 import javax.microedition.khronos.egl.EGLConfig;
 import javax.microedition.khronos.opengles.GL10;
 
+import org.opencv.core.Core;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
+import org.opencv.core.Point3;
+import org.opencv.core.Scalar;
 import org.opencv.highgui.Highgui;
 import org.opencv.imgproc.Imgproc;
 
@@ -25,21 +30,33 @@ import android.opengl.GLES11Ext;
 import android.opengl.GLES20;
 import android.opengl.GLSurfaceView.Renderer;
 import android.opengl.Matrix;
+import android.os.Debug;
 import android.util.Log;
 import be.wouterfranken.arboardgame.app.AppConfig;
+import be.wouterfranken.arboardgame.gameworld.LemmingsGenerator;
+import be.wouterfranken.arboardgame.gameworld.Pathfinder;
+import be.wouterfranken.arboardgame.gameworld.World;
+import be.wouterfranken.arboardgame.gameworld.WorldBorder;
+import be.wouterfranken.arboardgame.gameworld.WorldConfig;
+import be.wouterfranken.arboardgame.gameworld.WorldCoordinate;
+import be.wouterfranken.arboardgame.rendering.meshes.CubeMesh;
 import be.wouterfranken.arboardgame.rendering.meshes.FullSquadMesh;
 import be.wouterfranken.arboardgame.rendering.meshes.GameBoardOverlayMesh;
-import be.wouterfranken.arboardgame.rendering.tracking.CameraPose;
+import be.wouterfranken.arboardgame.rendering.meshes.MeshObject;
+import be.wouterfranken.arboardgame.rendering.meshes.RenderOptions;
+import be.wouterfranken.arboardgame.rendering.tracking.CameraPoseTracker;
 import be.wouterfranken.arboardgame.rendering.tracking.FrameTrackingCallback;
-import be.wouterfranken.arboardgame.rendering.tracking.LegoBrick;
+import be.wouterfranken.arboardgame.rendering.tracking.LegoBrickTracker;
 import be.wouterfranken.arboardgame.utilities.AndroidUtils;
+import be.wouterfranken.arboardgame.utilities.Color;
+import be.wouterfranken.arboardgame.utilities.DebugUtilities;
 import be.wouterfranken.arboardgame.utilities.RenderingUtils;
 import be.wouterfranken.arboardgame.utilities.TrackingUtilities;
 
 public class ArRenderer implements Renderer, PreviewCallback {
 	
 	private final static String TAG = ArRenderer.class.getSimpleName();
-	
+	private List<MeshObject> meshesToRender = new ArrayList<MeshObject>();
 	
 	private Camera camera;
 	private int[] tex;
@@ -47,16 +64,13 @@ public class ArRenderer implements Renderer, PreviewCallback {
 	private Buffer pTexCoordVBG;
 	private Buffer pVertexVBG;
 	
-	private CameraPose cameraPose;
-	private LegoBrick legoBrick;
+	private CameraPoseTracker cameraPose;
+	private LegoBrickTracker legoBrick;
 	private Context context;
 	
     private float[] mvp = new float[16];
     private float[] glProj = null;
     private float[] glMv = null;
-    
-    private GameBoardOverlayMesh gbo = new GameBoardOverlayMesh(new float[]{20f,20f});
-    
     
     // RENDER TO TEXTURE VARIABLES
  	int[] fb, depthRb, renderTex; // the framebuffer, the renderbuffer and the texture to render
@@ -70,23 +84,9 @@ public class ArRenderer implements Renderer, PreviewCallback {
 	private int sTextureHandler;
 	private int[] vPositionHandler;
     private int[] mvpHandler;
-    private int texColorHandler;
+    private int[] texColorHandler;
 	
-    // SHADERS
-	private final String vss =
-		"attribute vec3 vPosition;\n" +
-		"uniform mat4 u_MVP;\n" +
-		"void main() {\n" +
-		"  gl_Position = u_MVP * vec4( vPosition.x, vPosition.y, 0, 1.0 );\n" +
-		"}";
- 
-	private final String fss =
-		"precision mediump float;\n" +
-		"uniform vec4 color;\n" +
-		"void main() {\n" +
-		"  gl_FragColor = color;\n" +
-		"}";
-    
+    // CAMERA SHADERS
 	private final String vssCamera =
 		"attribute vec2 vPosition;\n" +
 		"attribute vec2 vTexCoord;\n" +
@@ -106,13 +106,20 @@ public class ArRenderer implements Renderer, PreviewCallback {
 		"  gl_FragColor = texture2D(sTexture,texCoord);\n" +
 		"}";
 	
-	public ArRenderer(Context ctx, CameraPose cameraPose) {
+	public ArRenderer(Context ctx, CameraPoseTracker cameraPose) {
 		this.cameraPose = cameraPose;
-		this.legoBrick = new LegoBrick();
+		this.legoBrick = new LegoBrickTracker();
 		this.context = ctx;
 		
-		
-		
+		// Add here the meshes that are needed for rendering.
+		GameBoardOverlayMesh gbo = new GameBoardOverlayMesh(new float[]{AppConfig.BOARD_SIZE[0],AppConfig.BOARD_SIZE[1]}, new RenderOptions(true, new Color(1,0,0,0.5f)));
+		meshesToRender.add(gbo);
+		CubeMesh cm = new CubeMesh(5,new WorldCoordinate(0, 0), 2.5f, new RenderOptions(true, new Color(0, 1, 0, 0.5f)));
+		meshesToRender.add(cm);
+//		GameBoardOverlayMesh gboX = new GameBoardOverlayMesh(new float[]{1.6f,20f},new RenderOptions(true, new Color(0, 1, 0, 0.5f), vss, fss));
+//		meshesToRender.add(gboX);
+//		GameBoardOverlayMesh gboY = new GameBoardOverlayMesh(new float[]{20f,1.6f},new RenderOptions(true, new Color(0, 0, 1, 0.5f), vss, fss));
+//		meshesToRender.add(gboY);
 	}
 	
 	/**
@@ -172,8 +179,6 @@ public class ArRenderer implements Renderer, PreviewCallback {
 		
 		GLES20.glClearColor(1.0f, 1.0f, 0.0f, 1.0f);
 		GLES20.glDisable(GLES20.GL_DEPTH_TEST);
-		// Backface Culling
-	//	GLES20.glDisable(GLES20.GL_CULL_FACE);
 		
 		setupRenderHandlers();
 	}
@@ -222,24 +227,8 @@ public class ArRenderer implements Renderer, PreviewCallback {
 
 	private void renderVirtualLayer() {
 		if(AppConfig.DEBUG_LOGGING) Log.d(TAG, "Trying to get Modelview and Projection for virtual layer...");
-	    double[] mv = cameraPose.getMv();
-		double[] proj = cameraPose.getProj();
-		if(mv != null && proj != null) {
-			glMv = new float[16];
-			glProj = new float[16];
-			
-			for (int i = 0; i < mv.length; i++) {
-				glProj[i] = (float) proj[i];
-				glMv[i] = (float) mv[i];
-			}
-			
-			if(AppConfig.DEBUG_LOGGING) Log.d(TAG, "Getting Modelview and Projection for virtual layer successful");
-		} else {
-			glProj = null;
-			glMv = null;
-			
-			if(AppConfig.DEBUG_LOGGING) Log.d(TAG, "Getting Modelview and Projection for virtual layer failed (no marker in sight?)");
-		} 
+	    glMv = cameraPose.getMv();
+		glProj = cameraPose.getProj();
 	    
 		 // Render virtual layer to texture
 		GLES20.glUseProgram(programId[1]);
@@ -249,57 +238,73 @@ public class ArRenderer implements Renderer, PreviewCallback {
 		
 	    if(glProj != null && glMv != null) {
 	    	
-	    	
 		    // Render virtual layer to texture
 			GLES20.glUseProgram(programId[1]);
 			GLES20.glEnable(GLES20.GL_BLEND);
 			GLES20.glBlendFunc(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE_MINUS_SRC_ALPHA);
 		    
+			
+			for (int i = 0; i< meshesToRender.size();i++) {
+				renderMesh(meshesToRender.get(i), i);
+			}
 			// GAMEBOARD
-		    GLES20.glVertexAttribPointer(vPositionHandler[1], 4, GLES20.GL_FLOAT, false, 4*3, gbo.getVertices());
-		    GLES20.glEnableVertexAttribArray(vPositionHandler[1]);
-		    GLES20.glUniform4f(texColorHandler, 1, 0, 0, 0.5f);
 		    
-		    Matrix.multiplyMM(mvp, 0, glProj, 0, glMv, 0);
-		    Matrix.scaleM(mvp, 0, 1, -1, 1);
-	        
-		    GLES20.glUniformMatrix4fv(mvpHandler[1], 1, false, mvp, 0);
-		  
-		    GLES20.glDrawArrays(GLES20.GL_TRIANGLE_STRIP, 0, 4);
-		    GLES20.glFlush();
 		    
 		    // GBOCENTER X
-		    GameBoardOverlayMesh gboX = new GameBoardOverlayMesh(new float[]{1.6f,20f});
-		    GLES20.glVertexAttribPointer(vPositionHandler[1], 4, GLES20.GL_FLOAT, false, 4*3, gboX.getVertices());
-		    GLES20.glEnableVertexAttribArray(vPositionHandler[1]);
-		    GLES20.glUniform4f(texColorHandler, 0, 1, 0, 0.5f);
-		    
-		    Matrix.multiplyMM(mvp, 0, glProj, 0, glMv, 0);
-		    Matrix.scaleM(mvp, 0, 1, -1, 1);
-	        
-		    GLES20.glUniformMatrix4fv(mvpHandler[1], 1, false, mvp, 0);
-		  
-		    GLES20.glDrawArrays(GLES20.GL_TRIANGLE_STRIP, 0, 4);
-		    GLES20.glFlush();
+			
+//		    GLES20.glVertexAttribPointer(vPositionHandler[1], 4, GLES20.GL_FLOAT, false, 4*3, gboX.getVertices());
+//		    GLES20.glEnableVertexAttribArray(vPositionHandler[1]);
+//		    GLES20.glUniform4f(texColorHandler, 0, 1, 0, 0.5f);
+//		    
+//		    Matrix.multiplyMM(mvp, 0, glProj, 0, glMv, 0);
+//		    Matrix.scaleM(mvp, 0, 1, -1, 1);
+//	        
+//		    GLES20.glUniformMatrix4fv(mvpHandler[1], 1, false, mvp, 0);
+//		  
+//		    GLES20.glDrawArrays(GLES20.GL_TRIANGLE_STRIP, 0, 4);
+//		    GLES20.glFlush();
 		    
 		    // GBOCENTER X
-		    GameBoardOverlayMesh gboY = new GameBoardOverlayMesh(new float[]{20f,1.6f});
-		    GLES20.glVertexAttribPointer(vPositionHandler[1], 4, GLES20.GL_FLOAT, false, 4*3, gboY.getVertices());
-		    GLES20.glEnableVertexAttribArray(vPositionHandler[1]);
-		    GLES20.glUniform4f(texColorHandler, 0, 0, 1, 0.5f);
 		    
-		    Matrix.multiplyMM(mvp, 0, glProj, 0, glMv, 0);
-		    Matrix.scaleM(mvp, 0, 1, -1, 1);
-	        
-		    GLES20.glUniformMatrix4fv(mvpHandler[1], 1, false, mvp, 0);
-		  
-		    GLES20.glDrawArrays(GLES20.GL_TRIANGLE_STRIP, 0, 4);
-		    GLES20.glFlush();
+//		    GLES20.glVertexAttribPointer(vPositionHandler[1], 4, GLES20.GL_FLOAT, false, 4*3, gboY.getVertices());
+//		    GLES20.glEnableVertexAttribArray(vPositionHandler[1]);
+//		    GLES20.glUniform4f(texColorHandler, 0, 0, 1, 0.5f);
+//		    
+//		    Matrix.multiplyMM(mvp, 0, glProj, 0, glMv, 0);
+//		    Matrix.scaleM(mvp, 0, 1, -1, 1);
+//	        
+//		    GLES20.glUniformMatrix4fv(mvpHandler[1], 1, false, mvp, 0);
+//		  
+//		    GLES20.glDrawArrays(GLES20.GL_TRIANGLE_STRIP, 0, 4);
+//		    GLES20.glFlush();
 		    
 		    
 	    }
 	    
 	    float[][] contours = legoBrick.getGLContour();
+	    float[][] ocvContours = legoBrick.getOcvContour();
+	    if(ocvContours != null) {
+    		float[][] corners = new float[ocvContours[0].length/3][4];
+	    	float[][] corners3D = new float[ocvContours[0].length/3][4];
+	    	for(int i = 0;i<ocvContours[0].length/3;i++) {
+	    		corners[i][0] = ocvContours[0][i*3];
+	    		corners[i][1] = ocvContours[0][i*3+1];
+	    		corners[i][2] = 1;
+	    		corners[i][3] = 1;
+	    		DebugUtilities.logGLMatrix("2D Corner ("+i+")", corners[i], 1, 4);
+	    	}
+	    	
+	    	
+	    	for (int i = 0; i < corners.length; i++) {
+	    		float[] point3D = cameraPose.get3DPointFrom2D(corners[i][0], corners[i][1]);
+	    		if(point3D == null) break;
+	    		corners3D[i][0] = point3D[0];
+	    		corners3D[i][1] = point3D[1];
+	    		corners3D[i][2] = point3D[2];
+	    		corners3D[i][3] = 1;
+	    		DebugUtilities.logGLMatrix("3D Corner ("+i+")", corners3D[i], 1, 4);
+			}
+	    }
 	    if(contours != null) {
 	    	// LegoBrick Contour
 	    	int totalContourCount = 0;
@@ -316,7 +321,7 @@ public class ArRenderer implements Renderer, PreviewCallback {
 	        bb.rewind();
 		    GLES20.glVertexAttribPointer(vPositionHandler[1], 3, GLES20.GL_FLOAT, false, 4*3, bb);
 		    GLES20.glEnableVertexAttribArray(vPositionHandler[1]);
-		    GLES20.glUniform4f(texColorHandler, 0, 1, 1, 1f);
+		    GLES20.glUniform4f(texColorHandler[0], 0, 1, 1, 1f);
 		    
 		    Matrix.setIdentityM(mvp, 0);
 //			    Matrix.scaleM(mvp, 0, 1, -1, 1);
@@ -362,6 +367,52 @@ public class ArRenderer implements Renderer, PreviewCallback {
 	    
 	    if(AppConfig.DEBUG_LOGGING) Log.d(TAG, "Rendering camera to FrameBuffer done...");
 	}
+	
+	private void renderMesh(MeshObject m, int index) {
+		// Backface Culling
+		GLES20.glEnable(GLES20.GL_CULL_FACE);
+		GLES20.glCullFace(GLES20.GL_BACK);
+		
+		RenderOptions ro = m.getRenderOptions();
+		
+		GLES20.glVertexAttribPointer(vPositionHandler[1+index], 3, GLES20.GL_FLOAT, false, 4*3, m.getVertices());
+	    GLES20.glEnableVertexAttribArray(vPositionHandler[1+index]);
+	    GLES20.glUniform4f(texColorHandler[index], ro.col.r, ro.col.g, ro.col.b, ro.col.a); // 1 0 0 0.5
+	    
+	    Matrix.setIdentityM(mvp, 0);
+	    if(ro.useMVP) Matrix.multiplyMM(mvp, 0, glProj, 0, glMv, 0);
+	    
+//	    List<WorldCoordinate> path = Pathfinder.findPath(WorldConfig.STARTPOINT, WorldConfig.ENDPOINT, new World());
+//	    Log.d(TAG, "Path generated!");
+//	    for (WorldCoordinate worldCoordinate : path) {
+//			Log.d(TAG, "Pathco: "+worldCoordinate.toString());
+//		}
+	    
+//	    float[] test = new float[4];
+//	    Matrix.multiplyMV(test, 0, mvp, 0, new float[]{-10.5f, 14.85f, 0, 1}, 0);
+//	    test[0] = ((test[0]/test[3]+1)/2*AppConfig.PREVIEW_RESOLUTION[0]);
+//	    test[1] = ((1-(test[1]/test[3]+1)/2)*AppConfig.PREVIEW_RESOLUTION[1]);
+//	    test[2] = test[2]/test[3];
+//	    test[3] = test[3]/test[3];
+//	    DebugUtilities.logGLMatrix("TESTVECTOR 2D (Z=0)", test, 1, 4);
+//	    
+//	    float[] point3D = cameraPose.get3DPointFrom2D(test[0], test[1]);
+//	    if(point3D != null)
+//	    	DebugUtilities.logGLMatrix("Corner3dPoint", point3D, 1, 3);
+        
+	    GLES20.glUniformMatrix4fv(mvpHandler[1+index], 1, false, mvp, 0);
+	  
+	    int[] multiRenderConfig = m.getMultiRenderConfiguration();
+	    
+	    for(int i = 1; i< multiRenderConfig.length+1; i++) {
+	    	Log.d(TAG, "MultiRender no"+(i-1)+": From "+multiRenderConfig[i-1]+", Count "+((i == multiRenderConfig.length ? m.getNumObjectVertex() : multiRenderConfig[i])-multiRenderConfig[i-1]));
+	    	GLES20.glDrawArrays(GLES20.GL_TRIANGLE_STRIP, multiRenderConfig[i-1], (i == multiRenderConfig.length ? m.getNumObjectVertex() : multiRenderConfig[i]) - multiRenderConfig[i-1]);
+	    }
+	    
+	    GLES20.glFlush();
+	    
+	    GLES20.glDisable(GLES20.GL_CULL_FACE);
+	}
 
 	/**
 	 **************************
@@ -382,11 +433,9 @@ public class ArRenderer implements Renderer, PreviewCallback {
 		Imgproc.cvtColor( yuv, colFrameImg, Imgproc.COLOR_YUV2BGR_NV21, 3);
 		if(AppConfig.DEBUG_TIMING) Log.d(TAG, "YUV2RGB (OpenCV) in "+(System.nanoTime()-start2)/1000000L+"ms");
 		
-		FrameTrackingCallback callback = new FrameTrackingCallback(frameData, camera);
+		FrameTrackingCallback callback = new FrameTrackingCallback(frameData, camera,start);
 		if(AppConfig.CAMERA_POSE_ESTIMATION) cameraPose.updateCameraPose(colFrameImg, callback);
 		if(AppConfig.LEGO_TRACKING) legoBrick.findLegoBrick(colFrameImg, callback);
-		
-		if(AppConfig.DEBUG_TIMING) Log.d(TAG, "Totaltime in "+(System.nanoTime()-start)/1000000L+"ms");
 	}
 	
 	/**
@@ -420,9 +469,10 @@ public class ArRenderer implements Renderer, PreviewCallback {
 	private void setupRenderHandlers() {
 		if(AppConfig.DEBUG_LOGGING) Log.d(TAG, "Starting renderhandlers init...");
 		
-		programId = new int[2];
-		vPositionHandler = new int[2];
-		mvpHandler = new int[2];
+		programId = new int[1+meshesToRender.size()];
+		vPositionHandler = new int[1+meshesToRender.size()];
+		mvpHandler = new int[1+meshesToRender.size()];
+		texColorHandler = new int[meshesToRender.size()];
 		
 		programId[0] = RenderingUtils.createProgramFromShaderSrc(vssCamera,fssCamera);
 		
@@ -431,10 +481,13 @@ public class ArRenderer implements Renderer, PreviewCallback {
 	    sTextureHandler = GLES20.glGetUniformLocation ( programId[0], "sTexture" );
 	    mvpHandler[0] = GLES20.glGetUniformLocation(programId[0], "u_MVP");
 	    
-	    programId[1] = RenderingUtils.createProgramFromShaderSrc(vss,fss);
-	    vPositionHandler[1] = GLES20.glGetAttribLocation(programId[1], "vPosition");
-	    mvpHandler[1] = GLES20.glGetUniformLocation(programId[1], "u_MVP");
-	    texColorHandler = GLES20.glGetUniformLocation(programId[1], "color");
+	    for(int i = 0; i<meshesToRender.size();i++) {
+	    	MeshObject m = meshesToRender.get(i);
+	    	programId[1+i] = RenderingUtils.createProgramFromShaderSrc(m.getRenderOptions().vertexShader,m.getRenderOptions().fragmentShader);
+		    vPositionHandler[1+i] = GLES20.glGetAttribLocation(programId[1+i], "vPosition");
+		    mvpHandler[1+i] = GLES20.glGetUniformLocation(programId[1+i], "u_MVP");
+		    texColorHandler[i] = GLES20.glGetUniformLocation(programId[1+i], "color");
+	    }
 	    
 	    if(AppConfig.DEBUG_LOGGING) Log.d(TAG, "Renderhandlers init done...");
 	}

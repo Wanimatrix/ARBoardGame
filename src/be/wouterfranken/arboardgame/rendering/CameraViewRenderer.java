@@ -5,7 +5,7 @@ import javax.microedition.khronos.egl.EGLConfig;
 import android.util.Log;
 import be.wouterfranken.arboardgame.app.AppConfig;
 import be.wouterfranken.arboardgame.app.CameraView;
-import be.wouterfranken.arboardgame.rendering.tracking.CameraPose;
+import be.wouterfranken.arboardgame.rendering.tracking.CameraPoseTracker;
 
 import com.google.vrtoolkit.cardboard.CardboardView.StereoRenderer;
 import com.google.vrtoolkit.cardboard.EyeTransform;
@@ -23,7 +23,7 @@ public class CameraViewRenderer implements StereoRenderer{
 	
 	public CameraViewRenderer(CameraView view) {
 		this.view = view;
-		arRenderer = new ArRenderer(this.view.getContext(),new CameraPose(this.view.getContext()));
+		arRenderer = new ArRenderer(this.view.getContext(),new CameraPoseTracker(this.view.getContext()));
 		finalRenderer = new FinalRenderer(view);
 	}
 	

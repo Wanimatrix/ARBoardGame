@@ -8,7 +8,7 @@ public class AppConfig {
 	public final static int AMOUNT_PREVIEW_BUFFERS = 5;
 	public static boolean TOUCH_EVENT = false;
 	public static final boolean LEGO_TRACKING = true;
-	public static final boolean CAMERA_POSE_ESTIMATION = false;
+	public static final boolean CAMERA_POSE_ESTIMATION = true;
 	
 	public final static boolean DEBUG_LOGGING = false;
 	public final static boolean DEBUG_TIMING = true;
@@ -39,4 +39,6 @@ public class AppConfig {
 	 */
 	
 	public final static int[] FPS_RANGE = new int[]{1000,15000};
+	
+	public final static float[] BOARD_SIZE = new float[]{21f,29.6f};
 }

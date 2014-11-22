@@ -16,6 +16,22 @@ public abstract class MeshObject
 {
 	private boolean isDebugMesh = false;
 	
+	// RenderOptions
+	private final RenderOptions ro;
+	private int[] multiRenderConfig = new int[]{0};
+	
+	public MeshObject(RenderOptions ro) {
+		this.ro = ro;
+	}
+	
+	public int[] getMultiRenderConfiguration() {
+		return multiRenderConfig;
+	}
+	
+	protected void setMultiRenderConfiguration(int[] multiRenderConfig) {
+		this.multiRenderConfig = multiRenderConfig;
+	}
+	
     public enum BUFFER_TYPE
     {
         BUFFER_TYPE_VERTEX, BUFFER_TYPE_TEXTURE_COORD, BUFFER_TYPE_NORMALS, BUFFER_TYPE_INDICES
@@ -45,6 +61,9 @@ public abstract class MeshObject
         return getBuffer(BUFFER_TYPE.BUFFER_TYPE_INDICES);
     }
     
+    public RenderOptions getRenderOptions() {
+    	return ro;
+    }
     
     protected Buffer fillBuffer(double[] array)
     {

@@ -52,16 +52,16 @@ extern "C"
 	JNIEXPORT void JNICALL Java_be_wouterfranken_arboardgame_utilities_JNILib_loadMatFromFile(
 			JNIEnv * env, jclass javaClass, jstring filePath, jstring matName, jlong matPtr);
 
-	JNIEXPORT void JNICALL Java_be_wouterfranken_arboardgame_rendering_tracking_CameraPose_loadCameraCalibration
-		  (JNIEnv * env, jobject jobject, jstring cameraIntDistPath);
+	JNIEXPORT void JNICALL Java_be_wouterfranken_arboardgame_rendering_tracking_CameraPoseTracker_loadCameraCalibration
+		  (JNIEnv * env, jobject jobject, jstring cameraIntDistPath, jlong cameraMat, jlong distortion);
 
-	JNIEXPORT jboolean JNICALL Java_be_wouterfranken_arboardgame_rendering_tracking_CameraPose_getCameraPose
+	JNIEXPORT jboolean JNICALL Java_be_wouterfranken_arboardgame_rendering_tracking_CameraPoseTracker_getCameraPose
 	  	  (JNIEnv * env, jobject jobject, jlong frameImagePtr, jlong projMatPtr, jlong mvMatPtr);
 
-	JNIEXPORT void JNICALL Java_be_wouterfranken_arboardgame_rendering_tracking_CameraPose_getCalibrationData
+	JNIEXPORT void JNICALL Java_be_wouterfranken_arboardgame_rendering_tracking_CameraPoseTracker_getCalibrationData
 		  (JNIEnv *env, jobject jobject, jlong cameraMat, jlong distortion);
 
-	JNIEXPORT void JNICALL Java_be_wouterfranken_arboardgame_rendering_tracking_LegoBrick_findLegoBrick
+	JNIEXPORT void JNICALL Java_be_wouterfranken_arboardgame_rendering_tracking_LegoBrickTracker_findLegoBrick
 		  (JNIEnv *env, jobject object, jlong yuvFrameImagePtr, jlong contourPtr);
 
 	JNIEXPORT void JNICALL Java_be_wouterfranken_arboardgame_utilities_TrackingUtilities_compileOCLKernels
@@ -75,8 +75,8 @@ extern "C"
 			jlong outImgPtr);
 }
 
-JNIEXPORT void JNICALL Java_be_wouterfranken_arboardgame_rendering_tracking_CameraPose_loadCameraCalibration(
-				JNIEnv * env, jobject jobject, jstring cameraIntDistPath)
+JNIEXPORT void JNICALL Java_be_wouterfranken_arboardgame_rendering_tracking_CameraPoseTracker_loadCameraCalibration(
+				JNIEnv * env, jobject jobject, jstring cameraIntDistPath, jlong cameraMat, jlong distortion)
 {
 	const char * path = env->GetStringUTFChars(cameraIntDistPath, NULL);
 
@@ -88,6 +88,8 @@ JNIEXPORT void JNICALL Java_be_wouterfranken_arboardgame_rendering_tracking_Came
 
 	__android_log_print(ANDROID_LOG_DEBUG,APPNAME, "Camera calibration done...");
 #endif
+	*(Mat *) cameraMat = calibData.intrinsics;
+	*(Mat *) distortion = calibData.distortion;
 }
 
 bool markerSort(aruco::Marker i, aruco::Marker j) {
@@ -102,13 +104,13 @@ bool markerSort(aruco::Marker i, aruco::Marker j) {
 
 int prevMarkerId = 0;
 
-JNIEXPORT void JNICALL Java_be_wouterfranken_arboardgame_rendering_tracking_CameraPose_getCalibrationData
+JNIEXPORT void JNICALL Java_be_wouterfranken_arboardgame_rendering_tracking_CameraPoseTracker_getCalibrationData
 		  (JNIEnv *env, jobject jobject, jlong cameraMat, jlong distortion) {
 	*(Mat *) cameraMat = calibData.intrinsics;
 	*(Mat *) distortion = calibData.distortion;
 }
 
-JNIEXPORT jboolean JNICALL Java_be_wouterfranken_arboardgame_rendering_tracking_CameraPose_getCameraPose
+JNIEXPORT jboolean JNICALL Java_be_wouterfranken_arboardgame_rendering_tracking_CameraPoseTracker_getCameraPose
   	  (JNIEnv * env, jobject jobject, jlong frameImagePtr, jlong projMatPtr, jlong mvMatPtr) {
 
 	Mat *mv = (Mat *) mvMatPtr;
@@ -116,7 +118,7 @@ JNIEXPORT jboolean JNICALL Java_be_wouterfranken_arboardgame_rendering_tracking_
 	Mat *frameImage = (Mat *) frameImagePtr;
 
 	double start = getRealTime();
-	float markerSize = 5.3f;
+	float markerSize = 5.9f;
 
 	aruco::MarkerDetector detector;
 	std::vector<aruco::Marker> markers;
@@ -124,6 +126,7 @@ JNIEXPORT jboolean JNICALL Java_be_wouterfranken_arboardgame_rendering_tracking_
 	Size inputImgSize = frameImage->size();
 
 	camParams.resize(inputImgSize);
+	Utilities::logMat(camParams.CameraMatrix,"JNI_Intrinsics");
 #if TIMING
 	__android_log_print(ANDROID_LOG_DEBUG,APPNAME,"Camparams initialized in %f ms...",((float)(getRealTime() - start))*1000.0);
 
@@ -163,8 +166,13 @@ JNIEXPORT jboolean JNICALL Java_be_wouterfranken_arboardgame_rendering_tracking_
 		double arucoMv[16];
 
 		int corner;
+//		Point2f cornerToOrigin;
 		Point2i edge;
+//		Point_<Point2f> edgeToOrigin = Point_<Point2f>(Point2f(),Point2f());
 		int inner;
+//		Point2f innerToOrigin;
+		Point2f innerToCenter;
+		Point2f outerToCenter;
 		Point2i quadrant;
 
 		aruco::Marker m;
@@ -191,24 +199,32 @@ JNIEXPORT jboolean JNICALL Java_be_wouterfranken_arboardgame_rendering_tracking_
 		case 1:
 			edge.x = 1;
 			corner = 0;
+			innerToCenter = Point2f(3.2f,7.85f);
+			outerToCenter = Point2f(9.1f,13.75f);
 			quadrant.x = -1;
 			quadrant.y = 1;
 			break;
 		case 11:
 			edge.x = 0;
 			corner = 1;
+			innerToCenter = Point2f(3.9f,7.85f);
+			outerToCenter = Point2f(9.8f,13.75f);
 			quadrant.x = 1;
 			quadrant.y = 1;
 			break;
 		case 111:
 			edge.x = 3;
 			corner = 2;
+			innerToCenter = Point2f(3.9f,8.05f);
+			outerToCenter = Point2f(9.8f,13.95f);
 			quadrant.x = 1;
 			quadrant.y = -1;
 			break;
 		case 1011:
 			edge.x = 2;
 			corner = 3;
+			innerToCenter = Point2f(3.2f,8.05f);
+			outerToCenter = Point2f(9.1f,13.95f);
 			quadrant.x = -1;
 			quadrant.y = -1;
 			break;
@@ -219,17 +235,17 @@ JNIEXPORT jboolean JNICALL Java_be_wouterfranken_arboardgame_rendering_tracking_
 		__android_log_print(ANDROID_LOG_DEBUG,APPNAME,"Index variables were set ...");
 #endif
 
-		double halfSize=markerSize/2.;
-		float innerToCenter = 3.9f;
-		float outerToCenter = markerSize+innerToCenter;
+//		double halfSize=markerSize/2.;
+//		float innerToCenter = 3.9f;
+//		float outerToCenter = markerSize+innerToCenter;
 #if DEBUG
 		__android_log_print(ANDROID_LOG_DEBUG,APPNAME,"Coordinate system variables were set ...");
 #endif
 
-		ObjPoints.at<Vec3f>(corner,0)=cv::Vec3f(quadrant.x*outerToCenter,quadrant.y*outerToCenter,0);
-		ObjPoints.at<Vec3f>(edge.x,0)=cv::Vec3f(quadrant.x*innerToCenter,quadrant.y*outerToCenter,0);
-		ObjPoints.at<Vec3f>(inner,0)=cv::Vec3f(quadrant.x*innerToCenter,quadrant.y*innerToCenter,0);
-		ObjPoints.at<Vec3f>(edge.y,0)=cv::Vec3f(quadrant.x*outerToCenter,quadrant.y*innerToCenter,0);
+		ObjPoints.at<Vec3f>(corner,0)=cv::Vec3f(quadrant.x*outerToCenter.x,quadrant.y*outerToCenter.y,0);
+		ObjPoints.at<Vec3f>(edge.x,0)=cv::Vec3f(quadrant.x*innerToCenter.x,quadrant.y*outerToCenter.y,0);
+		ObjPoints.at<Vec3f>(inner,0)=cv::Vec3f(quadrant.x*innerToCenter.x,quadrant.y*innerToCenter.y,0);
+		ObjPoints.at<Vec3f>(edge.y,0)=cv::Vec3f(quadrant.x*outerToCenter.x,quadrant.y*innerToCenter.y,0);
 
 #if TIMING
 		__android_log_print(ANDROID_LOG_DEBUG,APPNAME,"ObjectPoints found in %f ms...",((float)(getRealTime() - start))*1000.0);
@@ -302,14 +318,16 @@ struct HSVColorBounds {
 };
 struct HSVColorBounds red = {Scalar(160,153,30),Scalar(179,255,255)};
 
-JNIEXPORT void JNICALL Java_be_wouterfranken_arboardgame_rendering_tracking_LegoBrick_findLegoBrick(JNIEnv *env, jobject object, jlong bgrPointer, jlong contourPtr) {
-	Mat bgr = *(Mat *)bgrPointer;
+JNIEXPORT void JNICALL Java_be_wouterfranken_arboardgame_rendering_tracking_LegoBrickTracker_findLegoBrick(JNIEnv *env, jobject object, jlong bgrPointer, jlong contourPtr) {
+	Mat bgr_tmp = *(Mat *)bgrPointer;
 	Mat *contour = (Mat *)contourPtr;
 #if DEBUG
 	__android_log_print(ANDROID_LOG_DEBUG,APPNAME,"Jnicall LegoBrickTracker ...");
 #endif
 	Mat bgr_down = Mat();
 	Mat hsv = Mat();
+	Mat bgr = Mat();
+	bgr_tmp.copyTo(bgr);
 
 #if WRITE_CONTOURS(false)
 	Mat outImg;
@@ -322,33 +340,40 @@ JNIEXPORT void JNICALL Java_be_wouterfranken_arboardgame_rendering_tracking_Lego
 	int pyrlvl = 2;
 
 	bgr_down = bgr;
-	int blockAmount = 4;
-	int colBlocks = blockAmount/4;
-	int rowblocks = blockAmount/colBlocks;
-	for (int i = 0; i < pyrlvl; ++i) {
-		Mat tmpDown(Size(bgr_down.cols/2,bgr_down.rows/2),bgr_down.type());
-		#pragma omp parallel for
-		for (int block = 0; block < blockAmount; ++block) {
-			int colBegin = (bgr_down.cols/colBlocks)*(block%colBlocks);
-			int colAmount = (bgr_down.cols/colBlocks)*(block%colBlocks+1)-colBegin;
-			int rowBegin = (bgr_down.rows/rowblocks)*(block/colBlocks);
-			int rowAmount = (bgr_down.rows/rowblocks)*(block/colBlocks+1)-rowBegin;
-			Mat bgrDownBlock(bgr_down, cv::Rect(colBegin, rowBegin, colAmount, rowAmount));
-
-			colBegin = (tmpDown.cols/colBlocks)*(block%colBlocks);
-			colAmount = (tmpDown.cols/colBlocks)*(block%colBlocks+1)-colBegin;
-			rowBegin = (tmpDown.rows/rowblocks)*(block/colBlocks);
-			rowAmount = (tmpDown.rows/rowblocks)*(block/colBlocks+1)-rowBegin;
-			Mat tmpDownBlock(tmpDown, cv::Rect(colBegin, rowBegin, colAmount, rowAmount));
-
-			Mat tmpBlock;
-			tmpDownBlock.copyTo(tmpBlock);
-
-			pyrDown(bgrDownBlock,tmpBlock);
-			tmpBlock.copyTo(tmpDownBlock);
-		}
-		bgr_down = tmpDown;
+	for(int i = 0;i<pyrlvl;i++) {
+		Mat tmp;
+		pyrDown(bgr_down,tmp);
+		bgr_down = tmp;
 	}
+
+//	bgr_down = bgr;
+//	int blockAmount = 4;
+//	int colBlocks = blockAmount/4;
+//	int rowblocks = blockAmount/colBlocks;
+//	for (int i = 0; i < pyrlvl; ++i) {
+//		Mat tmpDown(Size(bgr_down.cols/2,bgr_down.rows/2),bgr_down.type());
+//		#pragma omp parallel for
+//		for (int block = 0; block < blockAmount; ++block) {
+//			int colBegin = (bgr_down.cols/colBlocks)*(block%colBlocks);
+//			int colAmount = (bgr_down.cols/colBlocks)*(block%colBlocks+1)-colBegin;
+//			int rowBegin = (bgr_down.rows/rowblocks)*(block/colBlocks);
+//			int rowAmount = (bgr_down.rows/rowblocks)*(block/colBlocks+1)-rowBegin;
+//			Mat bgrDownBlock(bgr_down, cv::Rect(colBegin, rowBegin, colAmount, rowAmount));
+//
+//			colBegin = (tmpDown.cols/colBlocks)*(block%colBlocks);
+//			colAmount = (tmpDown.cols/colBlocks)*(block%colBlocks+1)-colBegin;
+//			rowBegin = (tmpDown.rows/rowblocks)*(block/colBlocks);
+//			rowAmount = (tmpDown.rows/rowblocks)*(block/colBlocks+1)-rowBegin;
+//			Mat tmpDownBlock(tmpDown, cv::Rect(colBegin, rowBegin, colAmount, rowAmount));
+//
+//			Mat tmpBlock;
+//			tmpDownBlock.copyTo(tmpBlock);
+//
+//			pyrDown(bgrDownBlock,tmpBlock);
+//			tmpBlock.copyTo(tmpDownBlock);
+//		}
+//		bgr_down = tmpDown;
+//	}
 #if TIMING
 	__android_log_print(ANDROID_LOG_DEBUG,APPNAME,"Pyrdown time: %f\n",((float)(getRealTime() - start))*1000.0);
 #endif

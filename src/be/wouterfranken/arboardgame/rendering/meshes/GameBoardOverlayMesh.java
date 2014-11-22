@@ -19,19 +19,21 @@ public class GameBoardOverlayMesh extends MeshObject
     private int verticesNumber = 0;
     
     
-    public GameBoardOverlayMesh(float[] targetSize)
+    public GameBoardOverlayMesh(float[] targetSize, RenderOptions ro)
     {
+    	super(ro);
         setVerts(targetSize);
         setDebugMesh(true);
+        
     }
     
     
     private void setVerts(float[] targetSize)
     {
-    	float[] vertices = new float[]{-targetSize[0]/2,targetSize[1]/2,0,
-					 targetSize[0]/2,targetSize[1]/2,0,
-					 -targetSize[0]/2,-targetSize[1]/2,0,
-					targetSize[0]/2,-targetSize[1]/2,0};
+    	float[] vertices = new float[]{-targetSize[0]/2,-targetSize[1]/2,0,
+    			targetSize[0]/2,-targetSize[1]/2,0,
+    			-targetSize[0]/2,targetSize[1]/2,0,
+					 targetSize[0]/2,targetSize[1]/2,0};
     	
     	//DebugUtilities.logGLMatrix("Vertices", vertices, 4, 3);
     	
