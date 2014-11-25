@@ -7,7 +7,7 @@ public class AppConfig {
 	public final static boolean FORCE_TARGET_DESC_RELOAD = true;
 	public final static int AMOUNT_PREVIEW_BUFFERS = 5;
 	public static boolean TOUCH_EVENT = false;
-	public static final boolean LEGO_TRACKING = true;
+	public static final boolean LEGO_TRACKING = false;
 	public static final boolean CAMERA_POSE_ESTIMATION = true;
 	
 	public final static boolean DEBUG_LOGGING = false;

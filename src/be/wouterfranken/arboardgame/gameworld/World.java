@@ -5,15 +5,15 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.opencv.core.Point;
-
 import android.util.Log;
+import be.wouterfranken.arboardgame.utilities.MathUtilities;
 
 public class World {
 	private static final String TAG = World.class.getSimpleName();
 	
 	private List<Brick> bricks = new ArrayList<Brick>();
 	private Map<WorldCoordinate,WorldNode> theWorld = new HashMap<WorldCoordinate,WorldNode>();
+	private boolean worldGenerated = false;
 	
 	public World() {
 		// Generate the world, fully linked.
@@ -26,13 +26,20 @@ public class World {
 				if(theWorld.get(left) != null) {
 					theWorld.get(left).setRight(current);
 					newNode.setLeft(left);
-				} else if(theWorld.get(bottom) != null) {
+				} 
+				if(theWorld.get(bottom) != null) {
 					theWorld.get(bottom).setTop(current);
 					newNode.setBottom(bottom);
 				}
 				theWorld.put(current, newNode);
 			}
 		}
+		Log.d(TAG, "World is generated!");
+		worldGenerated = true;
+	}
+	
+	public boolean isWorldGenerated() {
+		return worldGenerated;
 	}
 	
 	public void addBrick(Brick brick) {

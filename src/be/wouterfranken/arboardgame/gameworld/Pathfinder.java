@@ -1,6 +1,8 @@
 package be.wouterfranken.arboardgame.gameworld;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
@@ -9,63 +11,77 @@ import java.util.Map;
 
 import android.util.Log;
 import android.util.Pair;
+import be.wouterfranken.arboardgame.app.AppConfig;
 
 public class Pathfinder {
 	private static final String TAG = Pathfinder.class.getSimpleName();
 	
-	public static List<WorldCoordinate> findPath(WorldCoordinate start, WorldCoordinate target, World w) {
-		Map<WorldCoordinate,Pair<WorldCoordinate,Integer>> queue = new LinkedHashMap<WorldCoordinate,Pair<WorldCoordinate,Integer>>();
+	// TODO: adapt to A*
+	public static List<WorldCoordinate> findPath(final WorldCoordinate start, WorldCoordinate target, World w) {
+		long startTime = System.nanoTime();
 		
-		queue.put(target,new Pair<WorldCoordinate, Integer>(null, 0));
-		WorldCoordinate latestAdded = null;
-		Iterator<Map.Entry<WorldCoordinate,Pair<WorldCoordinate,Integer>>> i = queue.entrySet().iterator();
-		while (i.hasNext()) { // TODO: Fix this loop: iterator ends after one element, however during the loop elements are succesfully added to the list!
-			Map.Entry<WorldCoordinate,Pair<WorldCoordinate,Integer>> entry = i.next();
+		Map<WorldCoordinate,Pair<WorldCoordinate,Integer>> map = new LinkedHashMap<WorldCoordinate,Pair<WorldCoordinate,Integer>>();
+		List<WorldCoordinate> queue = new ArrayList<WorldCoordinate>();
+		
+		map.put(target,new Pair<WorldCoordinate, Integer>(null, 0));
+		queue.add(target);
+		while(true) { 
+			WorldCoordinate current = queue.get(0);
 			Map<WorldCoordinate,Pair<WorldCoordinate,Integer>> neighbours = new HashMap<WorldCoordinate,Pair<WorldCoordinate,Integer>>();
-			WorldCoordinate left = w.getNode(entry.getKey()).getLeft();
-			WorldCoordinate right = w.getNode(entry.getKey()).getRight();
-			WorldCoordinate top = w.getNode(entry.getKey()).getTop();
-			WorldCoordinate bottom = w.getNode(entry.getKey()).getBottom();
+			WorldCoordinate left = w.getNode(current).getLeft();
+			WorldCoordinate right = w.getNode(current).getRight();
+			WorldCoordinate top = w.getNode(current).getTop();
+			WorldCoordinate bottom = w.getNode(current).getBottom();
 			if(left!=null){ 
-				neighbours.put(left, new Pair<WorldCoordinate, Integer>(entry.getKey(), entry.getValue().second+1));
+				neighbours.put(left, new Pair<WorldCoordinate, Integer>(current, map.get(current).second+1));
 			}
 			if(right!=null) {
-				neighbours.put(right,new Pair<WorldCoordinate, Integer>(entry.getKey(), entry.getValue().second+1));
+				neighbours.put(right,new Pair<WorldCoordinate, Integer>(current, map.get(current).second+1));
 			}
 			if(top!=null) {
-				neighbours.put(top,new Pair<WorldCoordinate, Integer>(entry.getKey(), entry.getValue().second+1));
+				neighbours.put(top,new Pair<WorldCoordinate, Integer>(current, map.get(current).second+1));
 			}
 			if(bottom!=null) {
-				neighbours.put(bottom,new Pair<WorldCoordinate, Integer>(entry.getKey(), entry.getValue().second+1));
+				neighbours.put(bottom,new Pair<WorldCoordinate, Integer>(current, map.get(current).second+1));
 			}
-			
-			
 			
 			Iterator<Map.Entry<WorldCoordinate,Pair<WorldCoordinate,Integer>>> i2 = neighbours.entrySet().iterator();
 			while (i2.hasNext()) {
 				Map.Entry<WorldCoordinate,Pair<WorldCoordinate,Integer>> wco = i2.next();
-				if(queue.containsKey(wco.getKey()) && queue.get(wco.getKey()).second >= wco.getValue().second) {
+				if(map.containsKey(wco.getKey()) && map.get(wco.getKey()).second <= wco.getValue().second) {
 					i2.remove();
 				} else {
-					queue.put(wco.getKey(), wco.getValue());
-//					Log.d(TAG, "New queue size: "+queue.size()+", new entryset size: "+queue.entrySet().size());
-					latestAdded = wco.getKey();
+					map.put(wco.getKey(), wco.getValue());
+					queue.add(wco.getKey());
 					if(wco.getKey().equals(start)) break;
 				}
 			}
-			if(latestAdded != null && latestAdded.equals(start)) {
-//				Log.d(TAG, "END: Jumping out of loop at break");
+			if(neighbours.containsKey(start)) {
 				break;
 			}
+			queue.remove(0);
+			Collections.sort(queue, new Comparator<WorldCoordinate>() {
+				@Override
+				public int compare(WorldCoordinate lhs,
+						WorldCoordinate rhs) {
+					if(lhs.distance(start) < rhs.distance(start))
+						return -1;
+					else if (lhs.distance(start) == rhs.distance(start))
+						return 0;
+					else return 1;
+				}
+			});
+			
 		}
-		
 		List<WorldCoordinate> path = new ArrayList<WorldCoordinate>();
 		WorldCoordinate current = start;
 		while(!current.equals(target)) {
 			path.add(current);
-			current = queue.get(current).first;
+			current = map.get(current).first;
 		}
 		path.add(target);
+		
+		if(AppConfig.DEBUG_TIMING) Log.d(TAG, "Lemming path found in "+(System.nanoTime()-startTime)/1000000L+"ms");
 		
 		return path;
 	}

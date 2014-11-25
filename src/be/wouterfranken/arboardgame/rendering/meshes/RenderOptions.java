@@ -4,14 +4,14 @@ import be.wouterfranken.arboardgame.utilities.Color;
 
 
 public class RenderOptions {
-	private static final String vss =
+	public static final String standardVss =
 		"attribute vec3 vPosition;\n" +
 		"uniform mat4 u_MVP;\n" +
 		"void main() {\n" +
 		"  gl_Position = u_MVP * vec4( vPosition.x, vPosition.y, vPosition.z, 1.0 );\n" +
 		"}";
 	 
-	private static final String fss =
+	public static final String standardFss =
 		"precision mediump float;\n" +
 		"uniform vec4 color;\n" +
 		"void main() {\n" +
@@ -26,8 +26,8 @@ public class RenderOptions {
 	public RenderOptions(boolean useMVP, Color color) {
 		this.useMVP = useMVP;
 		this.col = color;
-		this.vertexShader = vss;
-		this.fragmentShader = fss;
+		this.vertexShader = standardVss;
+		this.fragmentShader = standardFss;
 	}
 	
 	public RenderOptions(boolean useMVP, Color color, String vertexShader, String fragmentShader) {

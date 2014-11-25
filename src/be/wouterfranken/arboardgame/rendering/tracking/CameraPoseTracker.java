@@ -75,6 +75,10 @@ public class CameraPoseTracker extends Tracker{
 		task.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, grayImg);
 	}
 	
+	public boolean cameraPoseFound() {
+		return !mv.empty();
+	}
+	
 	public Point[] getPoints() {
 		return points.toArray();
 	}

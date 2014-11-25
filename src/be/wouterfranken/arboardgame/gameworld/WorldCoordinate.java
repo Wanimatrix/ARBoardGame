@@ -1,5 +1,7 @@
 package be.wouterfranken.arboardgame.gameworld;
 
+import be.wouterfranken.arboardgame.utilities.MathUtilities;
+
 public class WorldCoordinate {
 	
 	public final float x;
@@ -8,6 +10,10 @@ public class WorldCoordinate {
 	public WorldCoordinate(float x, float y) {
 		this.x = Math.round((x) * 10) / 10.0f;
 		this.y = Math.round((y) * 10) / 10.0f;
+	}
+	
+	public float distance(WorldCoordinate other) {
+		return MathUtilities.distance(x, y, other.x, other.y);
 	}
 	
 	@Override
