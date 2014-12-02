@@ -23,7 +23,7 @@ public class CameraViewRenderer implements StereoRenderer{
 	
 	public CameraViewRenderer(CameraView view) {
 		this.view = view;
-		arRenderer = new ArRenderer(this.view.getContext(),new CameraPoseTracker(this.view.getContext()));
+		arRenderer = new ArRenderer(new CameraPoseTracker(this.view.getContext()));
 		finalRenderer = new FinalRenderer(view);
 	}
 	

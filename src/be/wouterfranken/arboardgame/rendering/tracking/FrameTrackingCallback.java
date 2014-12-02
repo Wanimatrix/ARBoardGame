@@ -3,6 +3,7 @@ package be.wouterfranken.arboardgame.rendering.tracking;
 import java.util.ArrayList;
 
 import be.wouterfranken.arboardgame.app.AppConfig;
+import be.wouterfranken.arboardgame.gameworld.LemmingsGenerator;
 import android.hardware.Camera;
 import android.util.Log;
 
@@ -14,7 +15,8 @@ public class FrameTrackingCallback {
 	
 	public static void registerTracker(Class<? extends Tracker> c) {
 		if((c != CameraPoseTracker.class || AppConfig.CAMERA_POSE_ESTIMATION) 
-				&& (c != LegoBrickTracker.class || AppConfig.LEGO_TRACKING)) registeredTrackers.add(c);
+				&& (c != LegoBrickTracker.class || AppConfig.LEGO_TRACKING)
+				&& (c != LemmingsGenerator.class || AppConfig.LEMMING_RENDERING)) registeredTrackers.add(c);
 	}
 	
 	private ArrayList<Class<? extends Tracker>> doneTrackers = new ArrayList<Class<? extends Tracker>>();
@@ -22,6 +24,7 @@ public class FrameTrackingCallback {
 	private byte[] frameData;
 	private long timerStart;
 	
+	@SuppressWarnings("unchecked")
 	public FrameTrackingCallback(byte[] frameData, Camera camera, long timerStart) {
 		doneTrackers = (ArrayList<Class<? extends Tracker>>) registeredTrackers.clone();
 		this.frameData = frameData;

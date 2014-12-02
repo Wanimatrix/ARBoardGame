@@ -3,18 +3,21 @@
 	<storageModule moduleId="org.eclipse.cdt.core.settings">
 		<cconfiguration id="com.android.toolchain.gcc.331704429">
 			<storageModule buildSystemId="org.eclipse.cdt.managedbuilder.core.configurationDataProvider" id="com.android.toolchain.gcc.331704429" moduleId="org.eclipse.cdt.core.settings" name="Default">
+				<macros>
+					<stringMacro name="__GXX_EXPERIMENTAL_CXX0X__" type="VALUE_TEXT" value="1"/>
+				</macros>
 				<externalSettings>
 					<externalSetting/>
 				</externalSettings>
 				<extensions>
 					<extension id="org.eclipse.cdt.core.ELF" point="org.eclipse.cdt.core.BinaryParser"/>
+					<extension id="org.eclipse.cdt.core.GCCErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
 					<extension id="org.eclipse.cdt.core.GASErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
 					<extension id="org.eclipse.cdt.core.GmakeErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
 					<extension id="org.eclipse.cdt.core.GLDErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
 					<extension id="org.eclipse.cdt.core.MakeErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
 					<extension id="org.eclipse.cdt.core.VCErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
 					<extension id="org.eclipse.cdt.core.CWDLocator" point="org.eclipse.cdt.core.ErrorParser"/>
-					<extension id="org.eclipse.cdt.core.GCCErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
 					<extension id="org.eclipse.cdt.autotools.core.ErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
 					<extension id="org.eclipse.cdt.errorparsers.xlc.XlcErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
 				</extensions>
@@ -22,28 +25,11 @@
 			<storageModule moduleId="cdtBuildSystem" version="4.0.0">
 				<configuration artifactName="${ProjName}" buildProperties="" description="" id="com.android.toolchain.gcc.331704429" name="Default" parent="org.eclipse.cdt.build.core.emptycfg">
 					<folderInfo id="com.android.toolchain.gcc.331704429.587661665" name="/" resourcePath="">
-						<toolChain id="com.android.toolchain.gcc.1454264867" name="Android GCC" superClass="com.android.toolchain.gcc">
-							<targetPlatform binaryParser="org.eclipse.cdt.core.ELF" id="com.android.targetPlatform.1556029858" isAbstract="false" superClass="com.android.targetPlatform"/>
-							<builder arguments="NDK_DEBUG=1" command="ndk-build" id="com.android.builder.1493514152" keepEnvironmentInBuildfile="false" managedBuildOn="false" name="Android Builder" superClass="com.android.builder">
-								<outputEntries>
-									<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="outputPath" name="obj"/>
-									<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="outputPath" name="libs"/>
-								</outputEntries>
-							</builder>
-							<tool id="com.android.gcc.compiler.1432479742" name="Android GCC Compiler" superClass="com.android.gcc.compiler">
-								<option id="com.android.gcc.option.includePath.22836981" superClass="com.android.gcc.option.includePath" valueType="includePath">
-									<listOptionValue builtIn="false" value="/Volumes/MacintoshHD/Users/wouterfranken/Development/android-ndk-r10/sources/cxx-stl/stlport/stlport"/>
-									<listOptionValue builtIn="false" value="/Volumes/MacintoshHD/Users/wouterfranken/Development/android-ndk-r10/toolchains/arm-linux-androideabi-4.6/prebuilt/darwin-x86_64/include"/>
-									<listOptionValue builtIn="false" value="/Volumes/MacintoshHD/Users/wouterfranken/Development/arucoBuild/jni"/>
-									<listOptionValue builtIn="false" value="/Volumes/MacintoshHD/Users/wouterfranken/Development/OpenCV-2.4.9-android-sdk/sdk/native/jni/include"/>
-									<listOptionValue builtIn="false" value="../jni"/>
-									<listOptionValue builtIn="false" value="/Volumes/MacintoshHD/Users/wouterfranken/Development/android-ndk-r10/toolchains/arm-linux-androideabi-4.6/prebuilt/darwin-x86_64/lib/gcc/arm-linux-androideabi/4.6/include"/>
-									<listOptionValue builtIn="false" value="/Volumes/MacintoshHD/Users/wouterfranken/Development/android-ndk-r10/toolchains/arm-linux-androideabi-4.6/prebuilt/darwin-x86_64/lib/gcc/arm-linux-androideabi/4.6/include-fixed"/>
-									<listOptionValue builtIn="false" value="/Volumes/MacintoshHD/Users/wouterfranken/Development/android-ndk-r10/platforms/android-18/arch-arm/usr/include"/>
-									<listOptionValue builtIn="false" value="/Volumes/MacintoshHD/Users/wouterfranken/Development/android-ndk-r10/sources/cxx-stl/system/include"/>
-									<listOptionValue builtIn="false" value="/Volumes/MacintoshHD/Users/wouterfranken/Development/tbb43_20140724oss/include"/>
-								</option>
-								<inputType id="com.android.gcc.inputType.1310435194" superClass="com.android.gcc.inputType"/>
+						<toolChain id="com.android.toolchain.gcc.1952563788" name="Android GCC" superClass="com.android.toolchain.gcc" unusedChildren="com.android.gcc.compiler">
+							<targetPlatform binaryParser="org.eclipse.cdt.core.ELF" id="com.android.targetPlatform.1800059952" isAbstract="false" superClass="com.android.targetPlatform"/>
+							<builder id="com.android.builder.1699568498" keepEnvironmentInBuildfile="false" managedBuildOn="false" name="Android Builder" superClass="com.android.builder"/>
+							<tool id="com.android.gcc.compiler.824416530" name="Android GCC Compiler" superClass="com.android.gcc.compiler">
+								<inputType id="com.android.gcc.inputType.1151337144" superClass="com.android.gcc.inputType"/>
 							</tool>
 						</toolChain>
 					</folderInfo>
@@ -59,15 +45,36 @@
 		<project id="ARBoardGame.null.1654277122" name="ARBoardGame"/>
 	</storageModule>
 	<storageModule moduleId="org.eclipse.cdt.core.LanguageSettingsProviders"/>
+	<storageModule moduleId="refreshScope" versionNumber="2">
+		<configuration configurationName="Default">
+			<resource resourceType="PROJECT" workspacePath="/ARBoardGame"/>
+		</configuration>
+	</storageModule>
 	<storageModule moduleId="scannerConfiguration">
 		<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
 		<scannerConfigBuildInfo instanceId="com.android.toolchain.gcc.331704429;com.android.toolchain.gcc.331704429.587661665;com.android.gcc.compiler.1432479742;com.android.gcc.inputType.1310435194">
 			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId="com.android.AndroidPerProjectProfile"/>
 		</scannerConfigBuildInfo>
-	</storageModule>
-	<storageModule moduleId="refreshScope" versionNumber="2">
-		<configuration configurationName="Default">
-			<resource resourceType="PROJECT" workspacePath="/ARBoardGame"/>
-		</configuration>
+		<scannerConfigBuildInfo instanceId="com.android.toolchain.gcc.331704429;com.android.toolchain.gcc.331704429.587661665;cdt.managedbuild.tool.gnu.c.compiler.base.735630330;cdt.managedbuild.tool.gnu.c.compiler.input.1901784271">
+			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId="org.eclipse.cdt.managedbuilder.core.GCCManagedMakePerProjectProfileC"/>
+		</scannerConfigBuildInfo>
+		<scannerConfigBuildInfo instanceId="com.android.toolchain.gcc.331704429;com.android.toolchain.gcc.331704429.587661665;cdt.managedbuild.tool.gnu.cpp.compiler.base.1093618397;cdt.managedbuild.tool.gnu.cpp.compiler.input.1206517070">
+			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
+		</scannerConfigBuildInfo>
+		<scannerConfigBuildInfo instanceId="com.android.toolchain.gcc.331704429;com.android.toolchain.gcc.331704429.587661665;cdt.managedbuild.tool.gnu.cpp.compiler.base.110394537;cdt.managedbuild.tool.gnu.cpp.compiler.input.1556770205">
+			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
+		</scannerConfigBuildInfo>
+		<scannerConfigBuildInfo instanceId="com.android.toolchain.gcc.331704429;com.android.toolchain.gcc.331704429.587661665;cdt.managedbuild.tool.gnu.c.compiler.base.977262209;cdt.managedbuild.tool.gnu.c.compiler.input.1859519188">
+			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
+		</scannerConfigBuildInfo>
+		<scannerConfigBuildInfo instanceId="com.android.toolchain.gcc.331704429;com.android.toolchain.gcc.331704429.587661665;com.android.gcc.compiler.865970701;com.android.gcc.inputType.1198444597">
+			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId="com.android.AndroidPerProjectProfile"/>
+		</scannerConfigBuildInfo>
+		<scannerConfigBuildInfo instanceId="com.android.toolchain.gcc.331704429;com.android.toolchain.gcc.331704429.587661665;cdt.managedbuild.tool.gnu.c.compiler.base.1864931363;cdt.managedbuild.tool.gnu.c.compiler.input.1015696325">
+			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
+		</scannerConfigBuildInfo>
+		<scannerConfigBuildInfo instanceId="com.android.toolchain.gcc.331704429;com.android.toolchain.gcc.331704429.587661665;com.android.gcc.compiler.153217040;com.android.gcc.inputType.1032686480">
+			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId="com.android.AndroidPerProjectProfile"/>
+		</scannerConfigBuildInfo>
 	</storageModule>
 </cproject>

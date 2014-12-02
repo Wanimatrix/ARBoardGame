@@ -26,6 +26,7 @@
 // App includes
 #include "utilities.hpp"
 #include "app.hpp"
+
 extern "C" {
 	#include "getRealTime.c"
 }
@@ -63,16 +64,6 @@ extern "C"
 
 	JNIEXPORT void JNICALL Java_be_wouterfranken_arboardgame_rendering_tracking_LegoBrickTracker_findLegoBrick
 		  (JNIEnv *env, jobject object, jlong yuvFrameImagePtr, jlong contourPtr);
-
-	JNIEXPORT void JNICALL Java_be_wouterfranken_arboardgame_utilities_TrackingUtilities_compileOCLKernels
-		  (JNIEnv *env, jclass clazz);
-
-	JNIEXPORT void JNICALL Java_be_wouterfranken_arboardgame_utilities_TrackingUtilities_nv21ToRGBA(
-			JNIEnv *env, jclass clazz,
-	        jbyteArray inData,
-	        jint width,
-	        jint height,
-			jlong outImgPtr);
 }
 
 JNIEXPORT void JNICALL Java_be_wouterfranken_arboardgame_rendering_tracking_CameraPoseTracker_loadCameraCalibration(
@@ -337,7 +328,7 @@ JNIEXPORT void JNICALL Java_be_wouterfranken_arboardgame_rendering_tracking_Lego
 #if TIMING
 	start = getRealTime();
 #endif
-	int pyrlvl = 2;
+	int pyrlvl = 0;
 
 	bgr_down = bgr;
 	for(int i = 0;i<pyrlvl;i++) {
@@ -518,3 +509,7 @@ JNIEXPORT void JNICALL Java_be_wouterfranken_arboardgame_rendering_tracking_Lego
 	}
 
 }
+
+
+
+

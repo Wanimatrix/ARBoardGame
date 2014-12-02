@@ -1,5 +1,6 @@
 package be.wouterfranken.arboardgame.gameworld;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import android.util.Log;
@@ -18,18 +19,16 @@ public class Lemming {
 	
 	private float locationX;
 	private float locationY;
-	private int size;
+	private float size;
 	private float height;
 	private float speed; // cm/s
-//	private Color color;
 	
-	public Lemming(int size, float height, float locationX, float locationY, float speed, List<WorldCoordinate> path, Color color) {
+	public Lemming(float size, float height, float locationX, float locationY, float speed, List<WorldCoordinate> path, Color color) {
 		mesh = new CubeMesh(size, locationX, locationY, height, new RenderOptions(true, color));
 		this.locationX = locationX;
 		this.locationY = locationY;
 		this.size = size;
 		this.height = height;
-//		this.color = color;
 		this.speed = speed;
 		this.path = path;
 	}
@@ -46,24 +45,48 @@ public class Lemming {
 		return mesh;
 	}
 	
-	public void updateLocation() {
+	public void updateLocation(WorldCoordinate end, World w) {
 		float fps = AppConfig.FPS_RANGE[1]/1000.0f; // max frame/sec
 		float todoDistance = speed/fps;
-//		int i = 1;
-		Log.d(TAG, "Distance todo: "+todoDistance);
 		
 		float newLocationX = locationX;
 		float newLocationY = locationY;
 		float distance;
+		
+		WorldCoordinate to = path.get(1);
+		// When we will pass a node, the path will be updated first.
+		if(MathUtilities.distance(newLocationX,newLocationY,to.x,to.y) < todoDistance) {
+			if(AppConfig.DEBUG_LOGGING) Log.d(TAG, "Finding path from "+path.get(0).toString()+", to "+end.toString());
+			List<WorldCoordinate> tmpPath = Pathfinder.findPath(to, end, w);
+			if(tmpPath != null) {
+				List<WorldCoordinate> newPath = new ArrayList<WorldCoordinate>(tmpPath.size()+1);
+				newPath.add(0, path.get(0));
+				newPath.addAll(tmpPath);
+				path = newPath;
+			}
+		}
+		
+		if(AppConfig.DEBUG_LOGGING){
+			Log.d(TAG, "THE Lemming's PATH: ");
+			for (int i = 0; i < path.size(); i++) {
+				Log.d(TAG, "PATH NODE: "+path.get(i).toString());
+			}
+		}
+		
+		if(path.get(1).equals(path.get(0))) {
+			throw new IllegalStateException("Path is going from/to the same node!");
+		}
+		
 		while(todoDistance > 0) {
 			if(path.size() == 1) {
 				newLocationX = path.get(0).x;
 				newLocationY = path.get(0).y;
 				break;
 			}
-			WorldCoordinate to = path.get(1);
+			to = path.get(1);
+			
 			float distToEnd = MathUtilities.distance(newLocationX,newLocationY,to.x,to.y);
-			if(distToEnd < todoDistance) {
+			if(distToEnd <= todoDistance || Math.abs(distToEnd-todoDistance) < 0.0001f) {
 				distance = distToEnd;
 				todoDistance -= distToEnd;
 				path.remove(0);
@@ -72,23 +95,18 @@ public class Lemming {
 				todoDistance = 0;
 			}
 			float slope = (to.y-newLocationY)/(to.x-newLocationX);
-			Log.d(TAG, "Slope: "+slope);
 			if(Float.isInfinite(slope)) {
-				newLocationY += distance;
+				newLocationY += Math.signum(to.y-newLocationY)*distance;
 			} else if(Math.abs(slope) == 0){
-				newLocationX += distance;
-			} else {
-				newLocationX = (float) (newLocationX+Math.signum(to.x-newLocationX)*(distance/Math.sqrt(1+slope*slope)));
-				newLocationY = (float) (newLocationY+Math.signum(to.y-newLocationY)*(distance/Math.sqrt(1+slope*slope))*slope);
+				newLocationX += Math.signum(to.x-newLocationX)*distance;
+			} 
+			else {
+				throw new IllegalStateException("A Lemming cannot go diagonal! Slope was "+slope);
 			}
 		}
-		Log.d(TAG, "Lemming location updated: from ("+locationX+","+locationY+"), to ("+newLocationX+","+newLocationY+")");
+		if(AppConfig.DEBUG_LOGGING) Log.d(TAG, "Lemming location updated: from ("+locationX+","+locationY+"), to ("+newLocationX+","+newLocationY+")");
 		locationX = newLocationX;
 		locationY = newLocationY;
 		mesh = new CubeMesh(size, locationX, locationY, height, mesh.getRenderOptions());
 	}
-	
-//	public void setPath(List<WorldCoordinate> path) {
-//		this.path = new LemmingPath(path);	
-//	}
 }

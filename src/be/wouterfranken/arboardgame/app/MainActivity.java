@@ -1,25 +1,19 @@
 package be.wouterfranken.arboardgame.app;
 
-import org.opencv.android.BaseLoaderCallback;
-import org.opencv.android.LoaderCallbackInterface;
 import org.opencv.android.OpenCVLoader;
 
-import android.app.Activity;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.SharedPreferences.OnSharedPreferenceChangeListener;
 import android.content.res.Configuration;
 import android.os.Bundle;
-import android.util.Log;
 import android.view.Menu;
-import android.view.MotionEvent;
 import be.wouterfranken.arboardgame.R;
 
 import com.google.vrtoolkit.cardboard.CardboardActivity;
 
 public class MainActivity extends CardboardActivity implements OnSharedPreferenceChangeListener {
 	
-//	private SensorHandler sensorHandler;
 	private static final String TAG = MainActivity.class.getSimpleName();
 	
     static
@@ -27,8 +21,6 @@ public class MainActivity extends CardboardActivity implements OnSharedPreferenc
 		if(OpenCVLoader.initDebug()) {
 			try {
 				System.loadLibrary("gnustl_shared");
-				//System.loadLibrary("opencv_java");
-	//			System.loadLibrary("nonfree");
 				System.loadLibrary("aruco_opencv");
 				System.loadLibrary("jni_interface");
 			} catch (UnsatisfiedLinkError e) {
@@ -51,11 +43,6 @@ public class MainActivity extends CardboardActivity implements OnSharedPreferenc
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_main);
-		
-		
-		
-//		sensorHandler = new SensorHandler(this);
-//		DebugController.startDebugger(this);
 	}
 	
 	@Override
@@ -73,9 +60,6 @@ public class MainActivity extends CardboardActivity implements OnSharedPreferenc
 	@Override
 	protected void onResume() {
 		super.onResume();
-		
-//		OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_2_4_9, this, mLoaderCallback);
-//		sensorHandler.resume();
 	}
 	
 	/**
@@ -87,8 +71,6 @@ public class MainActivity extends CardboardActivity implements OnSharedPreferenc
 	@Override
 	protected void onPause() {
 		super.onPause();
-		
-//		sensorHandler.pause();
 	}
 	
 	@Override
@@ -99,10 +81,6 @@ public class MainActivity extends CardboardActivity implements OnSharedPreferenc
 	
 	@Override
 	public boolean onCreateOptionsMenu(Menu menu) {
-		Intent prefIntent = new Intent(this, SettingsActivity.class);
-		prefIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-		startActivity(prefIntent);
-		
 		return super.onCreateOptionsMenu(menu);
 	}
 
@@ -110,21 +88,4 @@ public class MainActivity extends CardboardActivity implements OnSharedPreferenc
 	public void onSharedPreferenceChanged(SharedPreferences sharedPreferences,
 			String key) {	
 	}
-	
-//	private BaseLoaderCallback mLoaderCallback = new BaseLoaderCallback(this) {
-//        @Override
-//        public void onManagerConnected(int status) {
-//            switch (status) {
-//                case LoaderCallbackInterface.SUCCESS:
-//                {
-//                    Log.i("Main", "OpenCV loaded successfully");
-////                    NonfreeJNILib.setOpenCvLoaded(true);
-//                } break;
-//                default:
-//                {
-//                    super.onManagerConnected(status);
-//                } break;
-//            }
-//        }
-//    };
 }

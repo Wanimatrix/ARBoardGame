@@ -1,21 +1,22 @@
 package be.wouterfranken.arboardgame.rendering.tracking;
 
-import org.opencv.core.CvType;
 import org.opencv.core.Mat;
-import org.opencv.core.MatOfPoint;
-import org.opencv.core.Point;
-import org.opencv.core.Range;
-import org.opencv.core.Size;
 
 import android.os.AsyncTask;
 import android.util.Log;
 import be.wouterfranken.arboardgame.app.AppConfig;
+import be.wouterfranken.arboardgame.gameworld.LegoBrick;
+import be.wouterfranken.arboardgame.gameworld.WorldConfig;
 import be.wouterfranken.arboardgame.utilities.DebugUtilities;
+import be.wouterfranken.arboardgame.utilities.MathUtilities;
 
 public class LegoBrickTracker extends Tracker{
 	private static final String TAG = LegoBrickTracker.class.getSimpleName();
 	
 	private Mat contour = new Mat();
+	private Mat contourExtern = new Mat();
+	private Object lock = new Object();
+	private Object lockExtern = new Object();
 	
 	public void findLegoBrick(Mat yuvFrameImage, FrameTrackingCallback trackingCallback) {
 		if(AppConfig.DEBUG_LOGGING) Log.d(TAG,"Legobrick tracking ...");
@@ -35,10 +36,11 @@ public class LegoBrickTracker extends Tracker{
 		task.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, yuvFrameImage);
 	}
 	
-	// TODO: Let this method call getOcvContour
 	public float[][] getGLContour() {
 		Mat tmp = new Mat();
-		contour.copyTo(tmp);
+		synchronized (lockExtern) {
+			contourExtern.copyTo(tmp);
+		}
 		if(tmp.empty()) return null;
 		float[][] result = new float[tmp.rows()][];
 		for (int j = 0; j < tmp.rows(); j++) {
@@ -47,18 +49,18 @@ public class LegoBrickTracker extends Tracker{
 			for (int i = 0; i < cornerAmount*3; i+=3) {
 				if(AppConfig.DEBUG_LOGGING) Log.d(TAG, "Point "+i/3+": ("+tmp.get(j,2*i/3+1)[0]+","+tmp.get(j,2*i/3+2)[0]+")");
 				result[j][i] = (float) ((tmp.get(j,2*i/3+1)[0]/AppConfig.PREVIEW_RESOLUTION[0])*2-1);
-				result[j][i+1] = (float) ((1-tmp.get(j,2*i/3+2)[0]/AppConfig.PREVIEW_RESOLUTION[1])*2-1);
+				result[j][i+1] = (float) ((tmp.get(j,2*i/3+2)[0]/AppConfig.PREVIEW_RESOLUTION[1])*2-1);
 				result[j][i+2] = 0;
 			}
-			DebugUtilities.logGLMatrix("GlContour", result[j], result[j].length /3, 3);
 		}
-//		DebugUtilities.logGLMatrix("GlContour", result, result.length /3, 3);
 		return result;
 	}
 	
 	public float[][] getOcvContour() {
 		Mat tmp = new Mat();
-		contour.copyTo(tmp);
+		synchronized (lockExtern) {
+			contourExtern.copyTo(tmp);
+		}
 		if(tmp.empty()) return null;
 		float[][] result = new float[tmp.rows()][];
 		for (int j = 0; j < tmp.rows(); j++) {
@@ -70,46 +72,178 @@ public class LegoBrickTracker extends Tracker{
 				result[j][i+1] = (float) (tmp.get(j,2*i/3+2)[0]);
 				result[j][i+2] = 0;
 			}
-			DebugUtilities.logGLMatrix("OcvContour", result[j], result[j].length /3, 3);
 		}
-//		DebugUtilities.logGLMatrix("GlContour", result, result.length /3, 3);
 		return result;
 	}
 	
-	public float[][] get3DCorners(float[] extrinsics) {
-		float[] homography = new float[9];
-		int i = 0;
-		for (int row = 0; row < extrinsics.length/4; row++) {
-			for (int col = 0; col < extrinsics.length/4; col++) {
-				if(row == 2) break;
-				else if(col == 3) continue;
-				else {
-					homography[i++] = extrinsics[row*4+col];
+	public LegoBrick[] getLegoBricks(CameraPoseTracker camPose) {
+	    float[][] ocvContours = getOcvContour();
+	    if(AppConfig.DEBUG_LOGGING) Log.d(TAG, "NEW CORNERS!!!");
+	    if(AppConfig.DEBUG_LOGGING) Log.d(TAG, "--------------");
+	    LegoBrick[] bricks;
+	    if(ocvContours != null) {
+	    	float[][][] cuboid = new float[ocvContours.length][8][3];
+	    	float[][] corners3D;
+		    float[][] corners3D1;
+		    float[] point3D1;
+		    float[] point3D;
+	    	bricks = new LegoBrick[ocvContours.length];
+	    	for (int k = 0; k < ocvContours.length; k++) {
+		    	corners3D = new float[ocvContours[k].length/3][4];
+		    	corners3D1 = new float[ocvContours[k].length/3][4];
+		    	
+		    	float minDistance = Float.POSITIVE_INFINITY;
+		    	int minDistanceCorner=-1;
+		    	for (int i = 0; i < ocvContours[k].length/3; i++) {
+		    		point3D = camPose.get3DPointFrom2D(ocvContours[k][i*3], ocvContours[k][i*3+1],0);
+		    		point3D1 = camPose.get3DPointFrom2D(ocvContours[k][i*3], ocvContours[k][i*3+1],1);
+		    		if(point3D == null || point3D1 == null) break;
+		    		corners3D[i][0] = point3D[0];
+		    		corners3D[i][1] = point3D[1];
+		    		corners3D[i][2] = point3D[2];
+		    		corners3D[i][3] = 1;
+		    		corners3D1[i][0] = point3D1[0];
+		    		corners3D1[i][1] = point3D1[1];
+		    		corners3D1[i][2] = point3D1[2];
+		    		corners3D1[i][3] = 1;
+		    		float[] cameraLocation = camPose.getCameraPosition();
+		    		if(AppConfig.DEBUG_LOGGING) DebugUtilities.logGLMatrix("3D Corner ("+i+")", corners3D[i], 1, 4);
+		    		if(AppConfig.DEBUG_LOGGING) DebugUtilities.logGLMatrix("3D1 Corner ("+i+")", corners3D1[i], 1, 4);
+		    		if(cameraLocation != null) {
+		    			float distance = MathUtilities.distance(corners3D[i][0], corners3D[i][1], cameraLocation[0], cameraLocation[1]);
+		    			if(distance < minDistance) {
+		    				minDistance = distance;
+		    				minDistanceCorner = i;
+		    			}
+		    			if(AppConfig.DEBUG_LOGGING) Log.d(TAG, "Corner distance: "+distance);
+		    		}
 				}
+		    	
+		    	float minAngle = 360;
+		    	float minDistanceAngle = 360;
+		    	int[] cornersMinAngle = new int[3];
+		    	for (int i = 0; i < corners3D.length; i++) {
+		    		float angle = MathUtilities.angle(corners3D[i], corners3D[(i+1)%corners3D.length], corners3D[(i+2)%corners3D.length]);
+		    		if(Math.abs(90-angle) < minDistanceAngle){
+		    			minDistanceAngle = Math.abs(90-angle);
+		    			minAngle = angle;
+		    			cornersMinAngle = new int[]{i,(i+1)%corners3D.length,(i+2)%corners3D.length};
+		    		}
+		    		if(AppConfig.DEBUG_LOGGING) Log.d(TAG, "ANGLE Angle between corners ("+i+","+(i+1)%corners3D.length+","+(i+2)%corners3D.length+"): "+angle);
+				}
+		    	
+		    	if(AppConfig.DEBUG_LOGGING) Log.d(TAG, "Minimum Distance to camera: "+minDistance);
+		    	if(AppConfig.DEBUG_LOGGING) Log.d(TAG, "Minimum Angle: "+minAngle);
+		    	if(minDistance != 0 && minAngle != 0) {
+		    		float[][] corners;
+		    		
+		    		if(cornersMinAngle[0] == minDistanceCorner || cornersMinAngle[1] == minDistanceCorner || cornersMinAngle[2] == minDistanceCorner) {
+		    			corners = corners3D;
+		    		} else {
+		    			corners = corners3D1;
+		    		}
+		    		
+		    		float[] vec1 = MathUtilities.vector(corners[cornersMinAngle[1]], corners[cornersMinAngle[0]]);
+		    		float[] vec2 = MathUtilities.vector(corners[cornersMinAngle[1]], corners[cornersMinAngle[2]]);
+		    		float[] vecZ = new float[]{0,0,1};
+		    		
+		    		float[] otherVec2a = MathUtilities.cross(vec1, vecZ);
+		    		float[] otherVec2b = MathUtilities.cross(vecZ, vec1);
+		    		float[] otherVec1a = MathUtilities.cross(vec2, vecZ);
+		    		float[] otherVec1b = MathUtilities.cross(vecZ, vec2);
+		    		float[] newVec1;
+		    		float[] newVec2;
+		    		if(MathUtilities.distance(otherVec2a[0], otherVec2a[1], vec2[0], vec2[1])
+		    				< MathUtilities.distance(otherVec2b[0], otherVec2b[1], vec2[0], vec2[1])) {
+		    			newVec2 = MathUtilities.mean(vec2, otherVec2a);
+		    		} else newVec2 = MathUtilities.mean(vec2, otherVec2b);
+		    		
+		    		if(MathUtilities.distance(otherVec1a[0], otherVec1a[1], vec1[0], vec1[1])
+		    				< MathUtilities.distance(otherVec1b[0], otherVec1b[1], vec1[0], vec1[1])) {
+		    			newVec1 = MathUtilities.mean(vec1, otherVec1a);
+		    		} else newVec1 = MathUtilities.mean(vec1, otherVec1b);
+		    		
+	    			newVec1 = MathUtilities.resize(newVec1, MathUtilities.norm(vec1));
+	    			newVec2 = MathUtilities.resize(newVec2, MathUtilities.norm(vec2));
+	    			
+		    		cuboid[k][0] = MathUtilities.vectorToPoint(newVec1, corners[cornersMinAngle[1]]);
+		    		cuboid[k][1] = corners[cornersMinAngle[1]];
+		    		cuboid[k][2] = MathUtilities.vectorToPoint(newVec2, corners[cornersMinAngle[1]]);
+		    		cuboid[k][3] = MathUtilities.vectorToPoint(newVec2, cuboid[k][0]);
+		    		
+		    		float[][] tmp = new float[4][];
+		    		int nextIdx;
+		    		int prevIdx;
+		    		float[] vec;
+		    		for (int i = 0; i < 4; i++) {
+		    			nextIdx = (i+1)%4;
+		    			prevIdx = ((((i-1) % 4) + 4) % 4);
+		    			vec = MathUtilities.vector(cuboid[k][i],cuboid[k][i%2==0 ? prevIdx : nextIdx]);
+		    			vec = MathUtilities.multiply(vec, -1);
+		    			vec = MathUtilities.resize(vec, WorldConfig.BRICK_PERIMETER);
+		    			tmp[i] = MathUtilities.vectorToPoint(vec, cuboid[k][i]);
+					}
+		    		
+		    		for (int i = 0; i < 4; i++) {
+		    			cuboid[k][i] = tmp[i];
+		    		}
+		    		
+		    		for (int i = 0; i < 4; i++) {
+		    			nextIdx = (i+1)%4;
+		    			prevIdx = ((((i-1) % 4) + 4) % 4);
+		    			vec = MathUtilities.vector(cuboid[k][i],cuboid[k][i%2==0 ? nextIdx : prevIdx]);
+		    			vec = MathUtilities.multiply(vec, -1);
+		    			vec = MathUtilities.resize(vec, WorldConfig.BRICK_PERIMETER);
+		    			tmp[i] = MathUtilities.vectorToPoint(vec, cuboid[k][i]);
+		    			
+					}
+		    		
+		    		for (int i = 0; i < 4; i++) {
+		    			cuboid[k][i] = tmp[i];
+		    		}
+		    		
+		    		
+		    		cuboid[k][4] = new float[]{cuboid[k][0][0],cuboid[k][0][1],1-cuboid[k][0][2]};
+		    		cuboid[k][5] = new float[]{cuboid[k][1][0],cuboid[k][1][1],1-cuboid[k][1][2]};
+		    		cuboid[k][6] = new float[]{cuboid[k][2][0],cuboid[k][2][1],1-cuboid[k][2][2]};
+		    		cuboid[k][7] = new float[]{cuboid[k][3][0],cuboid[k][3][1],1-cuboid[k][3][2]};
+		    		
+		    		if(AppConfig.DEBUG_LOGGING) {
+			    		for (int i = 0; i < cuboid[k].length; i++) {
+							Log.d(TAG, "RESULTING CUBOID Point "+i+": ("+cuboid[k][i][0]+","+cuboid[k][i][1]+","+cuboid[k][i][2]+")");
+						}
+		    		}
+		    		bricks[k] = new LegoBrick(cuboid[k]);
+		    	} else return new LegoBrick[0];
+	    	}
+	    	return bricks;
+	    } else return new LegoBrick[0];
+	}
+	
+	public void frameTick() {
+		synchronized (lock) {
+			synchronized (lockExtern) {
+				contour.copyTo(contourExtern);
 			}
 		}
-		DebugUtilities.logGLMatrix("Extrinsics", extrinsics, 4, 4);
-		DebugUtilities.logGLMatrix("Homography", homography, 3, 3);
-		
-		float[][] contours = getOcvContour();
-		float[][] contours3D = new float[contours.length][];
-		for (int j = 0; j < contours.length; j++) {
-			contours3D[j] = new float[contours[j].length];
-			for (int k = 0; k < contours[j].length; k+=3) {
-				float[] p = {contours[0][k],contours[0][k+1],1};
-				contours3D[j][k]   = homography[0]*p[0]+homography[3]*p[1]+homography[6]*p[2];
-				contours3D[j][k+1] = homography[1]*p[0]+homography[4]*p[1]+homography[7]*p[2];
-				contours3D[j][k+2] = homography[2]*p[0]+homography[5]*p[1]+homography[8]*p[2];
-			}
-			DebugUtilities.logGLMatrix("Contour3D ("+j+")", contours3D[j], contours3D[j].length/3, 3);
+	}
+	
+	private void setContour(Mat contour) {
+		synchronized (lock) {
+			contour.copyTo(this.contour);
 		}
-		
-		return null;
 	}
 	
 	private class FindLegoBrick extends AsyncTask<Mat, Void, Void > {
 		private FrameTrackingCallback trackingCallback;
 		private long start;
+		private Mat contour;
+		
+		public FindLegoBrick() {
+			synchronized (lock) {
+				contour = new Mat(LegoBrickTracker.this.contour.size(), LegoBrickTracker.this.contour.type());
+			}
+		}
 		
 		@Override
 		protected Void doInBackground(Mat... params) {
@@ -123,6 +257,7 @@ public class LegoBrickTracker extends Tracker{
 		@Override
 		protected void onPostExecute(Void result) {
 			super.onPostExecute(result);
+			setContour(contour);
 			this.trackingCallback.trackingDone(LegoBrickTracker.class);
 			if(AppConfig.DEBUG_TIMING) Log.d(TAG, "LegoBrick found in "+(System.nanoTime()-start)/1000000L+"ms");
 		}

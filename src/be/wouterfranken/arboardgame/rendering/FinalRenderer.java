@@ -86,8 +86,6 @@ public class FinalRenderer implements StereoRenderer {
 	public void onSurfaceCreated(EGLConfig arg0) {
 		GLES20.glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 		GLES20.glDisable(GLES20.GL_DEPTH_TEST);
-		// Backface Culling
-	//	GLES20.glDisable(GLES20.GL_CULL_FACE);
 		
 		if(AppConfig.DEBUG_LOGGING) Log.d(TAG, "Starting renderhandlers init...");
 		

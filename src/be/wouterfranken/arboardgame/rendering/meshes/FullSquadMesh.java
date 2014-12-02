@@ -12,7 +12,8 @@ public class FullSquadMesh extends MeshObject {
     
     public FullSquadMesh()
     {
-    	super(null); // This class is only used to render the camera correctly, 'RenderOptions' for this are HARD-CODED in the Render classes.
+    	super(null); // This class is only used to render the camera correctly, 
+    				// 		'RenderOptions' for this are HARD-CODED in the Render classes.
         setVerts();
         setTexCoords();
     }

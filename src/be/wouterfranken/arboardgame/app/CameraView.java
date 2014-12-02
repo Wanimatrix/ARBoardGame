@@ -1,7 +1,6 @@
 package be.wouterfranken.arboardgame.app;
 
 import android.content.Context;
-import android.opengl.GLSurfaceView;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.view.MotionEvent;

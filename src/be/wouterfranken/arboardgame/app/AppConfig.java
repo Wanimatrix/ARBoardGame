@@ -1,16 +1,14 @@
 package be.wouterfranken.arboardgame.app;
 
-
-
-
 public class AppConfig {
 	public final static boolean FORCE_TARGET_DESC_RELOAD = true;
 	public final static int AMOUNT_PREVIEW_BUFFERS = 5;
 	public static boolean TOUCH_EVENT = false;
-	public static final boolean LEGO_TRACKING = false;
+	public static final boolean LEGO_TRACKING = true;
 	public static final boolean CAMERA_POSE_ESTIMATION = true;
+	public static final boolean LEMMING_RENDERING = true;
 	
-	public final static boolean DEBUG_LOGGING = false;
+	public final static boolean DEBUG_LOGGING = true;
 	public final static boolean DEBUG_TIMING = true;
 	
 	/**
@@ -40,5 +38,5 @@ public class AppConfig {
 	
 	public final static int[] FPS_RANGE = new int[]{1000,15000};
 	
-	public final static float[] BOARD_SIZE = new float[]{21f,29.6f};
+	public final static float[] BOARD_SIZE = new float[]{21f,29f}; // A4: 21,29.7
 }
