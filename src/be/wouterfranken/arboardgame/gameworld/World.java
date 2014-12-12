@@ -2,17 +2,22 @@ package be.wouterfranken.arboardgame.gameworld;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
 import android.util.Log;
 import be.wouterfranken.arboardgame.app.AppConfig;
+import be.wouterfranken.arboardgame.rendering.meshes.MeshObject;
 import be.wouterfranken.arboardgame.utilities.MathUtilities;
 
 public class World {
 	private static final String TAG = World.class.getSimpleName();
 	
 	private List<LegoBrick> bricks = new ArrayList<LegoBrick>();
+	private List<Star> stars = new ArrayList<Star>();
+	private Object starLock = new Object();
+	private Object brickLock = new Object();
 	private Map<WorldCoordinate,WorldNode> theWorld = new HashMap<WorldCoordinate,WorldNode>();
 	private boolean worldGenerated = false;
 	
@@ -45,7 +50,7 @@ public class World {
 		return worldGenerated;
 	}
 	
-	public void addBrick(LegoBrick brick) {
+	private void activateBrick(LegoBrick brick) {
 		float[][] brickCorners = brick.getCuboid();
 		float[] xBounds = brick.getXBounds();
 		float[] yBounds = brick.getYBounds();
@@ -55,6 +60,8 @@ public class World {
 		// If the brick is anywhere out of borders: don't add this brick to the world.
 		if(xBnd.x < WorldConfig.BORDER.getXStart() || xBnd.y > WorldConfig.BORDER.getXEnd()
 				|| yBnd.x < WorldConfig.BORDER.getYStart() || yBnd.y > WorldConfig.BORDER.getYEnd()) return;
+		
+		brick.setActive(true);
 		
 		for(float x = xBnd.x;x<=xBnd.y;x+=WorldConfig.NODE_DISTANCE) {
 			for(float y = yBnd.x;y<=yBnd.y;y+=WorldConfig.NODE_DISTANCE) {
@@ -77,13 +84,32 @@ public class World {
 				}
 			}
 		}
-		bricks.add(brick);
 	}
 	
-	public boolean removeBrick() {
+	public void addBricks(LegoBrick[] bricksToAdd) {
+		synchronized (brickLock) {
+			Iterator<LegoBrick> i = bricks.iterator();
+			while(i.hasNext()) {
+				LegoBrick b = i.next();
+				int mergeIdx = b.mergeCheck(bricksToAdd);
+				if(b.readyToBeActive()) activateBrick(b);
+				if(b.readyToBeRemoved()) removeBrick(i);
+				else if(b.readyToBeInactive()) deactivateBrick(b);
+				if(mergeIdx != -1) bricksToAdd[mergeIdx] = null;
+			}
+			
+			for (LegoBrick b : bricksToAdd) {
+				if(b != null) bricks.add(b);
+			}
+		}
+	}
+	
+	private boolean deactivateBrick(LegoBrick brick) {
 		WorldCoordinate c;
-		if(bricks.size() == 0) return false;
-		LegoBrick brick = bricks.remove(0);
+		synchronized (brickLock) {
+			if(!bricks.contains(brick)) return false;
+		}
+		brick.deactivate();
 		while((c = brick.removeCoordinate()) != null) {
 			WorldNode n = theWorld.get(c);
 			WorldNode left = theWorld.get(c.getLeft());
@@ -108,6 +134,72 @@ public class World {
 			}
 		}
 		return true;
+	}
+	
+	private boolean removeBrick(Iterator<LegoBrick> i) {
+		synchronized (brickLock) {
+			i.remove();
+		}
+		return true;
+	}
+	
+	public int getBrickAmount() {
+		synchronized (brickLock) {
+			return bricks.size();
+		}
+	}
+	
+	public List<LegoBrick> getActiveBricks() {
+		List<LegoBrick> result;
+		synchronized (brickLock) {
+			result = new ArrayList<LegoBrick>();
+			for (int i = 0; i < bricks.size(); i++) {
+				if(bricks.get(i).isActive()) result.add(bricks.get(i));
+			}
+		}
+		return result;
+	}
+	
+//	public int getActiveBrickAmount() {
+//		
+//		int count = 0;
+//		for (int i = 0; i < bricks.size(); i++) {
+//			if(bricks.get(i).readyToBeActive()) count++;
+//		}
+//		return count;
+//	}
+	
+	public void addStars() {
+		synchronized (starLock) {
+			while(stars.size() < WorldConfig.STAR_AMOUNT_PER_LEMMING)
+				this.stars.add(new Star());
+		}
+	}
+	
+	public void removeStar(Star s) {
+		synchronized (starLock) {
+			this.stars.remove(s);
+		}
+	}
+	
+	public List<Star> getStars() {
+		List<Star> stars = new ArrayList<Star>();
+		synchronized (starLock) {
+			for (Star s : this.stars) {
+				stars.add(s);
+			}
+		}
+		return stars;
+	}
+	
+	public List<MeshObject> getStarMeshes() {
+		List<MeshObject> starMeshes = new ArrayList<MeshObject>();
+		synchronized (starLock) {
+			for (Star s : stars) {
+				starMeshes.add(s.getMesh());
+			}
+		}
+		return starMeshes;
 	}
 	
 	public WorldNode getNode(WorldCoordinate co) {

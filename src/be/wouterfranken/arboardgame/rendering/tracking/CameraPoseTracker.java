@@ -1,22 +1,35 @@
 package be.wouterfranken.arboardgame.rendering.tracking;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
+import org.apache.commons.collections.map.HashedMap;
 import org.opencv.core.Core;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 import org.opencv.core.MatOfDouble;
 import org.opencv.core.MatOfPoint;
+import org.opencv.core.MatOfPoint3;
 import org.opencv.core.Point;
+import org.opencv.core.Point3;
 import org.opencv.core.Scalar;
+import org.opencv.highgui.Highgui;
 import org.opencv.imgproc.Imgproc;
 
 import android.content.Context;
 import android.os.AsyncTask;
+import android.os.Process;
 import android.util.Log;
 import be.wouterfranken.arboardgame.R;
 import be.wouterfranken.arboardgame.app.AppConfig;
+import be.wouterfranken.arboardgame.gameworld.WorldConfig;
+import be.wouterfranken.arboardgame.gameworld.WorldCoordinate;
 import be.wouterfranken.arboardgame.utilities.AndroidUtils;
+import be.wouterfranken.arboardgame.utilities.DebugUtilities;
+import be.wouterfranken.arboardgame.utilities.MathUtilities;
 
 
 
@@ -59,17 +72,30 @@ public class CameraPoseTracker extends Tracker{
 	}
 	
 	public void updateCameraPose(Mat colFrameImg, FrameTrackingCallback trackingCallback) {
-		long start = System.currentTimeMillis();
+		long start = System.nanoTime();
 		
 		Mat grayImg = new Mat();
 		Imgproc.cvtColor(colFrameImg, grayImg, Imgproc.COLOR_BGR2GRAY);
 		
-		FindCameraPose task = new FindCameraPose();
-		task.start = start;
-		
-		task.setupFrameTrackingCallback(trackingCallback);
-//		task.execute(grayImg);
-		task.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, grayImg);
+		if(!AppConfig.PARALLEL_POSE_ESTIMATION) {
+			Mat proj = new Mat(this.proj.size(), this.proj.type());
+			Mat mv = new Mat(this.mv.size(), this.mv.type());
+			getCameraPose( 
+						grayImg.getNativeObjAddr(),
+						proj.getNativeObjAddr(),mv.getNativeObjAddr());
+			
+			setMv(mv);
+			setProj(proj);
+			trackingCallback.trackingDone(CameraPoseTracker.class);
+			if(AppConfig.DEBUG_TIMING) Log.d(TAG, "CameraPose found in "+(System.nanoTime()-start)/1000000L+"ms");
+		} else {
+			FindCameraPose task = new FindCameraPose();
+			task.start = start;
+			
+			task.setupFrameTrackingCallback(trackingCallback);
+//			task.execute(grayImg);
+			task.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, grayImg);
+		}
 	}
 	
 	public boolean cameraPoseFound() {
@@ -152,6 +178,80 @@ public class CameraPoseTracker extends Tracker{
 	    return new float[]{(float) vector3D.get(0,0)[0],(float) vector3D.get(1,0)[0],(float) vector3D.get(2,0)[0]};
 	}
 	
+	public Mat get2DPointFrom3D(Mat points3D) {
+	    Mat glMv = new Mat();
+	    Mat tmp2 = new Mat();
+	    synchronized (lockExtern) {
+	    	mvExtern.copyTo(tmp2);
+	    }
+	    if(tmp2 == null || tmp2.empty()) return null;
+	    Core.transpose(tmp2, glMv);
+	    glMv.convertTo(glMv, CvType.CV_32FC1);
+	    Mat points2D = Mat.ones(3,points3D.cols(),CvType.CV_32FC1);
+//	    Mat vector3D = Mat.ones(4,1,CvType.CV_32FC1);
+//	    vector3D.put(0,0,x);
+//	    vector3D.put(1,0,y);
+//	    vector3D.put(2,0,z);
+	    
+	    // Set Extrinsics
+	    Mat extrinsics = Mat.zeros(3,4, CvType.CV_32FC1);
+	    glMv.row(0).copyTo(extrinsics.row(0));
+	    glMv.row(1).copyTo(extrinsics.row(1));
+	    // Necessary, because glMv is already transformed for OpenGL.
+	    Core.multiply(glMv.row(2), new Scalar(-1), extrinsics.row(2));
+	    
+	    Mat tmp = Mat.zeros(3,4,CvType.CV_32FC1);
+	    Core.gemm(intrinsics,extrinsics,1,new Mat(),0,tmp,0);
+//	    Log.d(TAG, "Points3D Cols: "+points3D.cols()+", Rows: "+points3D.rows());
+	    Core.gemm(tmp,points3D,1,new Mat(),0,points2D,0);
+//	    Log.d(TAG, "Points2D Cols: "+points2D.cols()+", Rows: "+points2D.rows());
+	    
+	    return points2D;
+	}
+	
+//	private Mat grid = new Mat();
+//	private void buildGrid(){
+//		int i = 0;
+//		int matSize = (int)((WorldConfig.BORDER.getXEnd()-WorldConfig.BORDER.getXStart()+WorldConfig.NODE_DISTANCE)/WorldConfig.NODE_DISTANCE
+//								*(WorldConfig.BORDER.getYEnd()-WorldConfig.BORDER.getYStart()+WorldConfig.NODE_DISTANCE)/WorldConfig.NODE_DISTANCE);
+//		grid = new Mat(4,matSize,CvType.CV_32FC1);
+//		for(float x = WorldConfig.BORDER.getXStart();x<=WorldConfig.BORDER.getXEnd();x+=WorldConfig.NODE_DISTANCE) {
+//			for(float y = WorldConfig.BORDER.getYStart();y<=WorldConfig.BORDER.getYEnd();y+=WorldConfig.NODE_DISTANCE) {
+////				Log.d(TAG, "Points3D Grid point added...");
+//				grid.put(0, i, x);
+//				grid.put(1, i, y);
+//				grid.put(2, i, 0);
+//				grid.put(3, i++, 1);
+//			}
+//		}
+//		Log.d(TAG, "Matsize: "+matSize+",i:"+i);
+////		tmp.copyTo(grid);
+//	}
+//	
+//	
+//	public List<float[]> calculateImageGrid(Mat image) {
+//		List<float[]> result = new ArrayList<float[]>();
+//		Mat newImage = new Mat();
+//		
+//		image.copyTo(newImage);
+//		synchronized (lockExtern) {
+//			if(mvExtern == null || mvExtern.empty() || grid.empty()) return null;
+//			Mat gridPts2D = get2DPointFrom3D(grid);
+//			for (int i = 0; i < gridPts2D.cols(); i++) {
+//				gridPts2D.put(0, i, gridPts2D.get(0,i)[0]/gridPts2D.get(2,i)[0]);
+//				gridPts2D.put(1, i, gridPts2D.get(1,i)[0]/gridPts2D.get(2,i)[0]);
+//				if(gridPts2D.get(0,i)[0] >= 0 && gridPts2D.get(0,i)[0] <= AppConfig.PREVIEW_RESOLUTION[0] 
+//						&& gridPts2D.get(1,i)[0] >= 0 && gridPts2D.get(1,i)[0] <= AppConfig.PREVIEW_RESOLUTION[1]) {
+//					result.add(new float[]{(float) gridPts2D.get(0,i)[0],(float) gridPts2D.get(1,i)[0]});
+//					Core.circle(newImage, new Point(gridPts2D.get(0,i)[0], gridPts2D.get(1,i)[0]), 3, new Scalar(1, 0, 0));
+//				}
+//			}
+//		}
+//		Highgui.imwrite("/sdcard/arbg/gridImg.png", newImage);
+//		Highgui.imwrite("/sdcard/arbg/origImg.png", image);
+//		return result;//(float[][])result.toArray();
+//	}
+	
 	public float[] getCameraPosition() {
 		Mat glMv = new Mat();
 	    Mat tmp2 = new Mat();
@@ -213,19 +313,24 @@ public class CameraPoseTracker extends Tracker{
 		
 		@Override
 		protected Void doInBackground(Mat... params) {
+			if(AppConfig.DEBUG_TIMING) Log.d(TAG, "CameraPose preprocessing done in "+(System.nanoTime()-start)+"ms");
+			long startCalculation = System.nanoTime();
 			getCameraPose( 
 					params[0].getNativeObjAddr(),
 					this.proj.getNativeObjAddr(),this.mv.getNativeObjAddr());
+			if(AppConfig.DEBUG_TIMING) Log.d(TAG, "CameraPose calculations done in "+(System.nanoTime()-startCalculation)+"ms");
 			return null;
 		}
 		
 		@Override
 		protected void onPostExecute(Void result) {
 			super.onPostExecute(result);
+			long startSettingMatrices = System.nanoTime();
 			setMv(this.mv);
 			setProj(this.proj);
+			if(AppConfig.DEBUG_TIMING) Log.d(TAG, "CameraPose matrices set in "+(System.nanoTime()-startSettingMatrices)+"ms");
 			this.trackingCallback.trackingDone(CameraPoseTracker.class);
-			if(AppConfig.DEBUG_TIMING) Log.d(TAG, "CameraPose found in "+(System.currentTimeMillis()-start)+"ms");
+			if(AppConfig.DEBUG_TIMING) Log.d(TAG, "CameraPose found in "+(System.nanoTime()-start)+"ms");
 		}
 		
 		private void setupFrameTrackingCallback(FrameTrackingCallback trackingCallback) {

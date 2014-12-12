@@ -64,6 +64,9 @@ extern "C"
 
 	JNIEXPORT void JNICALL Java_be_wouterfranken_arboardgame_rendering_tracking_LegoBrickTracker_findLegoBrick
 		  (JNIEnv *env, jobject object, jlong yuvFrameImagePtr, jlong contourPtr);
+
+	JNIEXPORT void JNICALL Java_be_wouterfranken_arboardgame_rendering_tracking_LegoBrickTracker_findLegoBrick2
+			(JNIEnv *env, jobject object, jlong bgrPointer, jlong thresholdPtr);
 }
 
 JNIEXPORT void JNICALL Java_be_wouterfranken_arboardgame_rendering_tracking_CameraPoseTracker_loadCameraCalibration(
@@ -303,11 +306,30 @@ JNIEXPORT jboolean JNICALL Java_be_wouterfranken_arboardgame_rendering_tracking_
 	return true;
 }
 
+
+// TODO: FIX BUGS WHEN YELLOW + BLUE ARE ENABLED
+enum Color {
+	RED,
+	YELLOW,
+	BLUE, // Add extra colors here + in the array below!
+
+
+	COLOR_ITEM_AMOUNT};
 struct HSVColorBounds {
 	Scalar lower;
 	Scalar upper;
+	int close_kernel_size;
+	int open_kernel_size;
 };
-struct HSVColorBounds red = {Scalar(160,153,30),Scalar(179,255,255)};
+
+struct HSVColorBounds hsvColors[COLOR_ITEM_AMOUNT] =
+	{
+		{Scalar(160,153,30),Scalar(180,255,255), 5, 0}, // RED
+		{Scalar(135,147,30),Scalar(160,255,255), 9, 0}, // YELLOW
+		{Scalar(0,42,13),Scalar(112,255,255), 0, 17} // BLUE
+	};
+
+	// Hue (0,112), Sat (42,255), Val (13,255), Close Kernel Size 0, Open Kernel Size 17
 
 JNIEXPORT void JNICALL Java_be_wouterfranken_arboardgame_rendering_tracking_LegoBrickTracker_findLegoBrick(JNIEnv *env, jobject object, jlong bgrPointer, jlong contourPtr) {
 	Mat bgr_tmp = *(Mat *)bgrPointer;
@@ -375,7 +397,7 @@ JNIEXPORT void JNICALL Java_be_wouterfranken_arboardgame_rendering_tracking_Lego
 #endif
 	cvtColor( bgr_down, hsv, COLOR_RGB2HSV_FULL);
 
-	Mat thresholded = Mat(Size(bgr_down.size().width,bgr_down.size().height),CV_8UC1);
+	vector<Mat> thresholded(sizeof(hsvColors)/sizeof(*hsvColors)); //Mat(Size(bgr_down.size().width,bgr_down.size().height),CV_8UC1)
 
 	int N = 5;
 	Mat kernel = getStructuringElement(MORPH_ELLIPSE, Point(N, N));
@@ -384,44 +406,64 @@ JNIEXPORT void JNICALL Java_be_wouterfranken_arboardgame_rendering_tracking_Lego
 
 	start = getRealTime();
 #endif
-	inRange(hsv, red.lower,red.upper,thresholded);
+	// Mat redThresh;
+	// Mat yellowThresh;
+	// Mat blueThresh;
+	for (int i = 0; i < sizeof(hsvColors)/sizeof(*hsvColors); ++i)
+	{
+		inRange(hsv, hsvColors[i].lower,hsvColors[i].upper,thresholded[i]);
+	}
+	// bitwise_or(redThresh,yellowThresh,thresholded);
+
 #if TIMING
 	__android_log_print(ANDROID_LOG_DEBUG,APPNAME,"Threshold time: %f\n",((float)(getRealTime() - start))*1000.0);
 
 	start = getRealTime();
 #endif
 	Mat threshInv;
-	bitwise_not(thresholded,threshInv);
-	morphologyEx(threshInv, thresholded, MORPH_CLOSE, kernel);
-	bitwise_not(thresholded,thresholded);
+	for (int i = 0; i < thresholded.size(); ++i)
+	{
+		bitwise_not(thresholded[i],threshInv);
+		morphologyEx(threshInv, thresholded[i], MORPH_CLOSE, kernel);
+		bitwise_not(thresholded[i],thresholded[i]);
+	}
 #if TIMING
 	__android_log_print(ANDROID_LOG_DEBUG,APPNAME,"Closing time: %f\n",((float)(getRealTime() - start))*1000.0);
 #endif
 
-	Mat response, response_norm;
-	vector<vector<Point> > contours;
-	vector<Vec4i> hierarchy;
+	vector<Mat> response(thresholded.size());
+	vector<vector<vector<Point> > > contours(thresholded.size());
+	vector<vector<Vec4i> > hierarchy(thresholded.size());
 	vector <KeyPoint> kpts;
 
 #if WRITE_CONTOURS(true)
 	Mat thresholdImgColor;
-	cvtColor(thresholded,thresholdImgColor,COLOR_GRAY2BGR);
+	cvtColor(thresholded[RED],thresholdImgColor,COLOR_GRAY2BGR);
 #endif
 #if TIMING
 	start=getRealTime();
 #endif
 	/// Detect edges using canny
-	Canny( thresholded, response, 100, 100*2, 3);
+	for (int col = 0; col < thresholded.size(); ++col) Canny( thresholded[col], response[col], 100, 100*2, 3);
+	// Canny( yellowThresh, responseYellow, 100, 100*2, 3);
+	// Canny( blueThresh, responseBlue, 100, 100*2, 3);
 #if TIMING
 	__android_log_print(ANDROID_LOG_DEBUG,APPNAME,"Canny edge detection time: %f\n",((float)(getRealTime() - start))*1000.0);
 #endif
 	/// Find contours
-	vector<vector<Point> > contours0;
+	vector<vector<vector<Point> > > contours0(contours.size());
 #if TIMING
 	start=getRealTime();
 #endif
-	findContours( response, contours0, hierarchy, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_SIMPLE, Point(0, 0) );
-	contours.resize(contours0.size());
+	for (int col = 0; col < response.size(); ++col) {
+		findContours( response[col], contours0[col], hierarchy[col], CV_RETR_EXTERNAL, CV_CHAIN_APPROX_SIMPLE, Point(0, 0) );
+		contours[col].resize(contours0[col].size());
+	}
+
+	// findContours( responseYellow, contours0[1], hierarchy, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_SIMPLE, Point(0, 0) );
+	// contours[1].resize(contours0[1].size());
+	// findContours( responseBlue, contours0[2], hierarchy, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_SIMPLE, Point(0, 0) );
+	// contours[2].resize(contours0[2].size());
 #if TIMING
 	__android_log_print(ANDROID_LOG_DEBUG,APPNAME,"Finding contours time: %f\n",((float)(getRealTime() - start))*1000.0);
 #endif
@@ -430,22 +472,24 @@ JNIEXPORT void JNICALL Java_be_wouterfranken_arboardgame_rendering_tracking_Lego
 #if TIMING
 	start = getRealTime();
 #endif
-	for( int i = 0; i< contours0.size(); i++ )
-	{
-		double epsilon = 0.01*arcLength(contours0[i],true);
-		approxPolyDP(Mat(contours0[i]), contours[i], epsilon, true);
-		for (float fract = 0.02f; contours[i].size() > 6; fract += 0.01) {
-			epsilon = fract*arcLength(contours0[i],true);
-			approxPolyDP(Mat(contours0[i]), contours[i], epsilon, true);
-		}
-		double area = contourArea(contours[i]);
+	for( int c = 0; c< contours0.size(); c++ ) {
+		for( int i = 0; i< contours0[c].size(); i++ )
+		{
+			double epsilon = 0.01*arcLength(contours0[c][i],true);
+			approxPolyDP(Mat(contours0[c][i]), contours[c][i], epsilon, true);
+			for (float fract = 0.02f; contours[c][i].size() > 6; fract += 0.01) {
+				epsilon = fract*arcLength(contours0[c][i],true);
+				approxPolyDP(Mat(contours0[c][i]), contours[c][i], epsilon, true);
+			}
+			double area = contourArea(contours[c][i]);
 
-		if(area > maxArea)
-			maxArea = area;
+			if(area > maxArea)
+				maxArea = area;
 #if WRITE_CONTOURS(true)
-		Scalar color = Scalar(rand() % 256,rand() % 256,rand() % 256);
-		drawContours( thresholdImgColor, contours, i, color, 2, 8, hierarchy, 0, Point() );
+			Scalar color = Scalar(rand() % 256,rand() % 256,rand() % 256);
+			drawContours( thresholdImgColor, contours[c], i, color, 2, 8, hierarchy[c], 0, Point() );
 #endif
+		}
 	}
 #if TIMING
 	__android_log_print(ANDROID_LOG_DEBUG,APPNAME,"Approxpoly time: %f\n",((float)(getRealTime() - start))*1000.0);
@@ -457,22 +501,26 @@ JNIEXPORT void JNICALL Java_be_wouterfranken_arboardgame_rendering_tracking_Lego
 	start = getRealTime();
 #endif
 
-	for( int i = 0; i< contours.size();  ) {
-		if(contourArea(contours[i]) < maxArea/100.0) {
-			contours.erase(contours.begin()+i);
-		}
-		else {
-			for (int c = 0; c < contours[i].size(); ++c) {
-				contours[i][c].x = contours[i][c].x*red_den+offInc;
-				contours[i][c].y = contours[i][c].y*red_den+offInc;
+	int totalAmountContours = 0;
+	for( int col = 0; col< contours.size(); col++ ) {
+		std::vector<std::vector<Point> >::iterator i = contours[col].begin();
+		while(i != contours[col].end()) {
+			if(contourArea(*i) < maxArea/100.0) {
+				i = contours[col].erase(i);
 			}
+			else {
+				for (int c = 0; c < i->size(); ++c) {
+					(*i)[c].x = (*i)[c].x*red_den+offInc;
+					(*i)[c].y = (*i)[c].y*red_den+offInc;
+				}
+				totalAmountContours++;
+	#if WRITE_CONTOURS(false)
+				// Scalar color = Scalar(rand() % 256,rand() % 256,rand() % 256);
+				// drawContours( outImg, contours[col], i, color, 2, 8, hierarchy[col], 0, Point() );
+	#endif
 
-#if WRITE_CONTOURS(false)
-			Scalar color = Scalar(rand() % 256,rand() % 256,rand() % 256);
-			drawContours( outImg, contours, i, color, 2, 8, hierarchy, 0, Point() );
-#endif
-
-			i++;
+				i++;
+			}
 		}
 	}
 #if TIMING
@@ -484,32 +532,118 @@ JNIEXPORT void JNICALL Java_be_wouterfranken_arboardgame_rendering_tracking_Lego
 #if WRITE_CONTOURS(false)
 	imwrite("/sdcard/arbg/threshimg.png",outImg);
 #endif
-
-	if(contours.size()>0) {
-		Mat contourMat = Mat::zeros(contours.size(),12+1,CV_32SC1);
-		for (int j = 0; j < contours.size(); ++j) {
-			contourMat.at<int>(j,0) = contours[0].size();
-			for (int i = 0; i < contours[0].size()*2; i+=2) {
-				contourMat.at<int>(j,i+1) = contours[j][i/2].x;
-				contourMat.at<int>(j,i+2) = contours[j][i/2].y;
+	int emptyContourColors = 0;
+	int rowNb = 0;
+	Mat contourMat = Mat::zeros(totalAmountContours,12+1+1,CV_32SC1);
+	for( int col = 0; col< contours.size(); col++ ) {
+		if(contours[col].size()>0) {
+			for (int j = 0; j < contours[col].size(); ++j) {
+				contourMat.at<int>(rowNb,0) = col;
+				contourMat.at<int>(rowNb,1) = contours[col][j].size();
+				for (int i = 0; i < contours[col][j].size()*2; i+=2) {
+					contourMat.at<int>(rowNb,i+2) = contours[col][j][i/2].x;
+					contourMat.at<int>(rowNb,i+3) = contours[col][j][i/2].y;
+				}
+				rowNb++;
 			}
 		}
-		*contour = contourMat;
+		else {
+			emptyContourColors++;
+		}
+	}
 
+	if(emptyContourColors == COLOR_ITEM_AMOUNT) {
+		*contour = Mat();
+#if DEBUG
+		__android_log_print(ANDROID_LOG_DEBUG,APPNAME,"Result: No bricks FOUND");
+#endif
+	} else {
+		*contour = contourMat;
 		Utilities::logMat(*contour,"Contours");
 #if DEBUG
 		__android_log_print(ANDROID_LOG_DEBUG,APPNAME,"Result: bricks FOUND");
 #endif
 	}
-	else {
-		*contour = Mat();
-#if DEBUG
-		__android_log_print(ANDROID_LOG_DEBUG,APPNAME,"Result: No bricks FOUND");
-#endif
-	}
-
 }
 
+void morphology_operations(Mat src, Mat dst);
+
+JNIEXPORT void JNICALL Java_be_wouterfranken_arboardgame_rendering_tracking_LegoBrickTracker_findLegoBrick2(JNIEnv *env, jobject object, jlong bgrPointer, jlong thresholdPtr) {
+	Mat bgr_tmp = *(Mat *)bgrPointer;
+	Mat *thresholded = (Mat *)thresholdPtr;
+#define TAG "LegoBrickJNI"
+#if DEBUG
+	__android_log_print(ANDROID_LOG_DEBUG,TAG,"Jnicall LegoBrickTracker 2...");
+#endif
+	Mat hsv = Mat();
+	Mat bgr = Mat();
+	bgr_tmp.copyTo(bgr);
+
+	double start;
+
+#if TIMING
+	start = getRealTime();
+#endif
+	// imwrite("/sdcard/arbg/bgr.png",bgr);
+	cvtColor( bgr, hsv, COLOR_RGB2HSV_FULL);
+	// imwrite("/sdcard/arbg/hsv.png",hsv);
+
+	*thresholded = Mat(Size(bgr.size().width,bgr.size().height),CV_8UC1);
+
+	// int N = 5;
+	// Mat kernel = getStructuringElement(MORPH_ELLIPSE, Point(N, N));
+
+#if TIMING
+	__android_log_print(ANDROID_LOG_DEBUG,TAG,"Conversion RGB-HSV time: %f\n",((float)(getRealTime() - start))*1000.0);
+
+	start = getRealTime();
+#endif
+	inRange(hsv, hsvColors[0].lower, hsvColors[0].upper,*thresholded);
+
+	for (int i = 1; i < sizeof(hsvColors)/sizeof(*hsvColors); ++i) //
+	{
+		Mat tmp;
+		inRange(hsv, hsvColors[i].lower,hsvColors[i].upper,tmp);
+
+		// if( i == (sizeof(hsvColors)/sizeof(*hsvColors))-1) {
+		// 	imwrite("/sdcard/arbg/thresholdedTmp.png", tmp);
+		// }
+
+		// morphology_operations(tmp, tmp, i);
+
+		bitwise_or(*thresholded,tmp,*thresholded);
+	}
 
 
+	#if TIMING
+	__android_log_print(ANDROID_LOG_DEBUG,TAG,"Threshold time: %f\n",((float)(getRealTime() - start))*1000.0);
 
+	start = getRealTime();
+	#endif
+	Mat threshInv;
+
+	morphology_operations(*thresholded, *thresholded);
+	// bitwise_not(*thresholded,threshInv);
+	// morphologyEx(threshInv, *thresholded, MORPH_CLOSE, kernel);
+	// bitwise_not(*thresholded,*thresholded);
+
+	#if TIMING
+	__android_log_print(ANDROID_LOG_DEBUG,TAG,"Closing time: %f\n",((float)(getRealTime() - start))*1000.0);
+	#endif
+
+	imwrite("/sdcard/arbg/thresholded.png", *thresholded);
+	imwrite("/sdcard/arbg/bgr.png", bgr);
+}
+
+void morphology_operations(Mat src, Mat dst) {
+	bitwise_not(src,dst);
+	// if(hsvColors[i].close_kernel_size > 0) {
+		morphologyEx(dst, dst, MORPH_CLOSE, getStructuringElement(MORPH_ELLIPSE,
+		Point(9,9)));
+	// }
+	// if(hsvColors[i].open_kernel_size > 0) {
+		morphologyEx(dst, dst, MORPH_OPEN, getStructuringElement(MORPH_ELLIPSE,
+		Point(17,17)));
+	// }
+	bitwise_not(dst,dst);
+}

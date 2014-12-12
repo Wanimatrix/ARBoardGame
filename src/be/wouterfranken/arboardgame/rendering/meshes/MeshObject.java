@@ -27,7 +27,7 @@ public abstract class MeshObject
 	
     public enum BUFFER_TYPE
     {
-        BUFFER_TYPE_VERTEX, BUFFER_TYPE_TEXTURE_COORD, BUFFER_TYPE_NORMALS, BUFFER_TYPE_INDICES
+        BUFFER_TYPE_VERTEX, BUFFER_TYPE_TEXTURE_COORD, BUFFER_TYPE_NORMALS, BUFFER_TYPE_INDICES, BUFFER_TYPE_SHADOW_VERTEX
     }
     
     
@@ -52,6 +52,11 @@ public abstract class MeshObject
     public Buffer getIndices()
     {
         return getBuffer(BUFFER_TYPE.BUFFER_TYPE_INDICES);
+    }
+    
+    public Buffer getShadowVertices()
+    {
+        return getBuffer(BUFFER_TYPE.BUFFER_TYPE_SHADOW_VERTEX);
     }
     
     public RenderOptions getRenderOptions() {

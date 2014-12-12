@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import be.wouterfranken.arboardgame.app.AppConfig;
 import be.wouterfranken.arboardgame.gameworld.LemmingsGenerator;
 import android.hardware.Camera;
+import android.opengl.GLSurfaceView;
 import android.util.Log;
 
 public class FrameTrackingCallback {
