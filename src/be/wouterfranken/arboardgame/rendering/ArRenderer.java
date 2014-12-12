@@ -259,10 +259,10 @@ public class ArRenderer implements Renderer, PreviewCallback {
 				renderMesh(starMeshes.get(i), meshesToRender.size());
 			}
 			
-//			List<MeshObject> brickMeshes = lemmingsGenerator.getActiveBrickMeshes(new RenderOptions(true, new Color(0, 0, 1, 1),false));
-//			for (MeshObject mesh : brickMeshes) {
-//				renderMesh(mesh, 1);
-//			}
+			List<MeshObject> brickMeshes = lemmingsGenerator.getActiveBrickMeshes(new RenderOptions(true, new Color(0, 0, 1, 1),false));
+			for (MeshObject mesh : brickMeshes) {
+				renderMesh(mesh, 1);
+			}
 		    
 	    }
 	    
@@ -432,7 +432,7 @@ public class ArRenderer implements Renderer, PreviewCallback {
 //			lgt.setupFrameTrackingCallback(callback);
 //			lgt.start = lemmingStart;
 //			lgt.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
-			lemmingsGenerator.frameTick(null);
+			lemmingsGenerator.frameTick(legoBrick.getLegoBricks(cameraPose));
 			if(AppConfig.DEBUG_TIMING) Log.d(TAG, "Lemming frameUpdate in "+(System.nanoTime()-lemmingStart)/1000000L+"ms");
 			callback.trackingDone(LemmingsGenerator.class);
 			long lemmingMeshUpd = System.nanoTime();

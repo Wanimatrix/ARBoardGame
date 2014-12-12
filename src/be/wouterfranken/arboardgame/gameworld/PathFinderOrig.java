@@ -215,14 +215,6 @@ private static final String TAG = PathFinderOrig.class.getSimpleName();
 				if(current.accessGridNode().getCoordinate().equals(target))
 					break;
 				
-//				PathNode hopCheckCurrent = current;
-//				int hopCnt = 0;
-//				while(hopCheckCurrent != null) {
-//					hopCheckCurrent = hopCheckCurrent.getPreviousNode();
-//					hopCnt++;
-//				}
-//				if(hopCnt >= maxHops ) break;
-				
 				closed.put(current.accessGridNode().getCoordinate(), current);
 				for (PathNode nb : current.getNeighbours(brickThreshold, cameraPose)) {
 					if(closed.containsKey(nb.accessGridNode().getCoordinate()))
@@ -250,7 +242,7 @@ private static final String TAG = PathFinderOrig.class.getSimpleName();
 			}
 		}
 		
-//		if(!current.accessGridNode().getCoordinate().equals(target)) return null;
+		if(!current.accessGridNode().getCoordinate().equals(target)) return null;
 		
 		LemmingPath path = new LemmingPath();
 		while(current != null) {

@@ -31,18 +31,20 @@ public class LegoBrickTracker extends Tracker{
 		
 		long start = System.nanoTime();
 		Mat threshold = new Mat();
+		Mat contour = new Mat();
 //		FindLegoBrick task = new FindLegoBrick();
 //		task.start = System.nanoTime();
 		
-//		findLegoBrick( 
-//				yuvFrameImage.getNativeObjAddr(),
-//				contour.getNativeObjAddr()
-//				);
-		findLegoBrick2( 
+		findLegoBrick( 
 				yuvFrameImage.getNativeObjAddr(),
-				threshold.getNativeObjAddr()
+				contour.getNativeObjAddr()
 				);
-		setThreshold(threshold);
+//		findLegoBrick2( 
+//				yuvFrameImage.getNativeObjAddr(),
+//				threshold.getNativeObjAddr()
+//				);
+//		setThreshold(threshold);
+		setContour(contour);
 		trackingCallback.trackingDone(LegoBrickTracker.class);
 		if(AppConfig.DEBUG_TIMING) Log.d(TAG, "LegoBrick found in "+(System.nanoTime()-start)/1000000L+"ms");
 		
@@ -251,7 +253,7 @@ public class LegoBrickTracker extends Tracker{
 	public void frameTick() {
 		synchronized (lock) {
 			synchronized (lockExtern) {
-//				contour.copyTo(contourExtern);
+				contour.copyTo(contourExtern);
 				threshold.copyTo(thresholdExtern);
 			}
 		}

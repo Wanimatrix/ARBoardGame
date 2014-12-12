@@ -68,7 +68,8 @@ public class Lemming {
 		return mesh;
 	}
 	
-	public synchronized void updateLocation(WorldCoordinate end, World2 w) {
+//	public synchronized void updateLocation(WorldCoordinate end, World2 w) {
+	public synchronized void updateLocation(WorldCoordinate end, World w) {
 		long startFrameUpdate = System.nanoTime();
 //		float fps = AppConfig.FPS_RANGE[1]/1000.0f; // max frame/sec
 		float todoDistance;
@@ -108,7 +109,9 @@ public class Lemming {
 		// When we will pass a node, the path will be updated first.
 		if(MathUtilities.distance(newLocationX,newLocationY,to.x,to.y) < todoDistance) {
 			if(AppConfig.DEBUG_LOGGING) Log.d(TAG, "Finding path from "+path.get(0).toString()+", to "+end.toString());
-			LemmingPath tmpPath = PathFinderOrig.findPath(to, end, w);
+//			LemmingPath tmpPath = PathFinderOrig.findPath(to, end, w);
+			LemmingPath tmpPath = new LemmingPath();
+			tmpPath.addAll(PathFinderOrig1.findPath(to, end, w));
 //			LemmingPath tmpPath = pathGenerator.findPath2(to, end, w);
 			if(tmpPath != null) {
 				LemmingPath newPath = new LemmingPath();

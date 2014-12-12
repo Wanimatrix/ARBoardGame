@@ -26,14 +26,16 @@ public class LemmingsGenerator extends Tracker{
 	private WorldCoordinate start;
 	private WorldCoordinate end;
 	
-	private World2 w;
+//	private World2 w;
+	private World w;
 	
 	public LemmingsGenerator(LegoBrickTracker brickTracker, CameraPoseTracker cameraPose) {
 		super();
 		this.amount = WorldConfig.LEMMINGS_AMOUNT;
 		this.start = WorldConfig.STARTPOINT;
 		this.end = WorldConfig.ENDPOINT;
-		this.w = new World2(brickTracker, cameraPose);
+//		this.w = new World2(brickTracker, cameraPose);
+		this.w = new World();
 	}
 	
 	@SuppressWarnings("unused")
@@ -51,7 +53,8 @@ public class LemmingsGenerator extends Tracker{
 		
 		// Brick control
 //		synchronized (brickLock) {
-//			w.addBricks(bricks);
+		Log.d(TAG, "BrickAmount: "+bricks.length);
+			w.addBricks(bricks);
 		
 			// Generate Lemmings
 			synchronized (lock) {
@@ -88,7 +91,8 @@ public class LemmingsGenerator extends Tracker{
 //		Lemming l = 
 //				new Lemming(WorldConfig.LEMMINGS_SIZE, WorldConfig.LEMMING_HEIGHT, start.x, start.y, WorldConfig.LEMMINGS_SPEED_WITH_STARS, WorldConfig.LEMMINGS_COLOR);
 //		l.generatePath(start, end, w);
-		LemmingPath path = PathFinderOrig.findPath(start, end, w);
+		LemmingPath path = new LemmingPath();
+		path.addAll(PathFinderOrig1.findPath(start, end, w));
 		if(path == null) throw new IllegalStateException("You cannot place a LegoBrick on top of the startPosition!");
 		synchronized (lock) {
 			synchronized (amountLock) {
@@ -122,12 +126,12 @@ public class LemmingsGenerator extends Tracker{
 		return starMeshes;
 	}
 	
-//	public List<MeshObject> getActiveBrickMeshes(RenderOptions ro) {
-//		List<MeshObject> brickMeshes = new ArrayList<MeshObject>();
-//		if(!w.isWorldGenerated()) return brickMeshes;
-//		for (LegoBrick brick : w.getActiveBricks()) {
-//			brickMeshes.add(brick.getMesh(ro));
-//		}
-//		return brickMeshes;
-//	}
+	public List<MeshObject> getActiveBrickMeshes(RenderOptions ro) {
+		List<MeshObject> brickMeshes = new ArrayList<MeshObject>();
+		if(!w.isWorldGenerated()) return brickMeshes;
+		for (LegoBrick brick : w.getActiveBricks()) {
+			brickMeshes.add(brick.getMesh(ro));
+		}
+		return brickMeshes;
+	}
 }
