@@ -16,7 +16,7 @@ public class AppConfig {
 	public static final boolean LEMMING_RENDERING = true;
 	public static final boolean LEGO_TRACKING = true;
 	
-	public final static boolean DEBUG_LOGGING = true;
+	public final static boolean DEBUG_LOGGING = false;
 	public final static boolean DEBUG_TIMING = true;
 	
 	/**

@@ -259,10 +259,10 @@ public class ArRenderer implements Renderer, PreviewCallback {
 				renderMesh(starMeshes.get(i), meshesToRender.size());
 			}
 			
-			List<MeshObject> brickMeshes = lemmingsGenerator.getActiveBrickMeshes(new RenderOptions(true, new Color(0, 0, 1, 1),false));
-			for (MeshObject mesh : brickMeshes) {
-				renderMesh(mesh, 1);
-			}
+//			List<MeshObject> brickMeshes = lemmingsGenerator.getActiveBrickMeshes(new RenderOptions(true, new Color(0, 0, 1, 1),false));
+//			for (MeshObject mesh : brickMeshes) {
+//				renderMesh(mesh, 1);
+//			}
 		    
 	    }
 	    
