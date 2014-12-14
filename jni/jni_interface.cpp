@@ -32,7 +32,7 @@ extern "C" {
 }
 
 #define APPNAME "be.wouterfranken.arboardgame"
-#define DEBUG 1
+#define DEBUG 0
 #define TIMING 1
 #define DRAW_MARKERS 0 /*Write markers on image*/
 #define LARGE_CONTOURS 0 /*Write contours on big (non thresholded) image*/
@@ -631,19 +631,19 @@ JNIEXPORT void JNICALL Java_be_wouterfranken_arboardgame_rendering_tracking_Lego
 	__android_log_print(ANDROID_LOG_DEBUG,TAG,"Closing time: %f\n",((float)(getRealTime() - start))*1000.0);
 	#endif
 
-	imwrite("/sdcard/arbg/thresholded.png", *thresholded);
-	imwrite("/sdcard/arbg/bgr.png", bgr);
+	// imwrite("/sdcard/arbg/thresholded.png", *thresholded);
+	// imwrite("/sdcard/arbg/bgr.png", bgr);
 }
 
 void morphology_operations(Mat src, Mat dst) {
 	bitwise_not(src,dst);
 	// if(hsvColors[i].close_kernel_size > 0) {
 		morphologyEx(dst, dst, MORPH_CLOSE, getStructuringElement(MORPH_ELLIPSE,
-		Point(9,9)));
+		Point(5,5)));
 	// }
 	// if(hsvColors[i].open_kernel_size > 0) {
-		morphologyEx(dst, dst, MORPH_OPEN, getStructuringElement(MORPH_ELLIPSE,
-		Point(17,17)));
+		// morphologyEx(dst, dst, MORPH_OPEN, getStructuringElement(MORPH_ELLIPSE,
+		// Point(17,17)));
 	// }
 	bitwise_not(dst,dst);
 }

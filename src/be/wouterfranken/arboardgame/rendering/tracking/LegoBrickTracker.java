@@ -76,7 +76,7 @@ public class LegoBrickTracker extends Tracker{
 			contourExtern.copyTo(tmp);
 		}
 		if(tmp.empty()) return null;
-		Log.d(TAG, "Contours found: "+tmp.rows());
+		if(AppConfig.DEBUG_LOGGING) Log.d(TAG, "Contours found: "+tmp.rows());
 		float[][] result = new float[tmp.rows()][];
 		for (int j = 0; j < tmp.rows(); j++) {
 			int cornerAmount = (int) tmp.get(j,1)[0];

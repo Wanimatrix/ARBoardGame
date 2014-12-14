@@ -39,7 +39,7 @@ public class Lemming {
 	public void generatePath(WorldCoordinate start, WorldCoordinate goal, World w) {
 		if(AppConfig.DEBUG_LOGGING) Log.d(TAG, "Start path generation...");
 		path = pathGenerator.findPath2(start, goal, w);
-		Log.d(TAG, "Path size: "+path.size());
+		if(AppConfig.DEBUG_LOGGING) Log.d(TAG, "Path size: "+path.size());
 		if(AppConfig.DEBUG_LOGGING) Log.d(TAG, "Path generation done...");
 	}
 	
@@ -165,9 +165,8 @@ public class Lemming {
 		locationX = newLocationX;
 		locationY = newLocationY;
 		
-		Log.d(TAG, "Amount of stars: "+w.getStars().size());
+		if(AppConfig.DEBUG_LOGGING) Log.d(TAG, "Amount of stars: "+w.getStars().size());
 		for (Star s : w.getStars()) {
-			Log.d(TAG, "Distance to the star: "+MathUtilities.distance(locationX, locationY, s.getPosition().x, s.getPosition().y));
 			if(MathUtilities.distance(locationX, locationY, s.getPosition().x, s.getPosition().y)
 					< WorldConfig.STAR_PERIMETER) {
 				w.removeStar(s);
