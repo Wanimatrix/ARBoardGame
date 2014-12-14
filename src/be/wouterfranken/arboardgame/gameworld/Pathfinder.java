@@ -93,7 +93,7 @@ public class Pathfinder {
 			if(AppConfig.DEBUG_LOGGING) Log.d("PATHFINDER", "Sensing the blocking of bricks at the new node...");
 			
 			List<WorldCoordinate> nbs = startNode.getNeighbouringCoords(w, true);
-			Log.d("PATHFINDER", "New node has "+nbs.size()+" neighbours");
+			if(AppConfig.DEBUG_LOGGING) Log.d("PATHFINDER", "New node has "+nbs.size()+" neighbours");
 			WorldCoordinate[] pureNeighboursCoords = new WorldCoordinate[]{
 					startNode.getCoordinate().getLeft(),
 					startNode.getCoordinate().getRight(),
@@ -110,19 +110,19 @@ public class Pathfinder {
 				Node nb = pureNeighbourNodes[i];
 				if (nb != null && !nbs.contains(nbCoord)) {
 					if(i == 0) {
-						Log.d("PATHFINDER", "Left neighbour set to null");
+						if(AppConfig.DEBUG_LOGGING) Log.d("PATHFINDER", "Left neighbour set to null");
 						nb.right = null;
 						startNode.left = null;
 					} else if(i == 1) {
-						Log.d("PATHFINDER", "Right neighbour set to null");
+						if(AppConfig.DEBUG_LOGGING) Log.d("PATHFINDER", "Right neighbour set to null");
 						nb.left = null;
 						startNode.right = null;
 					} else if(i == 2) {
-						Log.d("PATHFINDER", "Bottom neighbour set to null");
+						if(AppConfig.DEBUG_LOGGING) Log.d("PATHFINDER", "Bottom neighbour set to null");
 						nb.bottom = null;
 						startNode.top = null;
 					} else if(i == 3) {
-						Log.d("PATHFINDER", "Top neighbour set to null");
+						if(AppConfig.DEBUG_LOGGING) Log.d("PATHFINDER", "Top neighbour set to null");
 						nb.top = null;
 						startNode.bottom = null;
 					}
@@ -165,7 +165,7 @@ public class Pathfinder {
 	private boolean performNewSearch(final WorldCoordinate start, final WorldCoordinate goal, World w) {
 		if(AppConfig.DEBUG_LOGGING) Log.d("PATHFINDER", "Starting new search...");
 		Node startNode = nodes.get(start);
-		Log.d("PATHFINDER", "Init start "+start+"...");
+		if(AppConfig.DEBUG_LOGGING) Log.d("PATHFINDER", "Init start "+start+"...");
 		tree.initState(startNode, goal);
 		startNode.setGScore(0);
 		open = new PriorityQueue<Node>();
@@ -183,7 +183,7 @@ public class Pathfinder {
 		if(path != null && path.get(0).equals(start)) return path;
 		if(path == null) performNewSearch(start, goal, w);
 		else stepPath(start, goal, w);
-		Log.d("PATHFINDER", "New path has size: "+path.size());
+		if(AppConfig.DEBUG_LOGGING) Log.d("PATHFINDER", "New path has size: "+path.size());
 		if(AppConfig.DEBUG_TIMING) Log.d(TAG, "Lemming path found in "+(System.nanoTime()-startTime)/1000000L+"ms");
 		return path;
 	}

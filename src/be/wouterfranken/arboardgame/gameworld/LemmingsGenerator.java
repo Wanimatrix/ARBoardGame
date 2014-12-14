@@ -53,7 +53,7 @@ public class LemmingsGenerator extends Tracker{
 		
 		// Brick control
 //		synchronized (brickLock) {
-		Log.d(TAG, "BrickAmount: "+bricks.length);
+		if(AppConfig.DEBUG_LOGGING) Log.d(TAG, "BrickAmount: "+bricks.length);
 			w.addBricks(bricks);
 		
 			// Generate Lemmings

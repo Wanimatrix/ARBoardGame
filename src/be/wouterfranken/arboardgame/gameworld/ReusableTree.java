@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import be.wouterfranken.arboardgame.app.AppConfig;
 import be.wouterfranken.arboardgame.gameworld.Pathfinder.Node;
 import android.util.Log;
 import android.util.Pair;
@@ -45,11 +46,11 @@ public class ReusableTree {
 	public int getGenerated(Node state) {
 		Integer gen = generated.get(state);
 		if(gen == null) {
-			Log.d("PATHFINDER", "Generated: 0");
+			if(AppConfig.DEBUG_LOGGING) Log.d("PATHFINDER", "Generated: 0");
 			return 0;
 		}
 		else {
-			Log.d("PATHFINDER", "Generated: "+gen);
+			if(AppConfig.DEBUG_LOGGING) Log.d("PATHFINDER", "Generated: "+gen);
 			return gen;
 		}
 	}
@@ -95,7 +96,7 @@ public class ReusableTree {
 	}
 	
 	private int getSearchCount() {
-		Log.d("PATHFINDER", "SearchCount: "+searchCount);
+		if(AppConfig.DEBUG_LOGGING) Log.d("PATHFINDER", "SearchCount: "+searchCount);
 		return searchCount;
 	}
 	
@@ -105,16 +106,16 @@ public class ReusableTree {
 	}
 	
 	public void initState(Node n, WorldCoordinate goal) {
-		Log.d("PATHFINDER", "NodeCoord: "+n.getCoordinate());
+		if(AppConfig.DEBUG_LOGGING) Log.d("PATHFINDER", "NodeCoord: "+n.getCoordinate());
 		if(this.getGenerated(n) == 0) {
 			n.setGScore(Float.POSITIVE_INFINITY);
 			n.setHScore(PathUtilities.h(n.getCoordinate(),goal));
 		} else if(this.getGenerated(n) != this.getSearchCount()) {
 			n.setGScore(Float.POSITIVE_INFINITY);
 		}
-		Log.d("PATHFINDER", "SearchCount: "+searchCount);
+		if(AppConfig.DEBUG_LOGGING) Log.d("PATHFINDER", "SearchCount: "+searchCount);
 		setGenerated(n, searchCount);
-		Log.d("PATHFINDER", "New generated: "+this.getGenerated(n));
+		if(AppConfig.DEBUG_LOGGING) Log.d("PATHFINDER", "New generated: "+this.getGenerated(n));
 	}
 	
 	public void addPath(Node s, WorldCoordinate start, WorldCoordinate goal) {

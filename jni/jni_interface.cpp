@@ -32,7 +32,7 @@ extern "C" {
 }
 
 #define APPNAME "be.wouterfranken.arboardgame"
-#define DEBUG 1
+#define DEBUG 0
 #define TIMING 1
 #define DRAW_MARKERS 0 /*Write markers on image*/
 #define LARGE_CONTOURS 0 /*Write contours on big (non thresholded) image*/

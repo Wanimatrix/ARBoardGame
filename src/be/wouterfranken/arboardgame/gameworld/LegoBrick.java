@@ -125,12 +125,12 @@ public class LegoBrick {
 	private void voteForSize(float norm0, float norm1) {
 		float[] newSize = new float[2];
 		
-		Log.d(TAG, "Incoming vote for bricksize (without perimeter): "+"("+norm0+","+norm1+")");
+		if(AppConfig.DEBUG_LOGGING) Log.d(TAG, "Incoming vote for bricksize (without perimeter): "+"("+norm0+","+norm1+")");
 		
 		newSize[0] = (float) (Math.round(norm0/0.8f)*0.8);
 		newSize[1] = (float) (Math.round(norm1/0.8f)*0.8);
 		
-		Log.d(TAG, "Vote was for bricksize (without perimeter): "+"("+newSize[0]+","+newSize[1]+")");
+		if(AppConfig.DEBUG_LOGGING) Log.d(TAG, "Vote was for bricksize (without perimeter): "+"("+newSize[0]+","+newSize[1]+")");
 		
 		if(newSize[0] > newSize[1]) {
 			newSize[0] = (mergeCount*size[0]+newSize[0])/(mergeCount+1);
@@ -141,7 +141,7 @@ public class LegoBrick {
 			newSize[1] = (mergeCount*size[1]+tmp)/(mergeCount+1);
 		}
 		
-		Log.d(TAG, "New bricksize (without perimeter): "+"("+newSize[0]+","+newSize[1]+")");
+		if(AppConfig.DEBUG_LOGGING) Log.d(TAG, "New bricksize (without perimeter): "+"("+newSize[0]+","+newSize[1]+")");
 		
 		setSize(newSize);
 	}
