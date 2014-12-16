@@ -220,6 +220,10 @@ public class LegoBrick {
 		return coord.remove(0);
 	}
 	
+	public boolean hasCoordinate(WorldCoordinate wc) {
+		return coord.contains(wc);
+	}
+	
 	public void setActive(boolean active) {
 		this.active = active;
 	}

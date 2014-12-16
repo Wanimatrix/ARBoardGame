@@ -25,8 +25,11 @@ import android.os.Process;
 import android.util.Log;
 import be.wouterfranken.arboardgame.R;
 import be.wouterfranken.arboardgame.app.AppConfig;
+import be.wouterfranken.arboardgame.gameworld.LegoBrick;
+import be.wouterfranken.arboardgame.gameworld.World;
 import be.wouterfranken.arboardgame.gameworld.WorldConfig;
 import be.wouterfranken.arboardgame.gameworld.WorldCoordinate;
+import be.wouterfranken.arboardgame.gameworld.WorldNode;
 import be.wouterfranken.arboardgame.utilities.AndroidUtils;
 import be.wouterfranken.arboardgame.utilities.DebugUtilities;
 import be.wouterfranken.arboardgame.utilities.MathUtilities;
@@ -51,6 +54,7 @@ public class CameraPoseTracker extends Tracker{
 	private String cameraIntDistPath;
 	
 	public CameraPoseTracker(Context context) {
+		buildGrid();
 		this.context = context;
 		
 		try {
@@ -209,48 +213,58 @@ public class CameraPoseTracker extends Tracker{
 	    return points2D;
 	}
 	
-//	private Mat grid = new Mat();
-//	private void buildGrid(){
-//		int i = 0;
-//		int matSize = (int)((WorldConfig.BORDER.getXEnd()-WorldConfig.BORDER.getXStart()+WorldConfig.NODE_DISTANCE)/WorldConfig.NODE_DISTANCE
-//								*(WorldConfig.BORDER.getYEnd()-WorldConfig.BORDER.getYStart()+WorldConfig.NODE_DISTANCE)/WorldConfig.NODE_DISTANCE);
-//		grid = new Mat(4,matSize,CvType.CV_32FC1);
-//		for(float x = WorldConfig.BORDER.getXStart();x<=WorldConfig.BORDER.getXEnd();x+=WorldConfig.NODE_DISTANCE) {
-//			for(float y = WorldConfig.BORDER.getYStart();y<=WorldConfig.BORDER.getYEnd();y+=WorldConfig.NODE_DISTANCE) {
-////				Log.d(TAG, "Points3D Grid point added...");
-//				grid.put(0, i, x);
-//				grid.put(1, i, y);
-//				grid.put(2, i, 0);
-//				grid.put(3, i++, 1);
-//			}
-//		}
-//		Log.d(TAG, "Matsize: "+matSize+",i:"+i);
-////		tmp.copyTo(grid);
-//	}
-//	
-//	
-//	public List<float[]> calculateImageGrid(Mat image) {
-//		List<float[]> result = new ArrayList<float[]>();
-//		Mat newImage = new Mat();
-//		
-//		image.copyTo(newImage);
-//		synchronized (lockExtern) {
-//			if(mvExtern == null || mvExtern.empty() || grid.empty()) return null;
-//			Mat gridPts2D = get2DPointFrom3D(grid);
-//			for (int i = 0; i < gridPts2D.cols(); i++) {
-//				gridPts2D.put(0, i, gridPts2D.get(0,i)[0]/gridPts2D.get(2,i)[0]);
-//				gridPts2D.put(1, i, gridPts2D.get(1,i)[0]/gridPts2D.get(2,i)[0]);
-//				if(gridPts2D.get(0,i)[0] >= 0 && gridPts2D.get(0,i)[0] <= AppConfig.PREVIEW_RESOLUTION[0] 
-//						&& gridPts2D.get(1,i)[0] >= 0 && gridPts2D.get(1,i)[0] <= AppConfig.PREVIEW_RESOLUTION[1]) {
-//					result.add(new float[]{(float) gridPts2D.get(0,i)[0],(float) gridPts2D.get(1,i)[0]});
-//					Core.circle(newImage, new Point(gridPts2D.get(0,i)[0], gridPts2D.get(1,i)[0]), 3, new Scalar(1, 0, 0));
-//				}
-//			}
-//		}
-//		Highgui.imwrite("/sdcard/arbg/gridImg.png", newImage);
-//		Highgui.imwrite("/sdcard/arbg/origImg.png", image);
-//		return result;//(float[][])result.toArray();
-//	}
+	private Mat grid = new Mat();
+	private void buildGrid(){
+		int i = 0;
+		int matSize = (int)((WorldConfig.BORDER.getXEnd()-WorldConfig.BORDER.getXStart()+WorldConfig.NODE_DISTANCE)/WorldConfig.NODE_DISTANCE
+								*(WorldConfig.BORDER.getYEnd()-WorldConfig.BORDER.getYStart()+WorldConfig.NODE_DISTANCE)/WorldConfig.NODE_DISTANCE);
+		grid = new Mat(4,matSize,CvType.CV_32FC1);
+		for(float x = WorldConfig.BORDER.getXStart();x<=WorldConfig.BORDER.getXEnd();x+=WorldConfig.NODE_DISTANCE) {
+			for(float y = WorldConfig.BORDER.getYStart();y<=WorldConfig.BORDER.getYEnd();y+=WorldConfig.NODE_DISTANCE) {
+//				Log.d(TAG, "Points3D Grid point added...");
+				grid.put(0, i, x);
+				grid.put(1, i, y);
+				grid.put(2, i, 0);
+				grid.put(3, i++, 1);
+			}
+		}
+		Log.d(TAG, "Matsize: "+matSize+",i:"+i);
+//		tmp.copyTo(grid);
+	}
+	
+	
+	public List<float[]> calculateImageGrid(Mat image, World w) {
+		List<float[]> result = new ArrayList<float[]>();
+		Mat newImage = new Mat();
+		
+		image.copyTo(newImage);
+		synchronized (lockExtern) {
+			if(mvExtern == null || mvExtern.empty() || grid.empty()) return null;
+			List<LegoBrick> bricks = w.getActiveBricks();
+			Mat gridPts2D = get2DPointFrom3D(grid);
+			boolean inBrick = false;
+			for (int i = 0; i < gridPts2D.cols(); i++) {
+				gridPts2D.put(0, i, gridPts2D.get(0,i)[0]/gridPts2D.get(2,i)[0]);
+				gridPts2D.put(1, i, gridPts2D.get(1,i)[0]/gridPts2D.get(2,i)[0]);
+				
+				for (LegoBrick b : bricks) {
+					if(b.hasCoordinate(new WorldCoordinate((float)grid.get(0, i)[0], (float)grid.get(1, i)[0]))) {
+						inBrick = true;
+						break;
+					}
+				}
+				if(!inBrick && gridPts2D.get(0,i)[0] >= 0 && gridPts2D.get(0,i)[0] <= AppConfig.PREVIEW_RESOLUTION[0] 
+						&& gridPts2D.get(1,i)[0] >= 0 && gridPts2D.get(1,i)[0] <= AppConfig.PREVIEW_RESOLUTION[1]) {
+					result.add(new float[]{(float) gridPts2D.get(0,i)[0],(float) gridPts2D.get(1,i)[0]});
+					Core.circle(newImage, new Point(gridPts2D.get(0,i)[0], gridPts2D.get(1,i)[0]), 3, new Scalar(1, 0, 0));
+				}
+				inBrick = false;
+			}
+		}
+		Highgui.imwrite("/sdcard/arbg/gridImg.png", newImage);
+		Highgui.imwrite("/sdcard/arbg/origImg.png", image);
+		return result;//(float[][])result.toArray();
+	}
 	
 	public float[] getCameraPosition() {
 		Mat glMv = new Mat();

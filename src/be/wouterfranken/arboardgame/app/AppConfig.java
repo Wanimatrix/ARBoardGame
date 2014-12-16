@@ -49,4 +49,5 @@ public class AppConfig {
 	public final static float[] BOARD_SIZE = new float[]{21f,29f}; // A4: 21,29.7
 	
 	public static final float[] LIGHT_POSITION = new float[]{AppConfig.BOARD_SIZE[0]/2,AppConfig.BOARD_SIZE[1]/2,50};
+	public static final boolean SHADOW_RENDERING = true;
 }

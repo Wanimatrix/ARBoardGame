@@ -110,9 +110,9 @@ public class ArRenderer implements Renderer, PreviewCallback {
 //		GameBoardOverlayMesh gbo = new GameBoardOverlayMesh(new float[]{AppConfig.BOARD_SIZE[0],AppConfig.BOARD_SIZE[1]}, new RenderOptions(true, new Color(1,0,0,0.5f)));
 //		meshesToRender.add(gbo);
 		if(AppConfig.LEMMING_RENDERING) {
-			CuboidMesh startPole = new CuboidMesh(0.5f, 0.5f, 10, WorldConfig.STARTPOINT.x, WorldConfig.STARTPOINT.y, 5f, new RenderOptions(true, new Color(0, 0, 1, 1f), true));
+			CuboidMesh startPole = new CuboidMesh(0.5f, 0.5f, 10, WorldConfig.STARTPOINT.x, WorldConfig.STARTPOINT.y, 5f, new RenderOptions(true, new Color(0, 0, 1, 1f), AppConfig.SHADOW_RENDERING));
 			meshesToRender.add(startPole);
-			CuboidMesh endPole = new CuboidMesh(0.5f, 0.5f, 10, WorldConfig.ENDPOINT.x, WorldConfig.ENDPOINT.y, 5f, new RenderOptions(true, new Color(0, 0, 1, 1f), true));
+			CuboidMesh endPole = new CuboidMesh(0.5f, 0.5f, 10, WorldConfig.ENDPOINT.x, WorldConfig.ENDPOINT.y, 5f, new RenderOptions(true, new Color(0, 0, 1, 1f), AppConfig.SHADOW_RENDERING));
 			meshesToRender.add(endPole);
 		}
 	}
@@ -444,6 +444,7 @@ public class ArRenderer implements Renderer, PreviewCallback {
 		} else if(AppConfig.LEMMING_RENDERING) {
 			callback.trackingDone(LemmingsGenerator.class);
 		}
+		cameraPose.calculateImageGrid(colFrameImg,lemmingsGenerator.getWorld());
 //		previousFrameTime = (System.nanoTime()-start)/1000000L;
 	}
 	

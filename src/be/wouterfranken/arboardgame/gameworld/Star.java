@@ -30,7 +30,7 @@ public class Star {
 		
 		if(AppConfig.DEBUG_LOGGING) Log.d(TAG, "Star position: "+position.toString());
 		
-		mesh = new CubeMesh(WorldConfig.STAR_SIZE, position.x, position.y, 1, new RenderOptions(true, new Color(1, 1, 0, 1), true));
+		mesh = new CubeMesh(WorldConfig.STAR_SIZE, position.x, position.y, 1, new RenderOptions(true, new Color(1, 1, 0, 1), AppConfig.SHADOW_RENDERING));
 	}
 	
 	public MeshObject getMesh() {

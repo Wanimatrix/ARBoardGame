@@ -44,7 +44,7 @@ public class Lemming {
 	}
 	
 	public Lemming(float size, float height, float locationX, float locationY, long lastLocationUpdate, LemmingPath path, float speed, Color color) {
-		mesh = new CubeMesh(size, locationX, locationY, height, new RenderOptions(true, color, true));
+		mesh = new CubeMesh(size, locationX, locationY, height, new RenderOptions(true, color, AppConfig.SHADOW_RENDERING));
 		this.locationX = locationX;
 		this.locationY = locationY;
 		this.size = size;

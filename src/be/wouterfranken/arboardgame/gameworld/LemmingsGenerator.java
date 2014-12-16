@@ -134,4 +134,8 @@ public class LemmingsGenerator extends Tracker{
 		}
 		return brickMeshes;
 	}
+	
+	public World getWorld() {
+		return w;
+	}
 }
