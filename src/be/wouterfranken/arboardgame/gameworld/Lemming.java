@@ -70,41 +70,18 @@ public class Lemming {
 	
 	public synchronized void updateLocation(WorldCoordinate end, World2 w) {
 		long startFrameUpdate = System.nanoTime();
-//		float fps = AppConfig.FPS_RANGE[1]/1000.0f; // max frame/sec
-		float todoDistance;
+		float fps = AppConfig.FPS_RANGE[1]/1000.0f; // max frame/sec
+		float todoDistance = speed/fps;
 //		synchronized (timestampLock) {
-//			Log.d(TAG, "LocationUpdateTimestamp: "+locationUpdateTimestamp);
-			long newTimestamp = System.nanoTime();
-//			Log.d(TAG, "Seconds difference: "+((newTimestamp-locationUpdateTimestamp)/1000000000.0f));
-			todoDistance = speed*((newTimestamp-locationUpdateTimestamp)/1000000000.0f);///fps;
-			locationUpdateTimestamp = newTimestamp;
+//			todoDistance = speed*((newTimestamp-locationUpdateTimestamp)/1000000000.0f);///fps;
+//			locationUpdateTimestamp = newTimestamp;
 //		}
-//		Log.d(TAG, "DistanceTodo: "+todoDistance);
-//		int maxHops = (int) Math.ceil(todoDistance/WorldConfig.NODE_DISTANCE)+2;
-//		Log.d(TAG, "MaxHops"+maxHops);
 		
 		float newLocationX = locationX;
 		float newLocationY = locationY;
 		float distance;
 		
-//		if(path == null || path.size() < 2) {
-//			path = PathFinderOrig.findPath(new WorldCoordinate(locationX, locationY), end, w);
-//			if(path == null || path.size() < 2) return;
-//		}
-//		else {
-//			LemmingPath p;
-//			p = PathFinderOrig.findPath(path.get(1), end, w);
-//			if(p != null) {
-//				p.add(0, path.get(0));
-//				path = p;
-//			}
-//		}
-//		Log.d(TAG, "Path size: "+path.size());
 		WorldCoordinate to = path.get(1);
-//		if(path != null) {
-//			to = path.get(1);
-//			to = 
-//		}
 		// When we will pass a node, the path will be updated first.
 		if(MathUtilities.distance(newLocationX,newLocationY,to.x,to.y) < todoDistance) {
 			if(AppConfig.DEBUG_LOGGING) Log.d(TAG, "Finding path from "+path.get(0).toString()+", to "+end.toString());

@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.PriorityQueue;
 
+import org.opencv.core.Core;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 import org.opencv.highgui.Highgui;
@@ -19,82 +20,8 @@ import be.wouterfranken.arboardgame.rendering.tracking.CameraPoseTracker;
 
 public class PathFinderOrig {
 private static final String TAG = PathFinderOrig.class.getSimpleName();
-	
-//	public static class Node implements Comparable<Node>{
-//		private WorldCoordinate wc;
-//		private float f;
-//		private float g;
-//		private float h;
-//		private Node previousNode;
-//		
-//		public Node(WorldCoordinate wc) {
-//			this.wc = wc;
-//			f = 0;
-//			g = 0;
-//			previousNode = null;
-//		}
-//		
-//		public void setFScore(float f) {
-//			this.f = f;
-//		}
-//		
-//		public void setGScore(float g) {
-//			this.g = g;
-//		}
-//		
-//		public void setHScore(float h) {
-//			this.h = h;
-//		}
-//		
-//		public float getFScore() {
-//			return f;
-//		}
-//		
-//		public float getGScore() {
-//			return g;
-//		}
-//		
-//		public float getHScore() {
-//			return h;
-//		}
-//		
-//		public WorldCoordinate getCoordinate() {
-//			return wc;
-//		}
-//		
-//		public List<Node> getNeighbours(World w) {
-//			List<Node> result = new ArrayList<Node>();
-//			WorldNode currentWNode = w.getNode(wc);
-//			if(wc.getLeft() != null && currentWNode.getLeft() != null) result.add(new Node(wc.getLeft()));
-//			if(wc.getRight() != null && currentWNode.getRight() != null) result.add(new Node(wc.getRight()));
-//			if(wc.getTop() != null && currentWNode.getTop() != null) result.add(new Node(wc.getTop()));
-//			if(wc.getBottom() != null && currentWNode.getBottom() != null) result.add(new Node(wc.getBottom()));
-//			return result;
-//		}
-//		
-//		public void setPreviousNode(Node n) {
-//			previousNode = n;
-//		}
-//		
-//		public Node getPreviousNode() {
-//			return previousNode;
-//		}
-//		
-//		@Override
-//		public int hashCode() {
-//			return wc.hashCode();
-//		}
-//		
-//		@Override
-//		public boolean equals(Object o) {
-//			return o.getClass() == this.getClass() && ((Node)o).getCoordinate().equals(wc);
-//		}
-//		
-//		@Override
-//		public int compareTo(Node other) {
-//			return Float.compare(this.getFScore(), other.getFScore());
-//		}
-//	}
+	private static long timeFor3dTo2d = 0;
+	private static long timeForGettingThreshVal = 0;
 
 	private static class PathNode implements Comparable<PathNode> {
 		private float gScore = 0;
@@ -134,21 +61,98 @@ private static final String TAG = PathFinderOrig.class.getSimpleName();
 			return theNode;
 		}
 		
-		public List<PathNode> getNeighbours(Mat brickThreshold, CameraPoseTracker cameraPose) {
+//		public List<PathNode> getAllNeighbours(int hops) {
+//			List<PathNode> result = new ArrayList<PathNode>();
+//			GridNode current = theNode.getLeft();
+//			for(int i = 1; current != null; i++) {
+//				if(i >= hops){
+//					result.add(new PathNode(current));
+//					break;
+//				}
+//				if(current.getLeft() != null)
+//					current = current.getLeft();
+//			}
+//			current = theNode.getRight();
+//			for(int i = 1; current != null; i++) {
+//				if(i >= hops){
+//					result.add(new PathNode(current));
+//					break;
+//				}
+//				if(current.getRight() != null)
+//					current = current.getRight();
+//			}
+//			current = theNode.getTop();
+//			for(int i = 1; current != null; i++) {
+//				if(i >= hops){
+//					result.add(new PathNode(current));
+//					break;
+//				}
+//				if(current.getTop() != null)
+//					current = current.getTop();
+//			}
+//			current = theNode.getBottom();
+//			for(int i = 1; current != null; i++) {
+//				if(i >= hops) {
+//					result.add(new PathNode(current));
+//					break;
+//				}
+//				if(current.getBottom() != null)
+//					current = current.getBottom();
+//			}
+//			if(hops == 1) {
+//			
+//				Log.d(TAG, "HOPS: "+hops);
+//				Log.d(TAG, "THIS: "+theNode.getCoordinate());
+//				for (PathNode pathNode : result) {
+//					Log.d(TAG, "NEIGHBOUR: "+pathNode.accessGridNode().getCoordinate());
+//				}
+//			}
+//			return result;
+//		}
+		
+		public List<PathNode> getAccessibleNeighbours(Mat brickThreshold, CameraPoseTracker cameraPose, Mat mv, int hops) {
 			List<PathNode> result = new ArrayList<PathNode>();
 //			Log.d(TAG, "Node "+theNode.getCoordinate()+" has "+theNode.getNeighbours().size()+" neighbours"
 //					+ ".");
 //			int l = 0;
-			for (GridNode nb : theNode.getNeighbours()) {
+			List<GridNode> nbs = theNode.getNeighbours();
+			long start = System.nanoTime();
+			Mat coord3D = Mat.ones(4, nbs.size(), CvType.CV_32FC1);
+			for (int i = 0;i<nbs.size();i++) {
+				WorldCoordinate wcoord = nbs.get(i).getCoordinate();
+				Log.d(TAG, "COORD: "+wcoord);
+				coord3D.put(0, i, wcoord.x);
+				coord3D.put(1, i, wcoord.y);
+				coord3D.put(2, i, 0);
+			}
+			
+			Mat coord2D = cameraPose.get2DPointFrom3D(coord3D, mv);
+			
+			
+			for (int i = 0;i<nbs.size();i++) {
+				coord2D.put(0, i, coord2D.get(0,0)[0]/coord2D.get(2,0)[0]);
+				coord2D.put(1, i, coord2D.get(1,0)[0]/coord2D.get(2,0)[0]);
+				int row = (int)coord2D.get(1,0)[0];
+				int col = (int)coord2D.get(0,0)[0];
+				double threshValue = brickThreshold.get(row,col)[0];
+				Log.d(TAG, "treshValue: "+threshValue);
+				if(brickThreshold.empty() || threshValue == 0) {
+					result.add(new PathNode(nbs.get(i)));
+				}
+			}
+			timeFor3dTo2d += System.nanoTime()-start;
 //				l++;
-				WorldCoordinate wcoord = nb.getCoordinate();
-				Mat coord3D = Mat.ones(4, 1, CvType.CV_32FC1);
-				coord3D.put(0, 0, wcoord.x);
-				coord3D.put(1, 0, wcoord.y);
-				coord3D.put(2, 0, 0);
-				Mat coord2D = cameraPose.get2DPointFrom3D(coord3D);
+//				
+//				long start = System.nanoTime();
+//				Mat coord3D = Mat.ones(4, 1, CvType.CV_32FC1);
+				
+				
+				
+//				Log.d(TAG, "3D to 2D in "+(System.nanoTime()-start)/1000000L+"ms");
 				coord2D.put(0, 0, coord2D.get(0,0)[0]/coord2D.get(2,0)[0]);
 				coord2D.put(1, 0, coord2D.get(1,0)[0]/coord2D.get(2,0)[0]);
+				
+				
 //				Log.d(TAG, "BrickThreshold == null? "+(brickThreshold == null));
 //				Log.d(TAG, "ImageCoordinate: ("+(int)coord2D.get(0,0)[0]+","+(int)coord2D.get(1,0)[0]+")");
 //				Log.d(TAG, "BrickThreshold borders: ("+brickThreshold.cols()+","+brickThreshold.rows()+")");
@@ -156,15 +160,18 @@ private static final String TAG = PathFinderOrig.class.getSimpleName();
 //				Log.d(TAG, "Threshold valueArray == null? "+(brickThreshold.get((int)coord2D.get(1,0)[0], (int)coord2D.get(0,0)[0]) == null ));
 //				Log.d(TAG, "Got Threshold value in "+(System.nanoTime()-start)/1000000L+"ms");
 //				result.add(new PathNode(nb));
-				if(brickThreshold.empty() || brickThreshold.get((int)coord2D.get(1,0)[0], (int)coord2D.get(0,0)[0])[0] == 0) {
+//				start = System.nanoTime();
+				
+//				timeForGettingThreshVal += System.nanoTime()-start;
+				
 //					if(nb.getNeighbours().size() == 0) {
 //						Log.e(TAG, "A normal grid node has no neighbours (Neighbour "+l+")!");
 //					}
-					result.add(new PathNode(nb));
+					
 //					if(!brickThreshold.empty())
 //						Log.d(TAG, "Threshold value was: "+brickThreshold.get((int)coord2D.get(1,0)[0], (int)coord2D.get(0,0)[0])[0]);
-				}
-			}
+//				}
+//			}
 //			Log.d(TAG, "Node "+theNode.getCoordinate()+" has "+theNode.getNeighbours().size()+" accessible neighbours.");
 			return result;
 		}
@@ -187,6 +194,8 @@ private static final String TAG = PathFinderOrig.class.getSimpleName();
 	
 	public static LemmingPath findPath(final WorldCoordinate start, final WorldCoordinate target, World2 w) {
 		long startTime = System.nanoTime();
+		timeFor3dTo2d = 0;
+		timeForGettingThreshVal = 0;
 		
 		Map<WorldCoordinate,PathNode> closed = new HashMap<WorldCoordinate,PathNode>();
 		PriorityQueue<PathNode> open = new PriorityQueue<PathNode>();
@@ -194,6 +203,8 @@ private static final String TAG = PathFinderOrig.class.getSimpleName();
 //		Map<GridNode, Pair<float[],GridNode>> fgPrevMap = new HashMap<GridNode, Pair<float[],GridNode>>();
 		Mat brickThreshold = w.getBrickThreshold();
 		CameraPoseTracker cameraPose = w.getCameraPoseTracker();
+		Mat mv = cameraPose.getMvMat();
+		if(mv == null || mv.empty()) return null;
 //		Highgui.imwrite("/sdcard/arbg/threshold.png",brickThreshold);
 		
 		PathNode current = null;
@@ -224,7 +235,14 @@ private static final String TAG = PathFinderOrig.class.getSimpleName();
 //				if(hopCnt >= maxHops ) break;
 				
 				closed.put(current.accessGridNode().getCoordinate(), current);
-				for (PathNode nb : current.getNeighbours(brickThreshold, cameraPose)) {
+//				long startNbs = System.nanoTime();
+				
+				List<PathNode> nbs;
+				if(current.getGScore() >= 4* WorldConfig.NODE_DISTANCE)
+					nbs = current.getAccessibleNeighbours(brickThreshold, cameraPose, mv,3);
+				else
+					nbs = current.getAccessibleNeighbours(brickThreshold, cameraPose, mv,1);
+				for (PathNode nb : nbs) {
 					if(closed.containsKey(nb.accessGridNode().getCoordinate()))
 						continue;
 					float g = current.getGScore() + current.accessGridNode().getCoordinate().distance(nb.accessGridNode().getCoordinate());
@@ -241,7 +259,7 @@ private static final String TAG = PathFinderOrig.class.getSimpleName();
 //						fgPrevMap.put(nb, new Pair<float[], GridNode>(new float[]{g+nb.getCoordinate().distance(target), g},current));
 						nb.setPreviousNode(current);
 						nb.setGScore(g);
-						nb.setHScore(nb.accessGridNode().getCoordinate().distance(target));
+						nb.setHScore(Math.abs(nb.accessGridNode().getCoordinate().x-target.x)+Math.abs(nb.accessGridNode().getCoordinate().y-target.y));
 //						openNodes.get(nb.accessGridNode().getCoordinate()).setPreviousNode(current);
 //						openNodes.get(nb.accessGridNode().getCoordinate()).setGScore(g);
 //						openNodes.get(nb.accessGridNode().getCoordinate()).setHScore(nb.accessGridNode().getCoordinate().distance(target));
@@ -250,7 +268,7 @@ private static final String TAG = PathFinderOrig.class.getSimpleName();
 			}
 		}
 		
-//		if(!current.accessGridNode().getCoordinate().equals(target)) return null;
+		if(!current.accessGridNode().getCoordinate().equals(target)) return null;
 		
 		LemmingPath path = new LemmingPath();
 		while(current != null) {
@@ -260,6 +278,8 @@ private static final String TAG = PathFinderOrig.class.getSimpleName();
 		Collections.reverse(path);
 		
 		if(AppConfig.DEBUG_TIMING) Log.d(TAG, "Lemming path found in "+(System.nanoTime()-startTime)/1000000L+"ms");
+		if(AppConfig.DEBUG_TIMING) Log.d(TAG, "Time needed for 3dTo2D: "+timeFor3dTo2d/1000000.0f+"ms");
+		if(AppConfig.DEBUG_TIMING) Log.d(TAG, "Time needed for getting Threshold value: "+timeForGettingThreshVal/1000000.0f+"ms");
 		
 		return path;
 	}

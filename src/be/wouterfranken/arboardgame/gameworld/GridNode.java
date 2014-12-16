@@ -9,6 +9,7 @@ public class GridNode{
 	private GridNode right = null;
 	private GridNode top = null;
 	private GridNode bottom = null;
+	private boolean accessible = true;
 	
 	public GridNode(WorldCoordinate coord) {
 		this.coord = coord;
@@ -57,6 +58,14 @@ public class GridNode{
 	
 	public void setTop(GridNode top) {
 		this.top = top;
+	}
+	
+	public boolean isAccessible() {
+		return accessible;
+	}
+	
+	public void setAccessible(boolean accessible) {
+		this.accessible = accessible;
 	}
 	
 	@Override

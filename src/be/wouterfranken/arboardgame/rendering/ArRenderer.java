@@ -428,23 +428,23 @@ public class ArRenderer implements Renderer, PreviewCallback {
 		
 		if(AppConfig.LEMMING_RENDERING && cameraPose.cameraPoseFound()) {
 			long lemmingStart = System.nanoTime();
-//			LemmingGeneratorTask lgt = new LemmingGeneratorTask();
-//			lgt.setupFrameTrackingCallback(callback);
-//			lgt.start = lemmingStart;
-//			lgt.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
-			lemmingsGenerator.frameTick(null);
-			if(AppConfig.DEBUG_TIMING) Log.d(TAG, "Lemming frameUpdate in "+(System.nanoTime()-lemmingStart)/1000000L+"ms");
-			callback.trackingDone(LemmingsGenerator.class);
-			long lemmingMeshUpd = System.nanoTime();
+			if(AppConfig.PARALLEL_LEMMING_UPDATES) {
+				LemmingGeneratorTask lgt = new LemmingGeneratorTask();
+				lgt.setupFrameTrackingCallback(callback);
+				lgt.start = lemmingStart;
+				lgt.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
+			} else {
+				lemmingsGenerator.frameTick();
+				if(AppConfig.DEBUG_TIMING) Log.d(TAG, "Lemming frameUpdate in "+(System.nanoTime()-lemmingStart)/1000000L+"ms");
+				callback.trackingDone(LemmingsGenerator.class);
+			}
 			synchronized (lock) {
 				lemmingMeshesToRender.clear();
 				lemmingMeshesToRender.addAll(lemmingsGenerator.getLemmingMeshes());
 			}
-//			if(AppConfig.DEBUG_TIMING) Log.d(TAG, "Lemming meshes updated in "+(System.nanoTime()-lemmingMeshUpd)/1000000L+"ms");
 		} else if(AppConfig.LEMMING_RENDERING) {
 			callback.trackingDone(LemmingsGenerator.class);
 		}
-//		previousFrameTime = (System.nanoTime()-start)/1000000L;
 	}
 	
 	private class LemmingGeneratorTask extends AsyncTask<Void, Void, Void> {
@@ -453,9 +453,7 @@ public class ArRenderer implements Renderer, PreviewCallback {
 		
 		@Override
 		protected Void doInBackground(Void... params) {
-			if(AppConfig.DEBUG_TIMING) Log.d(TAG, "Lemming Preprocessing in "+(System.nanoTime()-start)/1000000L+"ms");
-			start = System.nanoTime();
-			lemmingsGenerator.frameTick(null);//legoBrick.getLegoBricks(cameraPose)
+			lemmingsGenerator.frameTick();
 			return null;
 		}
 		

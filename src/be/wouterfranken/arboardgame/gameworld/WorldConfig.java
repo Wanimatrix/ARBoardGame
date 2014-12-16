@@ -22,9 +22,9 @@ public class WorldConfig {
 	// Lemming Configuration options
 	public final static WorldCoordinate STARTPOINT = new WorldCoordinate(0, -11.5f);
 	public final static WorldCoordinate ENDPOINT = new WorldCoordinate(0, 11.5f);
-	public final static int LEMMINGS_AMOUNT = 5;
-	public final static float LEMMINGS_SPEED_WITH_STARS = 0.5f;
-	public final static float LEMMINGS_SPEED_NO_STARS = 1.2f;
+	public final static int LEMMINGS_AMOUNT = 100;
+	public final static float LEMMINGS_SPEED_WITH_STARS = 5;//0.5f;
+	public final static float LEMMINGS_SPEED_NO_STARS = 10;//1.2f;
 	public final static float LEMMINGS_SIZE = 0.5f;
 	public final static Color LEMMINGS_COLOR = new Color(0, 1, 0, 1);
 	public final static float LEMMING_HEIGHT = 0.1f;

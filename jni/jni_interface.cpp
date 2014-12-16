@@ -67,6 +67,9 @@ extern "C"
 
 	JNIEXPORT void JNICALL Java_be_wouterfranken_arboardgame_rendering_tracking_LegoBrickTracker_findLegoBrick2
 			(JNIEnv *env, jobject object, jlong bgrPointer, jlong thresholdPtr);
+
+	JNIEXPORT void JNICALL Java_be_wouterfranken_arboardgame_rendering_tracking_CameraPoseTracker_get2DPointsFrom3D
+			(JNIEnv *env, jobject object, jlong points3dPtr, jlong glMvPtr, jlong intrinsicsPtr, jlong points2dPtr);
 }
 
 JNIEXPORT void JNICALL Java_be_wouterfranken_arboardgame_rendering_tracking_CameraPoseTracker_loadCameraCalibration(
@@ -636,14 +639,42 @@ JNIEXPORT void JNICALL Java_be_wouterfranken_arboardgame_rendering_tracking_Lego
 }
 
 void morphology_operations(Mat src, Mat dst) {
-	bitwise_not(src,dst);
-	// if(hsvColors[i].close_kernel_size > 0) {
-		morphologyEx(dst, dst, MORPH_CLOSE, getStructuringElement(MORPH_ELLIPSE,
+	morphologyEx(src, src, MORPH_CLOSE, getStructuringElement(MORPH_ELLIPSE,
+		Point(4,4)));
+	morphologyEx(dst, dst, MORPH_OPEN, getStructuringElement(MORPH_ELLIPSE,
 		Point(5,5)));
+	// bitwise_not(src,dst);
+	// if(hsvColors[i].close_kernel_size > 0) {
+		// morphologyEx(dst, dst, MORPH_CLOSE, getStructuringElement(MORPH_ELLIPSE,
+		// Point(9,9)));
 	// }
 	// if(hsvColors[i].open_kernel_size > 0) {
 		// morphologyEx(dst, dst, MORPH_OPEN, getStructuringElement(MORPH_ELLIPSE,
 		// Point(17,17)));
 	// }
-	bitwise_not(dst,dst);
+	// bitwise_not(dst,dst);
+}
+
+
+JNIEXPORT void JNICALL Java_be_wouterfranken_arboardgame_rendering_tracking_CameraPoseTracker_get2DPointsFrom3D
+	(JNIEnv *env, jobject object, jlong points3dPtr, jlong glMvPtr, jlong intrinsicsPtr, jlong points2dPtr) {
+	Mat points3d = *(Mat *) points3dPtr;
+	Mat glMv = *(Mat *) glMvPtr;
+	Mat *points2d = (Mat *) points2dPtr;
+	Mat intrinsics = *(Mat *) intrinsicsPtr;
+
+	Mat glMvTransposed;
+	transpose(glMv, glMvTransposed);
+	Utilities::logMat(glMvTransposed,"MV");
+	    
+	// Set Extrinsics
+	Mat extrinsics = Mat::zeros(3,4, CV_32FC1);
+    glMvTransposed.row(0).copyTo(extrinsics.row(0));
+    glMvTransposed.row(1).copyTo(extrinsics.row(1));
+
+    // Necessary, because glMv is already transformed for OpenGL.
+    glMvTransposed.row(2) *= -1;
+    glMvTransposed.row(2).copyTo(extrinsics.row(2));
+
+    *points2d = (intrinsics*extrinsics)*points3d;
 }

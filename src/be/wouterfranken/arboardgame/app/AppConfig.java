@@ -12,11 +12,14 @@ public class AppConfig {
 	public static final int MAX_LEGO_NO_MERGES_BEFORE_REMOVAL = 5;
 	
 	public static final boolean CAMERA_POSE_ESTIMATION = true;
-	public static final boolean PARALLEL_POSE_ESTIMATION = false;
 	public static final boolean LEMMING_RENDERING = true;
 	public static final boolean LEGO_TRACKING = true;
 	
-	public final static boolean DEBUG_LOGGING = false;
+	public static final boolean PARALLEL_POSE_ESTIMATION = false;
+	public static final boolean PARALLEL_LEMMING_UPDATES = false;
+	public static final boolean PARALLEL_LEGO_TRACKING = false;
+	
+	public final static boolean DEBUG_LOGGING = true;
 	public final static boolean DEBUG_TIMING = true;
 	
 	/**

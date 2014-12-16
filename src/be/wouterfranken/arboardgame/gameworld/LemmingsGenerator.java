@@ -37,7 +37,7 @@ public class LemmingsGenerator extends Tracker{
 	}
 	
 	@SuppressWarnings("unused")
-	public void frameTick(LegoBrick[] bricks) {
+	public void frameTick() {
 		if(!w.isWorldGenerated()) return;
 		
 		synchronized (lock) {
@@ -49,36 +49,31 @@ public class LemmingsGenerator extends Tracker{
 			}
 		}
 		
-		// Brick control
-//		synchronized (brickLock) {
-//			w.addBricks(bricks);
-		
-			// Generate Lemmings
-			synchronized (lock) {
-				boolean noLemmings = lemmings.isEmpty();
-				if(noLemmings && amount != 0) {
-					generateNewLemming();
-				} else if (!noLemmings){
-					for(int i = 0; i< lemmings.size();i++) {
-						Lemming lemming = lemmings.get(i);
-						if(lemming.getLocationX() == end.x && lemming.getLocationY() == end.y) {
-							lemmings.remove(i--);
-							if(WorldConfig.ONE_PER_ONE)
-								generateNewLemming();
-						} else {
-							lemming.updateLocation(end, w);
-						}
-					}
-					if(!WorldConfig.ONE_PER_ONE && !lemmings.isEmpty()){
-						Lemming lastNew;
-						lastNew = lemmings.get(lemmings.size()-1);
-						if(MathUtilities.distance(lastNew.getLocationX(), lastNew.getLocationY(), start.x, start.y) >= WorldConfig.LEMMING_DISTANCE) {
+		// Generate Lemmings
+		synchronized (lock) {
+			boolean noLemmings = lemmings.isEmpty();
+			if(noLemmings && amount != 0) {
+				generateNewLemming();
+			} else if (!noLemmings){
+				for(int i = 0; i< lemmings.size();i++) {
+					Lemming lemming = lemmings.get(i);
+					if(lemming.getLocationX() == end.x && lemming.getLocationY() == end.y) {
+						lemmings.remove(i--);
+						if(WorldConfig.ONE_PER_ONE)
 							generateNewLemming();
-						}
+					} else {
+						lemming.updateLocation(end, w);
+					}
+				}
+				if(!WorldConfig.ONE_PER_ONE && !lemmings.isEmpty()){
+					Lemming lastNew;
+					lastNew = lemmings.get(lemmings.size()-1);
+					if(MathUtilities.distance(lastNew.getLocationX(), lastNew.getLocationY(), start.x, start.y) >= WorldConfig.LEMMING_DISTANCE) {
+						generateNewLemming();
 					}
 				}
 			}
-//		}
+		}
 	}
 	
 	private void generateNewLemming() {

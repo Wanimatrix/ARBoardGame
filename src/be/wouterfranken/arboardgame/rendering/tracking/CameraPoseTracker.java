@@ -134,6 +134,14 @@ public class CameraPoseTracker extends Tracker{
 		return result;
 	}
 	
+	public Mat getMvMat() {
+		Mat result = new Mat();
+		synchronized (lockExtern) {
+			mvExtern.copyTo(result);
+		}
+		return result;
+	}
+	
 	public float[] get3DPointFrom2D(float x, float y, float finalZ) {
 	    Mat glMv = new Mat();
 	    Mat tmp2 = new Mat();
@@ -178,35 +186,38 @@ public class CameraPoseTracker extends Tracker{
 	    return new float[]{(float) vector3D.get(0,0)[0],(float) vector3D.get(1,0)[0],(float) vector3D.get(2,0)[0]};
 	}
 	
-	public Mat get2DPointFrom3D(Mat points3D) {
-	    Mat glMv = new Mat();
-	    Mat tmp2 = new Mat();
-	    synchronized (lockExtern) {
-	    	mvExtern.copyTo(tmp2);
-	    }
-	    if(tmp2 == null || tmp2.empty()) return null;
-	    Core.transpose(tmp2, glMv);
-	    glMv.convertTo(glMv, CvType.CV_32FC1);
-	    Mat points2D = Mat.ones(3,points3D.cols(),CvType.CV_32FC1);
-//	    Mat vector3D = Mat.ones(4,1,CvType.CV_32FC1);
-//	    vector3D.put(0,0,x);
-//	    vector3D.put(1,0,y);
-//	    vector3D.put(2,0,z);
-	    
-	    // Set Extrinsics
-	    Mat extrinsics = Mat.zeros(3,4, CvType.CV_32FC1);
-	    glMv.row(0).copyTo(extrinsics.row(0));
-	    glMv.row(1).copyTo(extrinsics.row(1));
-	    // Necessary, because glMv is already transformed for OpenGL.
-	    Core.multiply(glMv.row(2), new Scalar(-1), extrinsics.row(2));
-	    
-	    Mat tmp = Mat.zeros(3,4,CvType.CV_32FC1);
-	    Core.gemm(intrinsics,extrinsics,1,new Mat(),0,tmp,0);
-//	    Log.d(TAG, "Points3D Cols: "+points3D.cols()+", Rows: "+points3D.rows());
-	    Core.gemm(tmp,points3D,1,new Mat(),0,points2D,0);
-//	    Log.d(TAG, "Points2D Cols: "+points2D.cols()+", Rows: "+points2D.rows());
-	    
-	    return points2D;
+	public Mat get2DPointFrom3D(Mat points3D, Mat glMvIn) {
+		Mat result = new Mat(3,points3D.cols(),points3D.type());
+		get2DPointsFrom3D(points3D.getNativeObjAddr(), glMvIn.getNativeObjAddr(), intrinsics.getNativeObjAddr(), result.getNativeObjAddr());
+		return result;
+//	    Mat glMv = new Mat();
+////	    Mat tmp2 = new Mat();
+////	    synchronized (lockExtern) {
+////	    	mvExtern.copyTo(tmp2);
+////	    }
+////	    if(tmp2 == null || tmp2.empty()) return null;
+//	    Core.transpose(glMvIn, glMv);
+//	    glMv.convertTo(glMv, CvType.CV_32FC1);
+//	    Mat points2D = Mat.ones(3,points3D.cols(),CvType.CV_32FC1);
+////	    Mat vector3D = Mat.ones(4,1,CvType.CV_32FC1);
+////	    vector3D.put(0,0,x);
+////	    vector3D.put(1,0,y);
+////	    vector3D.put(2,0,z);
+//	    
+//	    // Set Extrinsics
+//	    Mat extrinsics = Mat.zeros(3,4, CvType.CV_32FC1);
+//	    glMv.row(0).copyTo(extrinsics.row(0));
+//	    glMv.row(1).copyTo(extrinsics.row(1));
+//	    // Necessary, because glMv is already transformed for OpenGL.
+//	    Core.multiply(glMv.row(2), new Scalar(-1), extrinsics.row(2));
+//	    
+//	    Mat tmp = Mat.zeros(3,4,CvType.CV_32FC1);
+//	    Core.gemm(intrinsics,extrinsics,1,new Mat(),0,tmp,0);
+////	    Log.d(TAG, "Points3D Cols: "+points3D.cols()+", Rows: "+points3D.rows());
+//	    Core.gemm(tmp,points3D,1,new Mat(),0,points2D,0);
+////	    Log.d(TAG, "Points2D Cols: "+points2D.cols()+", Rows: "+points2D.rows());
+//	    
+//	    return points2D;
 	}
 	
 //	private Mat grid = new Mat();
@@ -341,4 +352,5 @@ public class CameraPoseTracker extends Tracker{
 	private native boolean getCameraPose(long frameImagePtr, long projMatPtr, long mvMatPtr);
 	private native void loadCameraCalibration(String cameraIntDistPath,long cameraMat, long distortion);
 	public native void getCalibrationData(long cameraMat, long distortion);
+	public native void get2DPointsFrom3D(long points3dPtr, long glMvPtr, long intrinsicsPtr, long points2dPtr);
 }

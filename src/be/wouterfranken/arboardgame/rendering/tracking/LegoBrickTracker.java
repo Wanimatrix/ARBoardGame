@@ -30,24 +30,28 @@ public class LegoBrickTracker extends Tracker{
 		if(AppConfig.DEBUG_LOGGING) Log.d(TAG,"Legobrick tracking ...");
 		
 		long start = System.nanoTime();
-		Mat threshold = new Mat();
-//		FindLegoBrick task = new FindLegoBrick();
-//		task.start = System.nanoTime();
 		
+		if(AppConfig.PARALLEL_LEGO_TRACKING) {
+			FindLegoBrick task = new FindLegoBrick();
+			task.start = start;
+			task.setupFrameTrackingCallback(trackingCallback);
+			task.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, yuvFrameImage);
+		} else {
+			Mat threshold = new Mat();
+			findLegoBrick2( 
+					yuvFrameImage.getNativeObjAddr(),
+					threshold.getNativeObjAddr()
+					);
+			setThreshold(threshold);
+			trackingCallback.trackingDone(LegoBrickTracker.class);
+			if(AppConfig.DEBUG_TIMING) Log.d(TAG, "LegoBrick found in "+(System.nanoTime()-start)/1000000L+"ms");
+		}
+		
+
 //		findLegoBrick( 
 //				yuvFrameImage.getNativeObjAddr(),
 //				contour.getNativeObjAddr()
 //				);
-		findLegoBrick2( 
-				yuvFrameImage.getNativeObjAddr(),
-				threshold.getNativeObjAddr()
-				);
-		setThreshold(threshold);
-		trackingCallback.trackingDone(LegoBrickTracker.class);
-		if(AppConfig.DEBUG_TIMING) Log.d(TAG, "LegoBrick found in "+(System.nanoTime()-start)/1000000L+"ms");
-		
-//		task.setupFrameTrackingCallback(trackingCallback);
-//		task.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, yuvFrameImage);
 	}
 	
 //	public float[][] getGLContour() {
@@ -280,22 +284,16 @@ public class LegoBrickTracker extends Tracker{
 	private class FindLegoBrick extends AsyncTask<Mat, Void, Void > {
 		private FrameTrackingCallback trackingCallback;
 		private long start;
-		private Mat contour;
 		private Mat threshold;
 		
 		public FindLegoBrick() {
 			synchronized (lock) {
-//				contour = new Mat(LegoBrickTracker.this.contour.size(), LegoBrickTracker.this.contour.type());
 				threshold = new Mat(LegoBrickTracker.this.threshold.size(), LegoBrickTracker.this.threshold.type());
 			}
 		}
 		
 		@Override
 		protected Void doInBackground(Mat... params) {
-//			findLegoBrick( 
-//					params[0].getNativeObjAddr(),
-//					contour.getNativeObjAddr()
-//					);
 			long start = System.nanoTime();
 			findLegoBrick2( 
 					params[0].getNativeObjAddr(),
@@ -308,7 +306,6 @@ public class LegoBrickTracker extends Tracker{
 		@Override
 		protected void onPostExecute(Void result) {
 			super.onPostExecute(result);
-//			setContour(contour);
 			setThreshold(threshold);
 			this.trackingCallback.trackingDone(LegoBrickTracker.class);
 			if(AppConfig.DEBUG_TIMING) Log.d(TAG, "LegoBrick found in "+(System.nanoTime()-start)/1000000L+"ms");
