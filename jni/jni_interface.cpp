@@ -625,7 +625,11 @@ JNIEXPORT void JNICALL Java_be_wouterfranken_arboardgame_rendering_tracking_Lego
 	#endif
 	Mat threshInv;
 
+	// imwrite("/sdcard/arbg/thresholded.png",*thresholded);
+
 	morphology_operations(*thresholded, *thresholded);
+
+	// imwrite("/sdcard/arbg/closed.png",*thresholded);
 	// bitwise_not(*thresholded,threshInv);
 	// morphologyEx(threshInv, *thresholded, MORPH_CLOSE, kernel);
 	// bitwise_not(*thresholded,*thresholded);

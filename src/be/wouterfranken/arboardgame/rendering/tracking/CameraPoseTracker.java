@@ -247,7 +247,7 @@ public class CameraPoseTracker extends Tracker{
 //		image.copyTo(newImage);
 //		synchronized (lockExtern) {
 //			if(mvExtern == null || mvExtern.empty() || grid.empty()) return null;
-//			Mat gridPts2D = get2DPointFrom3D(grid);
+//			Mat gridPts2D = get2DPointFrom3D(grid,this.getMvMat());
 //			for (int i = 0; i < gridPts2D.cols(); i++) {
 //				gridPts2D.put(0, i, gridPts2D.get(0,i)[0]/gridPts2D.get(2,i)[0]);
 //				gridPts2D.put(1, i, gridPts2D.get(1,i)[0]/gridPts2D.get(2,i)[0]);
