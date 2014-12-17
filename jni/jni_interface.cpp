@@ -414,7 +414,7 @@ JNIEXPORT void JNICALL Java_be_wouterfranken_arboardgame_rendering_tracking_Lego
 		inRange(hsv, hsvColors[i].lower,hsvColors[i].upper,thresholded[i]);
 	}
 
-	imwrite("/sdcard/arbg/thresholded.png",thresholded[0]);
+	// imwrite("/sdcard/arbg/thresholded.png",thresholded[0]);
 	// bitwise_or(redThresh,yellowThresh,thresholded);
 
 #if TIMING
@@ -429,7 +429,7 @@ JNIEXPORT void JNICALL Java_be_wouterfranken_arboardgame_rendering_tracking_Lego
 	// 	morphologyEx(threshInv, thresholded[i], MORPH_CLOSE, kernel);
 	// 	bitwise_not(thresholded[i],thresholded[i]);
 	// }
-	imwrite("/sdcard/arbg/closing.png",thresholded[0]);
+	// imwrite("/sdcard/arbg/closing.png",thresholded[0]);
 #if TIMING
 	__android_log_print(ANDROID_LOG_DEBUG,APPNAME,"Closing time: %f\n",((float)(getRealTime() - start))*1000.0);
 #endif
@@ -439,19 +439,19 @@ JNIEXPORT void JNICALL Java_be_wouterfranken_arboardgame_rendering_tracking_Lego
 	vector<vector<Vec4i> > hierarchy(thresholded.size());
 	vector <KeyPoint> kpts;
 
-// #if WRITE_CONTOURS(true)
-	Mat thresholdImgColor1, thresholdImgColor2, thresholdImgColor3;
-	cvtColor(thresholded[RED],thresholdImgColor1,COLOR_GRAY2BGR);
-	cvtColor(thresholded[RED],thresholdImgColor2,COLOR_GRAY2BGR);
-	cvtColor(thresholded[RED],thresholdImgColor3,COLOR_GRAY2BGR);
-	imwrite("/sdcard/arbg/orig.png",bgr);
-// #endif
+#if WRITE_CONTOURS(true)
+	Mat thresholdImgColor;//1, thresholdImgColor2, thresholdImgColor3;
+	cvtColor(thresholded[RED],thresholdImgColor,COLOR_GRAY2BGR);
+	// cvtColor(thresholded[RED],thresholdImgColor2,COLOR_GRAY2BGR);
+	// cvtColor(thresholded[RED],thresholdImgColor3,COLOR_GRAY2BGR);
+	// imwrite("/sdcard/arbg/orig.png",bgr);
+#endif
 #if TIMING
 	start=getRealTime();
 #endif
 	/// Detect edges using canny
 	for (int col = 0; col < thresholded.size(); ++col) Canny( thresholded[col], response[col], 100, 100*2, 3);
-	imwrite("/sdcard/arbg/canny.png",response[0]);
+	// imwrite("/sdcard/arbg/canny.png",response[0]);
 	// Canny( yellowThresh, responseYellow, 100, 100*2, 3);
 	// Canny( blueThresh, responseBlue, 100, 100*2, 3);
 #if TIMING
@@ -493,15 +493,15 @@ JNIEXPORT void JNICALL Java_be_wouterfranken_arboardgame_rendering_tracking_Lego
 
 			if(area > maxArea)
 				maxArea = area;
-// #if WRITE_CONTOURS(true)
+#if WRITE_CONTOURS(true)
 			Scalar color = Scalar(rand() % 256,rand() % 256,rand() % 256);
-			drawContours( thresholdImgColor1, contours0[c], i, color, 2, 8, hierarchy[c], 0, Point() );
-			drawContours( thresholdImgColor2, contours[c], i, color, 2, 8, hierarchy[c], 0, Point() );
-// #endif
+			drawContours( thresholdImgColor, contours[c], i, color, 2, 8, hierarchy[c], 0, Point() );
+			// drawContours( thresholdImgColor2, contours[c], i, color, 2, 8, hierarchy[c], 0, Point() );
+#endif
 		}
 	}
-	imwrite("/sdcard/arbg/beforePoly.png",thresholdImgColor1);
-	imwrite("/sdcard/arbg/afterPoly.png",thresholdImgColor2);
+	// imwrite("/sdcard/arbg/beforePoly.png",thresholdImgColor1);
+	// imwrite("/sdcard/arbg/afterPoly.png",thresholdImgColor2);
 #if TIMING
 	__android_log_print(ANDROID_LOG_DEBUG,APPNAME,"Approxpoly time: %f\n",((float)(getRealTime() - start))*1000.0);
 #endif
@@ -526,17 +526,17 @@ JNIEXPORT void JNICALL Java_be_wouterfranken_arboardgame_rendering_tracking_Lego
 					(*i)[c].y = (*i)[c].y*red_den+offInc;
 				}
 				totalAmountContours++;
-	// #if WRITE_CONTOURS(false)
+	#if WRITE_CONTOURS(false)
 				Scalar color = Scalar(rand() % 256,rand() % 256,rand() % 256);
-				drawContours( thresholdImgColor3, contours[col], k, color, 2, 8, hierarchy[col], 0, Point() );
-	// #endif
+				drawContours( outImg, contours[col], k, color, 2, 8, hierarchy[col], 0, Point() );
+	#endif
 
 				i++;
 				k++;
 			}
 		}
 	}
-	imwrite("/sdcard/arbg/afterFiltering.png",thresholdImgColor3);
+	// imwrite("/sdcard/arbg/afterFiltering.png",thresholdImgColor3);
 #if TIMING
 	__android_log_print(ANDROID_LOG_DEBUG,APPNAME,"Contour filtering time: %f\n",((float)(getRealTime() - start))*1000.0);
 #endif
@@ -645,8 +645,8 @@ JNIEXPORT void JNICALL Java_be_wouterfranken_arboardgame_rendering_tracking_Lego
 	__android_log_print(ANDROID_LOG_DEBUG,TAG,"Closing time: %f\n",((float)(getRealTime() - start))*1000.0);
 	#endif
 
-	imwrite("/sdcard/arbg/thresholded.png", *thresholded);
-	imwrite("/sdcard/arbg/bgr.png", bgr);
+	// imwrite("/sdcard/arbg/thresholded.png", *thresholded);
+	// imwrite("/sdcard/arbg/bgr.png", bgr);
 }
 
 void morphology_operations(Mat src, Mat dst) {

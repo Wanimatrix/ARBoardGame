@@ -444,7 +444,6 @@ public class ArRenderer implements Renderer, PreviewCallback {
 		} else if(AppConfig.LEMMING_RENDERING) {
 			callback.trackingDone(LemmingsGenerator.class);
 		}
-		cameraPose.calculateImageGrid(colFrameImg,lemmingsGenerator.getWorld());
 //		previousFrameTime = (System.nanoTime()-start)/1000000L;
 	}
 	
