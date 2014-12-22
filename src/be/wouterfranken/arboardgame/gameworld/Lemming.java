@@ -20,39 +20,34 @@ public class Lemming {
 	
 	private float locationX;
 	private float locationY;
-	private long locationUpdateTimestamp;
-	private Object timestampLock = new Object();
 	private float size;
 	private float height;
 	private float speed; // cm/s
 	
-//	public Lemming(float size, float height, float locationX, float locationY, float speed, Color color) {
-//		mesh = new CubeMesh(size, locationX, locationY, height, new RenderOptions(true, color, true));
-//		this.locationX = locationX;
-//		this.locationY = locationY;
-//		this.size = size;
-//		this.height = height;
-//		this.speed = speed;
-//		this.pathGenerator = new Pathfinder();
-//	}
-	
-	public void generatePath(WorldCoordinate start, WorldCoordinate goal, World w) {
-		if(AppConfig.DEBUG_LOGGING) Log.d(TAG, "Start path generation...");
-		path = pathGenerator.findPath2(start, goal, w);
-		if(AppConfig.DEBUG_LOGGING) Log.d(TAG, "Path size: "+path.size());
-		if(AppConfig.DEBUG_LOGGING) Log.d(TAG, "Path generation done...");
-	}
-	
-	public Lemming(float size, float height, float locationX, float locationY, long lastLocationUpdate, LemmingPath path, float speed, Color color) {
+	public Lemming(float size, float height, float locationX, float locationY, float speed, Color color) {
 		mesh = new CubeMesh(size, locationX, locationY, height, new RenderOptions(true, color, true));
 		this.locationX = locationX;
 		this.locationY = locationY;
 		this.size = size;
 		this.height = height;
 		this.speed = speed;
-		synchronized (timestampLock) {
-			this.locationUpdateTimestamp = lastLocationUpdate;
-		}
+		this.pathGenerator = new Pathfinder();
+	}
+	
+	public void generatePath(WorldCoordinate start, WorldCoordinate goal, World2 w) {
+		if(AppConfig.DEBUG_LOGGING) Log.d(TAG, "Start path generation...");
+		path = pathGenerator.findPath2(start, goal, w);
+		if(AppConfig.DEBUG_LOGGING) Log.d(TAG, "Path size: "+path.size());
+		if(AppConfig.DEBUG_LOGGING) Log.d(TAG, "Path generation done...");
+	}
+	
+	public Lemming(float size, float height, float locationX, float locationY, LemmingPath path, float speed, Color color) {
+		mesh = new CubeMesh(size, locationX, locationY, height, new RenderOptions(true, color, true));
+		this.locationX = locationX;
+		this.locationY = locationY;
+		this.size = size;
+		this.height = height;
+		this.speed = speed;
 		this.path = path;
 	}
 	
@@ -85,13 +80,15 @@ public class Lemming {
 		// When we will pass a node, the path will be updated first.
 		if(MathUtilities.distance(newLocationX,newLocationY,to.x,to.y) < todoDistance) {
 			if(AppConfig.DEBUG_LOGGING) Log.d(TAG, "Finding path from "+path.get(0).toString()+", to "+end.toString());
-			LemmingPath tmpPath = PathFinderOrig.findPath(to, end, w);
-//			LemmingPath tmpPath = pathGenerator.findPath2(to, end, w);
+			LemmingPath tmpPath;
+			if(!AppConfig.TREE_ADAPTIVE_ASTAR)
+				tmpPath = PathFinderOrig.findPath(to, end, w);
+			else tmpPath = pathGenerator.findPath2(to, end, w);
 			if(tmpPath != null) {
 				LemmingPath newPath = new LemmingPath();
-//				if(!path.get(0).equals(tmpPath.get(0))) {
+				if(!AppConfig.TREE_ADAPTIVE_ASTAR || !path.get(0).equals(tmpPath.get(0))) {
 					newPath.add(0, path.get(0));
-//				}
+				}
 				newPath.addAll(tmpPath);
 				path = newPath;
 			}
@@ -110,6 +107,7 @@ public class Lemming {
 		
 		long startMoving = System.nanoTime();
 		while(todoDistance > 0) {
+			
 			if(path.size() == 1) {
 				newLocationX = path.get(0).x;
 				newLocationY = path.get(0).y;
@@ -121,7 +119,18 @@ public class Lemming {
 			if(distToEnd <= todoDistance || Math.abs(distToEnd-todoDistance) < 0.0001f) {
 				distance = distToEnd;
 				todoDistance -= distToEnd;
-				path.remove(0);
+//				path.remove(0);
+				LemmingPath tmpPath;
+				if(!AppConfig.TREE_ADAPTIVE_ASTAR) tmpPath = PathFinderOrig.findPath(to, end, w);
+				else tmpPath = pathGenerator.findPath2(to, end, w);
+				if(tmpPath != null) {
+//					LemmingPath newPath = new LemmingPath();
+//					if(!AppConfig.TREE_ADAPTIVE_ASTAR || !path.get(0).equals(tmpPath.get(0))) {
+//						newPath.add(0, path.get(0));
+//					}
+//					newPath.addAll(tmpPath);
+					path = tmpPath;
+				}
 			} else {
 				distance = todoDistance;
 				todoDistance = 0;

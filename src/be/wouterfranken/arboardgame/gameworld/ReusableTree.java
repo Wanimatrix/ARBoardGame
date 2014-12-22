@@ -7,42 +7,43 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import be.wouterfranken.arboardgame.gameworld.Pathfinder.Node;
+import be.wouterfranken.arboardgame.gameworld.Pathfinder.PathNode;
 import android.util.Log;
 import android.util.Pair;
 import android.util.SparseArray;
 
 public class ReusableTree {
-	private Map<Pathfinder.Node, Pair<Integer,Node>> perState = new HashMap<Pathfinder.Node, Pair<Integer,Node>>();
+	private Map<PathNode, Pair<Integer,PathNode>> perState = new HashMap<PathNode, Pair<Integer,PathNode>>();
 	private SparseArray<Pair<float[], Set<Integer>>> perPath = new SparseArray<Pair<float[],Set<Integer>>>();
-	private Map<Pathfinder.Node, Integer> generated = new HashMap<Pathfinder.Node, Integer>();
+	private Map<PathNode, Integer> generated = new HashMap<PathNode, Integer>();
 	private int searchCount = -1;
 	
-	public Integer getId(Node n) {
+	public Integer getId(PathNode n) {
+		if(perState.get(n) == null) return 0;
 		return perState.get(n).first;
 	}
 	
-	public void setId(Node n, int newId) {
-		Pair<Integer,Node> stateVars = perState.get(n);
+	public void setId(PathNode n, int newId) {
+		Pair<Integer,PathNode> stateVars = perState.get(n);
 		if(stateVars == null)
-			perState.put(n,new Pair<Integer, Node>(newId,null));
+			perState.put(n,new Pair<Integer, PathNode>(newId,null));
 		else
-			perState.put(n,new Pair<Integer, Node>(newId,stateVars.second));
+			perState.put(n,new Pair<Integer, PathNode>(newId,stateVars.second));
 	}
 	
-	public Node getParent(Node n) {
+	public PathNode getParent(PathNode n) {
 		return perState.get(n).second;
 	}
 	
-	public void setParent(Node n, Node newParent) {
-		Pair<Integer,Node> stateVars = perState.get(n);
+	public void setParent(PathNode n, PathNode newParent) {
+		Pair<Integer,PathNode> stateVars = perState.get(n);
 		if(stateVars == null)
-			perState.put(n,new Pair<Integer, Node>(0,newParent));
+			perState.put(n,new Pair<Integer, PathNode>(0,newParent));
 		else 
-			perState.put(n,new Pair<Integer, Node>(stateVars.first,newParent));
+			perState.put(n,new Pair<Integer, PathNode>(stateVars.first,newParent));
 	}
 	
-	public int getGenerated(Node state) {
+	public int getGenerated(PathNode state) {
 		Integer gen = generated.get(state);
 		if(gen == null) {
 			Log.d("PATHFINDER", "Generated: 0");
@@ -54,11 +55,12 @@ public class ReusableTree {
 		}
 	}
 	
-	public void setGenerated(Pathfinder.Node n, int generated) {
+	public void setGenerated(PathNode n, int generated) {
 		this.generated.put(n, generated);
 	}
 	
 	public float getHmax(Integer pathId) {
+		if(pathId == 0) return -1;
 		return perPath.get(pathId).first[1];
 	}
 	
@@ -99,16 +101,16 @@ public class ReusableTree {
 		return searchCount;
 	}
 	
-	private void addNode(Pathfinder.Node n) {
-		this.perState.put(n, new Pair<Integer, Node>(0, null));
-		setGenerated(n, searchCount);
-	}
+//	private void addNode(PathNode n) {
+//		this.perState.put(n, new Pair<Integer, PathNode>(0, null));
+//		setGenerated(n, searchCount);
+//	}
 	
-	public void initState(Node n, WorldCoordinate goal) {
-		Log.d("PATHFINDER", "NodeCoord: "+n.getCoordinate());
+	public void initState(PathNode n, WorldCoordinate goal) {
+		Log.d("PATHFINDER", "NodeCoord: "+n.accessGridNode().getCoordinate());
 		if(this.getGenerated(n) == 0) {
 			n.setGScore(Float.POSITIVE_INFINITY);
-			n.setHScore(PathUtilities.h(n.getCoordinate(),goal));
+			n.setHScore(PathUtilities.h(n.accessGridNode().getCoordinate(),goal));
 		} else if(this.getGenerated(n) != this.getSearchCount()) {
 			n.setGScore(Float.POSITIVE_INFINITY);
 		}
@@ -117,27 +119,29 @@ public class ReusableTree {
 		Log.d("PATHFINDER", "New generated: "+this.getGenerated(n));
 	}
 	
-	public void addPath(Node s, WorldCoordinate start, WorldCoordinate goal) {
-		if(s.getCoordinate() != goal) {
+	public void addPath(PathNode s, PathNode start, WorldCoordinate goal) {
+		if(!s.accessGridNode().getCoordinate().equals(goal)) {
 			getPaths(getId(s)).add(searchCount);
 		}
-		perPath.put(searchCount, new Pair<float[], Set<Integer>>(new float[]{PathUtilities.h(s.getCoordinate(),goal),PathUtilities.h(start,goal)}, new HashSet<Integer>()));
-		while(!s.getCoordinate().equals(start)) {
-			Node sTmp = s;
+		perPath.put(searchCount, new Pair<float[], Set<Integer>>(new float[]{s.getHScore(),start.getHScore()}, new HashSet<Integer>()));
+		while(!s.equals(start)) {
+			PathNode sTmp = s;
 			s = s.getPreviousNode();
 //			Log.d("PATHFINDER", "Current Node: "+s.getCoordinate());
 			setId(s, searchCount);
 			setParent(s, sTmp);
+			Log.d("PATHFINDER", "Node "+s.accessGridNode().getCoordinate()+" has new parent "+sTmp.accessGridNode().getCoordinate());
 		}
 	}
 	
-	public void removePaths(Node s, WorldCoordinate start, WorldCoordinate goal) {
+	public void removePaths(PathNode s) {
+		Log.d("PATHFINDER", "Removing paths ... ");
 		int x = getId(s);
-		if(getHmax(x) > PathUtilities.h(perState.get(s).second.getCoordinate(),goal))
-			setHmax(x, PathUtilities.h(perState.get(s).second.getCoordinate(),goal));
+		if(getHmax(x) > getParent(s).getHScore())
+			setHmax(x, getParent(s).getHScore());
 		List<Integer> q = new ArrayList<Integer>();
 		for (Integer x2 : getPaths(x)) {
-			if(getHmax(x) < getHmax(x2)) {
+			if(getHmax(x) < getHmin(x)) {
 				q.add(x2);
 				getPaths(x).remove(x2);
 			}
@@ -149,7 +153,7 @@ public class ReusableTree {
 				setHmax(first, getHmin(first));
 				for (Integer first2 : getPaths(first)) {
 					q.add(first2);
-					getPaths(x).remove(first2);
+					getPaths(first).remove(first2);
 				}
 			}
 		}

@@ -80,17 +80,20 @@ public class LemmingsGenerator extends Tracker{
 		synchronized (amountLock) {
 			if(amount == 0) return;
 		}
-//		Lemming l = 
-//				new Lemming(WorldConfig.LEMMINGS_SIZE, WorldConfig.LEMMING_HEIGHT, start.x, start.y, WorldConfig.LEMMINGS_SPEED_WITH_STARS, WorldConfig.LEMMINGS_COLOR);
-//		l.generatePath(start, end, w);
-		LemmingPath path = PathFinderOrig.findPath(start, end, w);
-		if(path == null) throw new IllegalStateException("You cannot place a LegoBrick on top of the startPosition!");
+		Lemming l;
+		if(AppConfig.TREE_ADAPTIVE_ASTAR) {
+			l = new Lemming(WorldConfig.LEMMINGS_SIZE, WorldConfig.LEMMING_HEIGHT, start.x, start.y, WorldConfig.LEMMINGS_SPEED_WITH_STARS, WorldConfig.LEMMINGS_COLOR);
+			l.generatePath(start, end, w);
+		} else {
+			LemmingPath path = PathFinderOrig.findPath(start, end, w);
+			if(path == null) return;//throw new IllegalStateException("You cannot place a LegoBrick on top of the startPosition!");
+			l = new Lemming(WorldConfig.LEMMINGS_SIZE, WorldConfig.LEMMING_HEIGHT, start.x, start.y, path, WorldConfig.LEMMINGS_SPEED_WITH_STARS, WorldConfig.LEMMINGS_COLOR);
+		}
 		synchronized (lock) {
 			synchronized (amountLock) {
 				if(amount == 0) return;
 				w.addStars();
-				lemmings.add(new Lemming(WorldConfig.LEMMINGS_SIZE, WorldConfig.LEMMING_HEIGHT, start.x, start.y, System.nanoTime(), path, WorldConfig.LEMMINGS_SPEED_WITH_STARS, WorldConfig.LEMMINGS_COLOR));
-//				lemmings.add(l);
+				lemmings.add(l);
 				amount--;
 			}
 		}

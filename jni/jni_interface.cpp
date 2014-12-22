@@ -638,8 +638,8 @@ JNIEXPORT void JNICALL Java_be_wouterfranken_arboardgame_rendering_tracking_Lego
 	__android_log_print(ANDROID_LOG_DEBUG,TAG,"Closing time: %f\n",((float)(getRealTime() - start))*1000.0);
 	#endif
 
-	// imwrite("/sdcard/arbg/thresholded.png", *thresholded);
-	// imwrite("/sdcard/arbg/bgr.png", bgr);
+	imwrite("/sdcard/arbg/thresholded.png", *thresholded);
+	imwrite("/sdcard/arbg/bgr.png", bgr);
 }
 
 void morphology_operations(Mat src, Mat dst) {
@@ -666,19 +666,30 @@ JNIEXPORT void JNICALL Java_be_wouterfranken_arboardgame_rendering_tracking_Came
 	Mat glMv = *(Mat *) glMvPtr;
 	Mat *points2d = (Mat *) points2dPtr;
 	Mat intrinsics = *(Mat *) intrinsicsPtr;
+	double start = getRealTime();
 
+	double startTranspose = getRealTime();
 	Mat glMvTransposed;
 	transpose(glMv, glMvTransposed);
-	Utilities::logMat(glMvTransposed,"MV");
-	    
+	// Utilities::logMat(glMvTransposed,"MV");
+	__android_log_print(ANDROID_LOG_DEBUG,"2D3DTime","Transpose time: %f\n",((float)(getRealTime() - startTranspose))*1000.0);
+
 	// Set Extrinsics
+	double startExtrinsics = getRealTime();
 	Mat extrinsics = Mat::zeros(3,4, CV_32FC1);
     glMvTransposed.row(0).copyTo(extrinsics.row(0));
     glMvTransposed.row(1).copyTo(extrinsics.row(1));
+    __android_log_print(ANDROID_LOG_DEBUG,"2D3DTime","Extrinsics time: %f\n",((float)(getRealTime() - startExtrinsics))*1000.0);
 
     // Necessary, because glMv is already transformed for OpenGL.
+    double startInvRow = getRealTime();
     glMvTransposed.row(2) *= -1;
     glMvTransposed.row(2).copyTo(extrinsics.row(2));
+    __android_log_print(ANDROID_LOG_DEBUG,"2D3DTime","InvRow time: %f\n",((float)(getRealTime() - startInvRow))*1000.0);
 
+    double startMatMul = getRealTime();
     *points2d = (intrinsics*extrinsics)*points3d;
+    __android_log_print(ANDROID_LOG_DEBUG,"2D3DTime","MatMul time: %f\n",((float)(getRealTime() - startMatMul))*1000.0);
+
+    __android_log_print(ANDROID_LOG_DEBUG,"2D3DTime","2dTo3d time: %f\n",((float)(getRealTime() - start))*1000.0);
 }

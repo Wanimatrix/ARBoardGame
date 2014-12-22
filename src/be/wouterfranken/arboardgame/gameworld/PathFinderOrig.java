@@ -15,13 +15,11 @@ import org.opencv.highgui.Highgui;
 import android.util.Log;
 import android.util.Pair;
 import be.wouterfranken.arboardgame.app.AppConfig;
-import be.wouterfranken.arboardgame.gameworld.Pathfinder.Node;
 import be.wouterfranken.arboardgame.rendering.tracking.CameraPoseTracker;
 
 public class PathFinderOrig {
 private static final String TAG = PathFinderOrig.class.getSimpleName();
-	private static long timeFor3dTo2d = 0;
-	private static long timeForGettingThreshVal = 0;
+	private static long[] time = new long[]{0,0,0};
 
 	private static class PathNode implements Comparable<PathNode> {
 		private float gScore = 0;
@@ -120,27 +118,31 @@ private static final String TAG = PathFinderOrig.class.getSimpleName();
 			Mat coord3D = Mat.ones(4, nbs.size(), CvType.CV_32FC1);
 			for (int i = 0;i<nbs.size();i++) {
 				WorldCoordinate wcoord = nbs.get(i).getCoordinate();
-				Log.d(TAG, "COORD: "+wcoord);
+//				Log.d(TAG, "COORD: "+wcoord);
 				coord3D.put(0, i, wcoord.x);
 				coord3D.put(1, i, wcoord.y);
 				coord3D.put(2, i, 0);
 			}
-			
+			time[0] += System.nanoTime()-start;
+			start = System.nanoTime();
 			Mat coord2D = cameraPose.get2DPointFrom3D(coord3D, mv);
+			time[1] += System.nanoTime()-start;
 			
-			
+			start = System.nanoTime();
 			for (int i = 0;i<nbs.size();i++) {
-				coord2D.put(0, i, coord2D.get(0,0)[0]/coord2D.get(2,0)[0]);
-				coord2D.put(1, i, coord2D.get(1,0)[0]/coord2D.get(2,0)[0]);
-				int row = (int)coord2D.get(1,0)[0];
-				int col = (int)coord2D.get(0,0)[0];
-				double threshValue = brickThreshold.get(row,col)[0];
-				Log.d(TAG, "treshValue: "+threshValue);
+//				coord2D.put(0, i, );
+//				coord2D.put(1, i, ;
+//				int row = ;
+//				int col = ;
+				double threshValue = brickThreshold.get(
+						(int)(coord2D.get(1,i)[0]*Math.pow(coord2D.get(2,i)[0],-1)),
+						(int)(coord2D.get(0,i)[0]*Math.pow(coord2D.get(2,i)[0],-1)))[0];
+//				Log.d(TAG, "treshValue: "+threshValue);
 				if(brickThreshold.empty() || threshValue == 0) {
 					result.add(new PathNode(nbs.get(i)));
 				}
 			}
-			timeFor3dTo2d += System.nanoTime()-start;
+			time[2] += System.nanoTime()-start;
 //				l++;
 //				
 //				long start = System.nanoTime();
@@ -149,8 +151,8 @@ private static final String TAG = PathFinderOrig.class.getSimpleName();
 				
 				
 //				Log.d(TAG, "3D to 2D in "+(System.nanoTime()-start)/1000000L+"ms");
-				coord2D.put(0, 0, coord2D.get(0,0)[0]/coord2D.get(2,0)[0]);
-				coord2D.put(1, 0, coord2D.get(1,0)[0]/coord2D.get(2,0)[0]);
+//				coord2D.put(0, 0, coord2D.get(0,0)[0]/coord2D.get(2,0)[0]);
+//				coord2D.put(1, 0, coord2D.get(1,0)[0]/coord2D.get(2,0)[0]);
 				
 				
 //				Log.d(TAG, "BrickThreshold == null? "+(brickThreshold == null));
@@ -194,8 +196,7 @@ private static final String TAG = PathFinderOrig.class.getSimpleName();
 	
 	public static LemmingPath findPath(final WorldCoordinate start, final WorldCoordinate target, World2 w) {
 		long startTime = System.nanoTime();
-		timeFor3dTo2d = 0;
-		timeForGettingThreshVal = 0;
+		time = new long[]{0,0,0};
 		
 		Map<WorldCoordinate,PathNode> closed = new HashMap<WorldCoordinate,PathNode>();
 		PriorityQueue<PathNode> open = new PriorityQueue<PathNode>();
@@ -278,8 +279,9 @@ private static final String TAG = PathFinderOrig.class.getSimpleName();
 		Collections.reverse(path);
 		
 		if(AppConfig.DEBUG_TIMING) Log.d(TAG, "Lemming path found in "+(System.nanoTime()-startTime)/1000000L+"ms");
-		if(AppConfig.DEBUG_TIMING) Log.d(TAG, "Time needed for 3dTo2D: "+timeFor3dTo2d/1000000.0f+"ms");
-		if(AppConfig.DEBUG_TIMING) Log.d(TAG, "Time needed for getting Threshold value: "+timeForGettingThreshVal/1000000.0f+"ms");
+		if(AppConfig.DEBUG_TIMING) Log.d(TAG, "Time needed for FOR1: "+time[0]/1000000.0f+"ms");
+		if(AppConfig.DEBUG_TIMING) Log.d(TAG, "Time needed for 3dTo2D: "+time[1]/1000000.0f+"ms");
+		if(AppConfig.DEBUG_TIMING) Log.d(TAG, "Time needed for FOR2: "+time[2]/1000000.0f+"ms");
 		
 		return path;
 	}
