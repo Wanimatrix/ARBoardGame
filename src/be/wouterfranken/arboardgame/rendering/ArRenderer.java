@@ -103,7 +103,7 @@ public class ArRenderer implements Renderer, PreviewCallback {
 	
 	public ArRenderer(GLSurfaceView view, CameraPoseTracker cameraPose) {
 		this.cameraPose = cameraPose;
-		this.legoBrick = new LegoBrickTracker();
+		this.legoBrick = new LegoBrickTracker(view.getContext());
 		this.view = view;
 		
 		// Add here the meshes that are needed for rendering.
@@ -425,6 +425,8 @@ public class ArRenderer implements Renderer, PreviewCallback {
 			}
 		}
 		if(AppConfig.LEGO_TRACKING) legoBrick.findLegoBrick(colFrameImg, callback);
+		
+//		legoBrick.getTrackedLegoBricks(cameraPose);
 		
 		if(AppConfig.LEMMING_RENDERING && cameraPose.cameraPoseFound()) {
 			long lemmingStart = System.nanoTime();

@@ -1,16 +1,25 @@
 package be.wouterfranken.arboardgame.rendering.tracking;
 
+import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.opencv.core.Core;
 import org.opencv.core.Mat;
+import org.opencv.core.Point;
+import org.opencv.core.Scalar;
+import org.opencv.core.Size;
 import org.opencv.highgui.Highgui;
+import org.opencv.imgproc.Imgproc;
 
+import android.content.Context;
 import android.os.AsyncTask;
 import android.util.Log;
 import be.wouterfranken.arboardgame.app.AppConfig;
 import be.wouterfranken.arboardgame.gameworld.LegoBrick;
 import be.wouterfranken.arboardgame.gameworld.WorldConfig;
+import be.wouterfranken.arboardgame.utilities.AndroidUtils;
 import be.wouterfranken.arboardgame.utilities.Color;
 import be.wouterfranken.arboardgame.utilities.DebugUtilities;
 import be.wouterfranken.arboardgame.utilities.MathUtilities;
@@ -23,8 +32,28 @@ public class LegoBrickTracker extends Tracker{
 	private List<Color> contourColors = new ArrayList<Color>();
 	private Mat contourExtern = new Mat();
 	private Mat thresholdExtern = new Mat();
+	private Mat brickPositionData = new Mat();
 	private Object lock = new Object();
 	private Object lockExtern = new Object();
+	
+	private Context ctx;
+	
+	public LegoBrickTracker(Context ctx) {
+		this.ctx = ctx;
+		if(AppConfig.LEGO_TRACKING_CAD) { // Load all LegoBrick CAD renderings
+			try {
+				String[] fileNames = ctx.getAssets().list("model_imgs");
+				Log.d(TAG, "File amount: "+fileNames.length);
+				for (String fn : fileNames) {
+					AndroidUtils.copyFileFromAssets(ctx, "model_imgs",fn);
+				}
+				AndroidUtils.copyFileFromAssets(ctx, "","hogTestImg.png");
+				generateHOGDescriptors(ctx.getDir("execdir",Context.MODE_PRIVATE).getAbsolutePath());
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		}
+	}
 	
 	public void findLegoBrick(Mat yuvFrameImage, FrameTrackingCallback trackingCallback) {
 		if(AppConfig.DEBUG_LOGGING) Log.d(TAG,"Legobrick tracking ...");
@@ -47,6 +76,16 @@ public class LegoBrickTracker extends Tracker{
 			if(AppConfig.DEBUG_TIMING) Log.d(TAG, "LegoBrick found in "+(System.nanoTime()-start)/1000000L+"ms");
 		}
 		
+//		Log.d(TAG, "Dir: ")
+		if(AppConfig.LEGO_TRACKING_CAD)
+			findLegoBrick3(yuvFrameImage.getNativeObjAddr(), brickPositionData.getNativeObjAddr());
+		
+		// This makes an image with a rectangle that shows one of the best results.
+//		Mat testImg = Highgui.imread(ctx.getDir("execdir",Context.MODE_PRIVATE).getAbsolutePath()+"/hogTestImg.jpg");
+//		Core.rectangle(testImg, new Point(brickPositionData.get(7, 3)[0], brickPositionData.get(7, 4)[0]), 
+//				new Point((brickPositionData.get(7, 3)[0]+brickPositionData.get(7, 5)[0]), (brickPositionData.get(7, 4)[0])+brickPositionData.get(7, 6)[0]), 
+//				new Scalar(0,0,255));
+//		Highgui.imwrite("/sdcard/arbg/hogMatchingResult1.png", testImg);
 
 //		findLegoBrick( 
 //				yuvFrameImage.getNativeObjAddr(),
@@ -94,6 +133,61 @@ public class LegoBrickTracker extends Tracker{
 			}
 		}
 		return result;
+	}
+	
+	public LegoBrick[] getTrackedLegoBricks(CameraPoseTracker camPose) {
+		//TODO: FOR EACH SCALE:
+		//			Take middlePoint of templateMatching result and set a LegoBrick there (that is watched from the side).
+		//			Rotate this brick according to the correct matched viewpoint.
+		//		END FOR
+		//		Check the resulting pixelratio with the template pixelratio to detect best scale.
+		//		This gives us the resulting brick. :)
+		
+		/**
+		 * Left,Bottom: (145,410)
+		 * Right,Top: (454,224)
+		 * Template size: (600,600)
+		 * */
+		int scale = 0;
+		Mat scaleResult = brickPositionData.row(scale);
+		if(!camPose.cameraPoseFound()) return null;
+		Mat inputMv = camPose.getMvMat();
+		float rho = (float)scaleResult.get(0,0)[0];
+		int phi = (int)scaleResult.get(0,1)[0];
+		int theta = (int)scaleResult.get(0,2)[0];
+		Point location = new Point(scaleResult.get(0,3)[0],scaleResult.get(0,4)[0]);
+		Size templSize = new Size(scaleResult.get(0,5)[0],scaleResult.get(0,6)[0]);
+		
+		Point lb = new Point(location.x+145.0*(templSize.width/600.0),location.y+410.0*(templSize.height/600.0));
+		Log.d(TAG, "Left-Bottom Pt: ("+lb.x+","+lb.y+")");
+		float[] lbZ0 = camPose.get3DPointFrom2D((float)lb.x, (float)lb.y, 0);
+		float[] lbZ1 = camPose.get3DPointFrom2D((float)lb.x, (float)lb.y, 1);
+		Log.d(TAG, "Left-Bottom 3D Pt Z=0: ("+lbZ0[0]+","+lbZ0[1]+","+lbZ0[2]+")");
+		Log.d(TAG, "Left-Bottom 3D Pt Z=0: ("+lbZ1[0]+","+lbZ1[1]+","+lbZ1[2]+")");
+		float[] lbZVec = MathUtilities.vector(lbZ1, lbZ0);
+		
+		Point rb = new Point(location.x+454.0*templSize.width/600.0,location.y+410.0*templSize.height/600.0);
+		float[] rbZ0 = camPose.get3DPointFrom2D((float)rb.x, (float)rb.y, 0);
+		float[] rbZ1 = camPose.get3DPointFrom2D((float)rb.x, (float)rb.y, 1);
+		float[] rbZVec = MathUtilities.vector(rbZ1, rbZ0);
+		
+		float[] pt0 = camPose.getPositionOfPixelInWorld(0, 0, inputMv);
+		float[] pt1 = camPose.getPositionOfPixelInWorld(0, 5, inputMv);
+		float[] pt2 = camPose.getPositionOfPixelInWorld(5, 0, inputMv);
+		float[] pt3 = camPose.getPositionOfPixelInWorld(5, 5, inputMv);
+		float[] camPos = camPose.getCameraPosition();
+		DebugUtilities.logGLMatrix("PosOfPixelInWorld (0,0)", pt0, 1, 3);
+		DebugUtilities.logGLMatrix("PosOfPixelInWorld (0,5)", pt1, 1, 3);
+		DebugUtilities.logGLMatrix("PosOfPixelInWorld (5,0)", pt2, 1, 3);
+		DebugUtilities.logGLMatrix("CameraPosition", camPos, 1, 3);
+		
+		float s = (pt2[0]*(pt0[1]-pt3[1])+pt3[0]*pt2[1]-pt0[0]*pt2[1])/(pt2[0]*pt1[1]*(((pt1[0]*pt2[1])/(pt2[0]*pt1[1]))-1));
+		float q = (pt3[0]-pt0[0]-s*pt1[0])/pt2[0];
+		float calcZ3 = pt0[2]+s*pt1[2]+q*pt2[2];
+		
+		Log.d(TAG, "Is (5,5) in the same plane? "+calcZ3+" == "+pt3[2]+"?"+(calcZ3==pt3[2]));
+		
+		return null;
 	}
 	
 	public LegoBrick[] getLegoBricks(CameraPoseTracker camPose) {
@@ -318,4 +412,7 @@ public class LegoBrickTracker extends Tracker{
 	
 	private native void findLegoBrick(long yuvFrameImage, long contour);
 	private native void findLegoBrick2(long yuvFrameImage, long contour);
+	private native void findLegoBrick3(long bgrPointer, long resultMatPtr);
+//	private native void findLegoBrick3(long camFrameImage, String renderImgsPath, long brickPosPtr);
+	private native void generateHOGDescriptors(String renderImgsPath);
 }

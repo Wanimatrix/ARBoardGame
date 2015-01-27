@@ -16,6 +16,7 @@ public class AppConfig {
 	public static final boolean CAMERA_POSE_ESTIMATION = true;
 	public static final boolean LEMMING_RENDERING = true;
 	public static final boolean LEGO_TRACKING = true;
+	public static final boolean LEGO_TRACKING_CAD = true;
 	
 	public static final boolean PARALLEL_POSE_ESTIMATION = false;
 	public static final boolean PARALLEL_LEMMING_UPDATES = false;

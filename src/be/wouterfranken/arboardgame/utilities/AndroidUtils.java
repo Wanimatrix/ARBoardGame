@@ -32,12 +32,14 @@ public class AndroidUtils {
 		return context.getFilesDir() + "/" + fileName;
 	}
 	
-	public static void copyFileFromAssets(Context ctx, final String f) {
+	public static void copyFileFromAssets(Context ctx, final String dir, final String f) {
 		InputStream in;
 		try {
-			in = ctx.getAssets().open(f);
+			if(dir.equals("")) in = ctx.getAssets().open(f);
+			else in = ctx.getAssets().open(dir+"/"+f);
+			
 			final File of = new File(ctx.getDir("execdir",Context.MODE_PRIVATE), f);
-
+			
 			final OutputStream out = new FileOutputStream(of);
 
 			final byte b[] = new byte[65535];

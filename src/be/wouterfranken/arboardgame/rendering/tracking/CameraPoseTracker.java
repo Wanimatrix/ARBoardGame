@@ -273,9 +273,11 @@ public class CameraPoseTracker extends Tracker{
 	    Core.transpose(tmp2, glMv);
 	    glMv.convertTo(glMv, CvType.CV_32FC1);
 	    
+	    // Set Extrinsics
 	    Mat extrinsics = Mat.zeros(3,4, CvType.CV_32FC1);
 	    glMv.row(0).copyTo(extrinsics.row(0));
 	    glMv.row(1).copyTo(extrinsics.row(1));
+	    // Necessary, because glMv is already transformed for OpenGL.
 	    Core.multiply(glMv.row(2), new Scalar(-1), extrinsics.row(2));
 	    
 	    Mat rotation = extrinsics.rowRange(0, 3).colRange(0, 3).t();
@@ -286,6 +288,51 @@ public class CameraPoseTracker extends Tracker{
 	    Core.gemm(rotation,translation,1,new Mat(),0,camPosition,0);
 	    
 	    return new float[]{(float) camPosition.get(0, 0)[0],(float) camPosition.get(1, 0)[0],(float) camPosition.get(2, 0)[0]};
+	}
+	
+	public float[] getPositionOfPixelInWorld(int x, int y, Mat inputMv) {
+		Mat glMv = new Mat();
+//	    Mat tmp2 = new Mat();
+//	    synchronized (lockExtern) {
+//	    	mvExtern.copyTo(tmp2);
+//	    }
+//	    if(tmp2 == null || tmp2.empty()) return null;
+	    Core.transpose(inputMv, glMv);
+	    glMv.convertTo(glMv, CvType.CV_32FC1);
+	    Mat vector2D = Mat.ones(4,1,CvType.CV_32FC1);
+	    Mat vector3D = Mat.zeros(4,1,CvType.CV_32FC1);
+	    
+	    // Set Extrinsics
+	    Mat extrinsics = Mat.zeros(3,4, CvType.CV_32FC1);
+	    glMv.row(0).copyTo(extrinsics.row(0));
+	    glMv.row(1).copyTo(extrinsics.row(1));
+	    // Necessary, because glMv is already transformed for OpenGL.
+	    Core.multiply(glMv.row(2), new Scalar(-1), extrinsics.row(2));
+	    
+	    Mat tmp = Mat.zeros(3,4,CvType.CV_32FC1);
+	    Core.gemm(intrinsics,extrinsics,1,new Mat(),0,tmp,0);
+	    Mat square = Mat.eye(4, 4,CvType.CV_32FC1);
+	    tmp.row(0).copyTo(square.row(0));
+	    tmp.row(1).copyTo(square.row(1));
+	    tmp.row(2).copyTo(square.row(2));
+	    
+	    
+	    Mat squareInverted = Mat.eye(4, 4,CvType.CV_32FC1);
+	    Core.invert(square, squareInverted);
+	    
+	    vector2D.put(0, 0, x);
+	    vector2D.put(1, 0, y);
+	    vector2D.put(3, 0, 1);
+	    // Knowing that z has to be finalZ, we can calculate the correct value for w!
+//	    double a = (squareInverted.get(2,0)[0]*x+squareInverted.get(2,1)[0]*y+squareInverted.get(2,2)[0]);
+//	    double b = (squareInverted.get(3,0)[0]*x+squareInverted.get(3,1)[0]*y+squareInverted.get(3,2)[0]);
+//	    double newW = (finalZ*b-a)/(squareInverted.get(2,3)[0]-finalZ*squareInverted.get(3,3)[0]);
+//	    vector2D.put(3, 0, newW);
+	    
+	    Core.gemm(squareInverted, vector2D, 1, new Mat(), 1, vector3D, 0);
+	    Core.multiply(vector3D, new Scalar(1.0/vector3D.get(3, 0)[0]), vector3D);
+	    
+	    return new float[]{(float) vector3D.get(0,0)[0],(float) vector3D.get(1,0)[0],(float) vector3D.get(2,0)[0]};
 	}
 	
 	public void frameTick() {

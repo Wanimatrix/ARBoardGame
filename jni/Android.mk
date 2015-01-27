@@ -17,9 +17,9 @@ OPENCV_CAMERA_MODULES:=off
 OPENCV_LIB_TYPE:=SHARE
 ifeq ("$(wildcard $(OPENCV_MK_PATH))","")
 include /Volumes/MacintoshHD/Users/wouterfranken/Development/OpenCV-2.4.9-android-sdk/sdk/native/jni/OpenCV.mk
-else 
-include $(OPENCV_MK_PATH) 
-endif 
+else
+include $(OPENCV_MK_PATH)
+endif
 
 LOCAL_C_INCLUDES:= /Volumes/MacintoshHD/Users/wouterfranken/Development/OpenCV-2.4.9-android-sdk/sdk/native/jni/include
 LOCAL_C_INCLUDES+= /Volumes/MacintoshHD/Users/wouterfranken/Development/arucoBuild/jni
@@ -29,5 +29,5 @@ LOCAL_CFLAGS    := -Werror -O3 -pipe -fPIC -mfpu=neon -ffast-math -fopenmp -DAND
 LOCAL_LDLIBS    += -llog -ldl $(LOCAL_PATH_EXT)libOpenCL.so
 LOCAL_LDFLAGS   += -O3 -fopenmp
 LOCAL_SHARED_LIBRARIES := opencv_java_prebuilt aruco
-LOCAL_SRC_FILES := utilities.cpp jni_interface.cpp
+LOCAL_SRC_FILES := utilities.cpp jni_interface.cpp showHOG.cpp features.cpp detect.cpp
 include $(BUILD_SHARED_LIBRARY)

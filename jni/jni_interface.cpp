@@ -5,6 +5,7 @@
  *      Author: Wouter Franken
  */
 // Libraries (C,OpenCV,Android,Aruco,OpenMP,...)
+#include <logger.hpp>
 #include <jni.h>
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
@@ -26,14 +27,15 @@
 // App includes
 #include "utilities.hpp"
 #include "app.hpp"
+#include "detect.hpp"
 
 extern "C" {
 	#include "getRealTime.c"
 }
 
 #define APPNAME "be.wouterfranken.arboardgame"
-#define DEBUG 0
-#define TIMING 1
+#define DEBUG 1
+#define TIMING 0
 #define DRAW_MARKERS 0 /*Write markers on image*/
 #define LARGE_CONTOURS 0 /*Write contours on big (non thresholded) image*/
 #define SMALL_CONTOURS 0 /*Write contours on downsampled image*/
@@ -70,6 +72,12 @@ extern "C"
 
 	JNIEXPORT void JNICALL Java_be_wouterfranken_arboardgame_rendering_tracking_CameraPoseTracker_get2DPointsFrom3D
 			(JNIEnv *env, jobject object, jlong points3dPtr, jlong glMvPtr, jlong intrinsicsPtr, jlong points2dPtr);
+
+	JNIEXPORT void JNICALL Java_be_wouterfranken_arboardgame_rendering_tracking_LegoBrickTracker_findLegoBrick3
+			(JNIEnv *env, jobject object, jlong bgrPointer, jlong resultMatPtr);
+
+	JNIEXPORT void JNICALL Java_be_wouterfranken_arboardgame_rendering_tracking_LegoBrickTracker_generateHOGDescriptors
+			(JNIEnv *env, jobject object, jstring renderImgsPath);
 }
 
 JNIEXPORT void JNICALL Java_be_wouterfranken_arboardgame_rendering_tracking_CameraPoseTracker_loadCameraCalibration(
@@ -692,4 +700,212 @@ JNIEXPORT void JNICALL Java_be_wouterfranken_arboardgame_rendering_tracking_Came
     __android_log_print(ANDROID_LOG_DEBUG,"2D3DTime","MatMul time: %f\n",((float)(getRealTime() - startMatMul))*1000.0);
 
     __android_log_print(ANDROID_LOG_DEBUG,"2D3DTime","2dTo3d time: %f\n",((float)(getRealTime() - start))*1000.0);
+}
+
+vector<Mat> hogDescriptorMats;
+vector<vector<float> > hogDescriptors;
+
+/**
+* Load hog descriptors
+*/
+JNIEXPORT void JNICALL Java_be_wouterfranken_arboardgame_rendering_tracking_LegoBrickTracker_generateHOGDescriptors(JNIEnv *env, jobject object, jstring renderImgsPath) {
+	const char *renderImgsPathStr= env->GetStringUTFChars(renderImgsPath,0);
+	char *s = new char[29];
+
+#if DEBUG
+	__android_log_print(ANDROID_LOG_DEBUG,APPNAME,"Paths: %s",renderImgsPathStr);
+#endif
+
+	HogDetector::loadRenderedImages(renderImgsPathStr);
+
+	// HogDetector::findBestMatches();
+
+	// int finalPhi = -1;
+	// int finalTheta = -1;
+
+	// int phiValues[] = {20,40};
+	// int thetaValues[] = {0,10,20,30,40,50,60,70,90};
+//
+// 	vector<Mat> renderedImages;
+//
+// 	int i = 0;
+// 	for (int *phi = phiValues; phi != phiValues+(sizeof(phiValues)/sizeof(int)); ++phi) {
+//     	for (int *theta = thetaValues; theta != thetaValues+(sizeof(thetaValues)/sizeof(int)); ++theta, ++i) {
+// 			sprintf(s, "image_%03d_p%03d_t%03d_r%03d.png", i, *phi, *theta, 2);
+// 			string path = string(renderImgsPathStr) + string("/") + string(s);
+// #if DEBUG
+// 			__android_log_print(ANDROID_LOG_DEBUG,APPNAME,"Path: %s", path.c_str());
+// #endif
+// 			renderedImages.push_back(imread(path.c_str()));
+// 		}
+//     }
+// 	imwrite("/sdcard/arbg/testImg.png", renderedImages[5]);
+//
+// 	Mat resized;
+// 	Size winSize(128,128);
+// 	Size cellSize(8,8);
+// 	vector<float> descriptorValues;
+// 	vector<Point> locations;
+// 	Mat hogFeat;
+//
+// 	for(int i = 0; i < renderedImages.size(); i++)
+// 	{
+// 		resize(renderedImages[i],resized,winSize);
+// 		cvtColor(resized, resized, CV_RGB2GRAY);
+//
+// 		calculateHOGDescriptor(resized, descriptorValues, winSize, cellSize, locations);
+//
+// #if DEBUG
+// 		resize(renderedImages[i],resized,winSize);
+// 		char *hogFileName = new char[24];
+// 		sprintf(hogFileName,"/sdcard/arbg/hog%03d.png",i);
+// 		imwrite(hogFileName,
+// 			get_hogdescriptor_visual_image(resized, descriptorValues,
+// 		                                   winSize,
+// 		                                   cellSize,
+// 		                                   5,1));
+// 		delete[] hogFileName;
+// #endif
+//
+// 		hogFeat = Mat(descriptorValues.size(),1,CV_32FC1);
+//
+// 		for(int i=0;i<descriptorValues.size();i++){
+//   			hogFeat.at<float>(i,0)=descriptorValues.at(i);
+// 		}
+//
+// 		hogDescriptorMats.push_back(hogFeat);
+// 		hogDescriptors.push_back(descriptorValues);
+// 	}
+//
+// 	delete[] s;
+}
+
+
+/**
+* Find Lego Bricks Algorithm 3: Using CAD 3D models
+*/
+JNIEXPORT void JNICALL Java_be_wouterfranken_arboardgame_rendering_tracking_LegoBrickTracker_findLegoBrick3(JNIEnv *env, jobject object, jlong bgrPointer, jlong resultMatPtr) {
+
+
+	/**
+	* TODO:
+	*   - Test on Real input frame.
+	*   - Brick 2D -> 3D + Rotation (Phi & Theta) => Final Result for 1 LegoBrick
+	*/
+
+	Mat *resultMat = (Mat *)resultMatPtr;
+
+	vector<ResultingMatch> results = HogDetector::findBestMatches();
+
+	(*resultMat) = Mat(results.size(),7,CV_32FC1);
+
+	for(int i = 0; i < results.size();i++) {
+		(*resultMat).at<float>(i,0) = results[i].rho;
+		(*resultMat).at<float>(i,1) = results[i].phi;
+		(*resultMat).at<float>(i,2) = results[i].theta;
+		(*resultMat).at<float>(i,3) = results[i].location.x;
+		(*resultMat).at<float>(i,4) = results[i].location.y;
+		(*resultMat).at<float>(i,5) = results[i].templateSize.width;
+		(*resultMat).at<float>(i,6) = results[i].templateSize.height;
+	}
+
+// 	Mat bgr = *(Mat *)bgrPointer;
+// 	Mat *brickPositions = (Mat *)brickPositionsPtr;
+// 	const char *renderImgsPathStr= env->GetStringUTFChars(renderImgsPath,0);
+// 	char *s = new char[29];
+//
+// #if DEBUG
+// 	__android_log_print(ANDROID_LOG_DEBUG,APPNAME,"Paths: %s",renderImgsPathStr);
+// #endif
+//
+// 	int finalPhi = -1;
+// 	int finalTheta = -1;
+//
+// 	int phiValues[] = {20,40};
+// 	int thetaValues[] = {0,11,23,34,46,58,69,81,92};
+//
+// 	vector<Mat> renderedImages;
+//
+// 	int i = 0;
+// 	for (int *phi = phiValues; phi != phiValues+(sizeof(phiValues)/sizeof(int)); ++phi) {
+//     	for (int *theta = thetaValues; theta != thetaValues+(sizeof(thetaValues)/sizeof(int)); ++theta, ++i) {
+// 			sprintf(s, "image_%03d_p%03d_t%03d_r%03d.png", i, *phi, *theta, 2);
+// 			string path = string(renderImgsPathStr) + string("/") + string(s);
+// #if DEBUG
+// 			__android_log_print(ANDROID_LOG_DEBUG,APPNAME,"Path: %s", path.c_str());
+// #endif
+// 			renderedImages.push_back(imread(path.c_str()));
+// 		}
+//     }
+// 	imwrite("/sdcard/arbg/testImg.png", renderedImages[5]);
+//
+// 	Mat resized;
+// 	Size winSize(128,128);
+// 	Size cellSize(8,8);
+// 	// resize(renderedImages[5],resized,winSize);
+// 	// cvtColor(resized, resized, CV_RGB2GRAY);
+// 	//
+// 	vector<float> descriptorValues;
+// 	vector<Point> locations;
+// 	//
+// 	// calculateHOGDescriptor(resized, descriptorValues, winSize, cellSize, locations);
+// 	//
+// 	resize(renderedImages[5],resized,winSize);
+//
+// 	imwrite("/sdcard/arbg/hog.png",
+// 		get_hogdescriptor_visual_image(resized, hogDescriptors[5],
+// 	                                   winSize,
+// 	                                   cellSize,
+// 	                                   5,1));
+//
+// 	Mat subImg;
+// 	Mat hogFeat;
+// 	Mat output;
+// 	Mat subImgGray;
+// 	Mat tmp;
+// 	Mat tmp2;
+// 	Mat tmp2Gray;
+// 	bgr.copyTo(output);
+// 	vector<double> norms;
+// 	for(int row = 0; row+winSize.height-1 < bgr.rows; row+=50) {
+// 		for(int col = 0; col+winSize.width-1 < bgr.cols; col+=50) {
+// 			__android_log_print(ANDROID_LOG_DEBUG,APPNAME,"HOG Detector ROI from (%d,%d) to (%d,%d)",row,col,row+winSize.height-1, col+winSize.width-1);
+// 			subImg = bgr(cv::Range(row, row+winSize.height), cv::Range(col, col+winSize.width));
+// 			subImg.copyTo(tmp2);
+// 			// imwrite("/sdcard/arbg/subImg.png",tmp2);
+// 			__android_log_print(ANDROID_LOG_DEBUG,APPNAME,"HOG Detector ROI size: (%d,%d)",tmp2.rows,tmp2.cols);
+// 			cvtColor(tmp2, tmp2Gray, CV_RGB2GRAY);
+// 			calculateHOGDescriptor(tmp2Gray, descriptorValues, winSize, cellSize, locations);
+// 			hogFeat = Mat(descriptorValues.size(),1,CV_32FC1);
+// 			for(int i=0;i<descriptorValues.size();i++){
+// 	  			hogFeat.at<float>(i,0)=descriptorValues.at(i);
+// 			}
+// 			__android_log_print(ANDROID_LOG_DEBUG,APPNAME,"HOG Detector Calculating norm ...");
+// 			double n = norm(hogFeat,hogDescriptorMats[5]);
+// 			__android_log_print(ANDROID_LOG_DEBUG,APPNAME,"HOG Detector Resulting norm: %f",n);
+// 			norms.push_back(n);
+// 		}
+// 	}
+//
+// 	double maxNorm;
+//     maxNorm = *std::max_element(norms.begin(), norms.end());
+//
+// 	for(int row = 0; row+winSize.height-1 < bgr.rows; row+=50) {
+// 		for(int col = 0; col+winSize.width-1 < bgr.cols; col+=50) {
+// 			__android_log_print(ANDROID_LOG_DEBUG,APPNAME,"HOG Detector ROI from (%d,%d) to (%d,%d)",row,col,row+50, col+50);
+// 			tmp = output(cv::Range(row, row+50), cv::Range(col, col+50));
+// 			int idx = col/50+(row/50)*(bgr.cols/50);
+// 			double norm = norms[idx];
+// 			__android_log_print(ANDROID_LOG_DEBUG,APPNAME,"HOG Detector Rescaled norm: %f @idx %d",255*(norm/maxNorm),idx);
+// 			tmp.setTo(Scalar(255*(norm/maxNorm),255*(norm/maxNorm),255*(norm/maxNorm)));
+// 			// output.at<Vec3b>(row,col)[0] = 255*(norm/maxNorm);
+// 			// output.at<Vec3b>(row,col)[1] = 255*(norm/maxNorm);
+// 			// output.at<Vec3b>(row,col)[2] = 255*(norm/maxNorm);
+// 		}
+// 	}
+// 	imwrite("/sdcard/arbg/hogMatchResult.png",output);
+//
+// 	delete[] s;
+// 	// imwrite("/sdcard/arbg/thresholded.png", *thresholded);
+// 	// imwrite("/sdcard/arbg/bgr.png", bgr);
 }
