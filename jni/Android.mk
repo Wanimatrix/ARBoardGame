@@ -24,10 +24,11 @@ endif
 LOCAL_C_INCLUDES:= /Volumes/MacintoshHD/Users/wouterfranken/Development/OpenCV-2.4.9-android-sdk/sdk/native/jni/include
 LOCAL_C_INCLUDES+= /Volumes/MacintoshHD/Users/wouterfranken/Development/arucoBuild/jni
 LOCAL_C_INCLUDES+= $(LOCAL_PATH)/../include
+LOCAL_C_INCLUDES+= $(LOCAL_PATH)/BrickDetectorLines
 LOCAL_MODULE    := jni_interface
 LOCAL_CFLAGS    := -Werror -O3 -pipe -fPIC -mfpu=neon -ffast-math -fopenmp -DANDROID_CL -DWITH_TBB=YES
 LOCAL_LDLIBS    += -llog -ldl $(LOCAL_PATH_EXT)libOpenCL.so
 LOCAL_LDFLAGS   += -O3 -fopenmp
 LOCAL_SHARED_LIBRARIES := opencv_java_prebuilt aruco
-LOCAL_SRC_FILES := utilities.cpp jni_interface.cpp showHOG.cpp features.cpp detect.cpp
+LOCAL_SRC_FILES := utilities.cpp jni_interface.cpp BrickDetectorLines/brickDetectorLines.cpp showHOG.cpp features.cpp detect.cpp
 include $(BUILD_SHARED_LIBRARY)

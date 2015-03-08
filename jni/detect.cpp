@@ -47,30 +47,6 @@ void HogDetector::loadRenderedImages(string dir) {
 		}
     }
 
-    // NEVER USE JPG!!
-
-    string testPath = dir + "/hogTestImg.png";
-
-    LOGD("InputImg: %s\n",testPath.c_str());
-
-    input = imread(testPath.c_str());
-    Mat image;
-    cv::GaussianBlur(input, image, cv::Size(3, 3), 3);
-    cv::addWeighted(input, 1.5, image, -0.5, 0, input);
-
-    Mat mask;
-    inRange(input, Scalar(0, 0, 0), Scalar(40,40,40), mask);
-
-    Mat noisy;
-    image.copyTo(noisy);
-    randn(noisy, 125, 50);
-
-    int N = 10;
-	Mat kernel = getStructuringElement(MORPH_ELLIPSE, Point(N, N));
-    morphologyEx(mask, mask, MORPH_DILATE, kernel);
-
-    bitwise_not(mask, mask);
-
     struct HogParams params = {5,0.1,0.1,0.1,3};
 
     for(int i = 0; i < renderedImages.size(); i++) {
@@ -92,25 +68,44 @@ void HogDetector::loadRenderedImages(string dir) {
         featuresRendered.push_back(tmpFeat);
         scalesRendered.push_back(tmpScale);
     }
-    Mat edges;
-    Canny(input, edges, 50, 50*3);
-
-    bitwise_and(edges, mask, edges);
-
-    cvtColor(edges,edges,CV_GRAY2RGB);
-    edges.convertTo(edges, CV_64FC3);
-
-    params.min_scale = 0.3;
-    params.max_scale = 2.0;
-
-    hogPyramid(edges, params, featuresInput, scaleInput); // TODO: This is not always correct, sometimes we get very strange results.
 
     Mat hogPic = HOGPicture(featuresRendered[14][0],10,params.sbin);
     imwrite("/sdcard/arbg/hogPic.jpg",hogPic);
 }
 
-vector<ResultingMatch> HogDetector::findBestMatches(void) {
+vector<ResultingMatch> HogDetector::findBestMatches(Mat input) {
     // namedWindow("window");
+
+    Mat image;
+    cv::GaussianBlur(input, image, cv::Size(3, 3), 3);
+    cv::addWeighted(input, 1.5, image, -0.5, 0, input);
+
+    Mat mask;
+    inRange(input, Scalar(0, 0, 0), Scalar(40,40,40), mask);
+
+    Mat noisy;
+    image.copyTo(noisy);
+    randn(noisy, 125, 50);
+
+    int N = 10;
+	Mat kernel = getStructuringElement(MORPH_ELLIPSE, Point(N, N));
+    morphologyEx(mask, mask, MORPH_DILATE, kernel);
+
+    bitwise_not(mask, mask);
+
+    Mat edges;
+    Canny(input, edges, 50, 50*3);
+
+    bitwise_and(edges, mask, edges);
+
+    imwrite("/sdcard/arbg/edges.png",edges);
+
+    cvtColor(edges,edges,CV_GRAY2RGB);
+    edges.convertTo(edges, CV_64FC3);
+
+    struct HogParams params = {5,0.3,2.0,0.1,3};
+
+    hogPyramid(edges, params, featuresInput, scaleInput);
 
     Mat tmp;
     vector<float> best;
@@ -185,6 +180,7 @@ vector<ResultingMatch> HogDetector::findBestMatches(void) {
         resultVec.back().rho = 1.5f;
         resultVec.back().phi = phiValues[bestVpIdx/(sizeof(thetaValues)/sizeof(int))];
         resultVec.back().theta = thetaValues[bestVpIdx%(sizeof(thetaValues)/sizeof(int))];
+        resultVec.back().score = max;
         resultVec.back().location = maxPoint*5*(1.0/scale);
         resultVec.back().templateSize = bestTemplate.size();
 

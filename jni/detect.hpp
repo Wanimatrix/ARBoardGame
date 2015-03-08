@@ -9,6 +9,7 @@ struct ResultingMatch {
     float rho;
     int phi;
     int theta;
+    double score;
     cv::Point location;
     cv::Size templateSize;
 };
@@ -16,7 +17,7 @@ struct ResultingMatch {
 class HogDetector {
     public:
         static void loadRenderedImages(std::string dir);
-        static std::vector<ResultingMatch> findBestMatches(void);
+        static std::vector<ResultingMatch> findBestMatches(cv::Mat input);
 };
 
 #endif //DETECT_H

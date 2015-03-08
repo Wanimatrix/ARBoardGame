@@ -102,6 +102,7 @@ public class World {
 				if(b != null) bricks.add(b);
 			}
 		}
+		Log.d(TAG, "BricksSize: "+bricks.size());
 	}
 	
 	private boolean deactivateBrick(LegoBrick brick) {

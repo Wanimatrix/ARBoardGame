@@ -27,9 +27,12 @@ public class LegoBrick {
 	private boolean active;
 	private List<WorldCoordinate> coord = new ArrayList<WorldCoordinate>();
 	
-	public LegoBrick(float[][] corners, Color.ColorName color) {
+	private float[] overlap;
+	
+	public LegoBrick(float[][] corners, Color.ColorName color, float[] overlap) {
 		this.corners = corners;
 		this.color = color;
+		this.overlap = overlap;
 		
 		mergeCount = 1;
 		noMergeCount = 0;
@@ -90,8 +93,8 @@ public class LegoBrick {
 				corners[i][2] = (corners[i][2]*mergeCount + otherCorners[cornerMap.get(i)][2])/(mergeCount+1);
 			}
 			
-			voteForSize(MathUtilities.norm(MathUtilities.vector(corners[0], corners[3])),
-					MathUtilities.norm(MathUtilities.vector(corners[0], corners[1])));
+//			voteForSize(MathUtilities.norm(MathUtilities.vector(corners[0], corners[3])),
+//					MathUtilities.norm(MathUtilities.vector(corners[0], corners[1])));
 			
 			noMergeCount = 0;
 			mergeCount++;
@@ -147,48 +150,48 @@ public class LegoBrick {
 	}
 	
 	private void setSize(float[] newSize) {
-		float[][] cuboid = corners;
+//		float[][] cuboid = corners;
+//		
+//		float[][] tmp = new float[4][];
+//		int nextIdx;
+//		int prevIdx;
+//		float[] vec;
+//		float norm, otherNorm;
+//		for (int i = 0; i < 4; i++) {
+//			nextIdx = (i+1)%4;
+//			prevIdx = ((((i-1) % 4) + 4) % 4);
+//			vec = MathUtilities.vector(cuboid[i],cuboid[i%2==0 ? prevIdx : nextIdx]);
+//			norm = MathUtilities.norm(vec);
+//			otherNorm = MathUtilities.norm(MathUtilities.vector(cuboid[i],cuboid[i%2!=0 ? prevIdx : nextIdx]));
+//			vec = MathUtilities.multiply(vec, -1);
+//			vec = MathUtilities.resize(vec, (((norm > otherNorm ? newSize[0] : newSize[1])+WorldConfig.BRICK_PERIMETER*2)-norm)/2.0f);
+//			tmp[i] = MathUtilities.vectorToPoint(vec, cuboid[i]);
+//		}
+//		
+//		for (int i = 0; i < 4; i++) {
+//			cuboid[i] = tmp[i];
+//		}
+//		
+//		for (int i = 0; i < 4; i++) {
+//			nextIdx = (i+1)%4;
+//			prevIdx = ((((i-1) % 4) + 4) % 4);
+//			vec = MathUtilities.vector(cuboid[i],cuboid[i%2==0 ? nextIdx : prevIdx]);
+//			norm = MathUtilities.norm(vec);
+//			otherNorm = MathUtilities.norm(MathUtilities.vector(cuboid[i],cuboid[i%2!=0 ? nextIdx : prevIdx]));
+//			vec = MathUtilities.multiply(vec, -1);
+//			vec = MathUtilities.resize(vec, (((norm > otherNorm ? newSize[0] : newSize[1])+WorldConfig.BRICK_PERIMETER*2)-norm)/2.0f);
+//			tmp[i] = MathUtilities.vectorToPoint(vec, cuboid[i]);
+//			
+//		}
+//		
+//		for (int i = 0; i < 4; i++) {
+//			cuboid[i] = tmp[i];
+//		}
 		
-		float[][] tmp = new float[4][];
-		int nextIdx;
-		int prevIdx;
-		float[] vec;
-		float norm, otherNorm;
-		for (int i = 0; i < 4; i++) {
-			nextIdx = (i+1)%4;
-			prevIdx = ((((i-1) % 4) + 4) % 4);
-			vec = MathUtilities.vector(cuboid[i],cuboid[i%2==0 ? prevIdx : nextIdx]);
-			norm = MathUtilities.norm(vec);
-			otherNorm = MathUtilities.norm(MathUtilities.vector(cuboid[i],cuboid[i%2!=0 ? prevIdx : nextIdx]));
-			vec = MathUtilities.multiply(vec, -1);
-			vec = MathUtilities.resize(vec, (((norm > otherNorm ? newSize[0] : newSize[1])+WorldConfig.BRICK_PERIMETER*2)-norm)/2.0f);
-			tmp[i] = MathUtilities.vectorToPoint(vec, cuboid[i]);
-		}
-		
-		for (int i = 0; i < 4; i++) {
-			cuboid[i] = tmp[i];
-		}
-		
-		for (int i = 0; i < 4; i++) {
-			nextIdx = (i+1)%4;
-			prevIdx = ((((i-1) % 4) + 4) % 4);
-			vec = MathUtilities.vector(cuboid[i],cuboid[i%2==0 ? nextIdx : prevIdx]);
-			norm = MathUtilities.norm(vec);
-			otherNorm = MathUtilities.norm(MathUtilities.vector(cuboid[i],cuboid[i%2!=0 ? nextIdx : prevIdx]));
-			vec = MathUtilities.multiply(vec, -1);
-			vec = MathUtilities.resize(vec, (((norm > otherNorm ? newSize[0] : newSize[1])+WorldConfig.BRICK_PERIMETER*2)-norm)/2.0f);
-			tmp[i] = MathUtilities.vectorToPoint(vec, cuboid[i]);
-			
-		}
-		
-		for (int i = 0; i < 4; i++) {
-			cuboid[i] = tmp[i];
-		}
-		
-		cuboid[4] = new float[]{cuboid[0][0],cuboid[0][1],1-cuboid[0][2]};
-		cuboid[5] = new float[]{cuboid[1][0],cuboid[1][1],1-cuboid[1][2]};
-		cuboid[6] = new float[]{cuboid[2][0],cuboid[2][1],1-cuboid[2][2]};
-		cuboid[7] = new float[]{cuboid[3][0],cuboid[3][1],1-cuboid[3][2]};
+//		cuboid[4] = new float[]{cuboid[0][0],cuboid[0][1],1-cuboid[0][2]};
+//		cuboid[5] = new float[]{cuboid[1][0],cuboid[1][1],1-cuboid[1][2]};
+//		cuboid[6] = new float[]{cuboid[2][0],cuboid[2][1],1-cuboid[2][2]};
+//		cuboid[7] = new float[]{cuboid[3][0],cuboid[3][1],1-cuboid[3][2]};
 	}
 	
 	public MeshObject getMesh(RenderOptions ro) {
@@ -222,5 +225,9 @@ public class LegoBrick {
 	
 	public void setActive(boolean active) {
 		this.active = active;
+	}
+
+	public float[] getOverlap() {
+		return overlap;
 	}
 }

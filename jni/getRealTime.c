@@ -5,6 +5,8 @@
  *          http://creativecommons.org/licenses/by/3.0/deed.en_US
  */
 
+#include "getRealTime.h"
+
 #if defined(_WIN32)
 #include <Windows.h>
 
@@ -103,4 +105,3 @@ double getRealTime( )
 	return -1.0;		/* Failed. */
 #endif
 }
-

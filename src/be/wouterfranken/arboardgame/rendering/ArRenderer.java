@@ -9,8 +9,10 @@ import java.util.List;
 import javax.microedition.khronos.egl.EGLConfig;
 import javax.microedition.khronos.opengles.GL10;
 
+import org.opencv.core.Core;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
+import org.opencv.highgui.Highgui;
 import org.opencv.imgproc.Imgproc;
 
 import android.app.Activity;
@@ -30,6 +32,7 @@ import android.util.Log;
 import be.wouterfranken.arboardgame.app.AppConfig;
 import be.wouterfranken.arboardgame.gameworld.LegoBrick;
 import be.wouterfranken.arboardgame.gameworld.LemmingsGenerator;
+import be.wouterfranken.arboardgame.gameworld.World;
 import be.wouterfranken.arboardgame.gameworld.WorldConfig;
 import be.wouterfranken.arboardgame.rendering.meshes.CuboidMesh;
 import be.wouterfranken.arboardgame.rendering.meshes.FullSquadMesh;
@@ -66,6 +69,7 @@ public class ArRenderer implements Renderer, PreviewCallback {
     private LemmingsGenerator lemmingsGenerator;
     private List<MeshObject> lemmingMeshesToRender = new ArrayList<MeshObject>();
     private Object lock = new Object();
+    private List<MeshObject> bricksToRender = new ArrayList<MeshObject>();
     
     // RENDER TO TEXTURE VARIABLES
  	int[] fb, depthRb, renderTex; // the framebuffer, the renderbuffer and the texture to render
@@ -80,6 +84,8 @@ public class ArRenderer implements Renderer, PreviewCallback {
 	private int[] vPositionHandler;
     private int[] mvpHandler;
     private int[] texColorHandler;
+    
+    World w = new World();
 	
     // CAMERA SHADERS
 	private final String vssCamera =
@@ -248,6 +254,10 @@ public class ArRenderer implements Renderer, PreviewCallback {
 				renderMesh(meshesToRender.get(i), i);
 			}
 			
+			for (int i = 0; i< bricksToRender.size();i++) {
+				renderMesh(bricksToRender.get(i), meshesToRender.size());
+			}
+			
 			if(AppConfig.LEMMING_RENDERING) {
 				for (int i = 0; i< lemmMeshesTmp.size();i++) {
 					renderMesh(lemmMeshesTmp.get(i), meshesToRender.size());
@@ -366,7 +376,13 @@ public class ArRenderer implements Renderer, PreviewCallback {
 	    GLES20.glUniform4f(texColorHandler[index], ro.col.r, ro.col.g, ro.col.b, ro.col.a); // 1 0 0 0.5
 	    
 	    Matrix.setIdentityM(mvp, 0);
-	    if(ro.useMVP) Matrix.multiplyMM(mvp, 0, glProj, 0, glMv, 0);
+	    if(ro.useMVP) { 
+//	    	float[] tmp = new float[16];
+	    	Matrix.multiplyMM(mvp, 0, glProj, 0, glMv, 0);
+//	    	Matrix.multiplyMM(mvp, 0, tmp, 0, mvp, 0);
+	    }
+	    
+//	    Matrix.multiplyMM(mvp, 0, mvp, 0, ro.transformation, 0);
         
 	    GLES20.glUniformMatrix4fv(mvpHandler[1+index], 1, false, mvp, 0);
 	    
@@ -392,6 +408,8 @@ public class ArRenderer implements Renderer, PreviewCallback {
 	@Override
 	public void onPreviewFrame(byte[] frameData, Camera camera) {
 		if(AppConfig.DEBUG_LOGGING) Log.d(TAG, "Updating camera pose ...");
+		
+		Log.d(TAG, "Focal length: "+camera.getParameters().getFocalLength()+"mm");
 		long start = System.nanoTime();
 		
 //		if(previousFrameTime != 0) {
@@ -424,11 +442,25 @@ public class ArRenderer implements Renderer, PreviewCallback {
 				if(AppConfig.DEBUG_TIMING) Log.d(TAG, "Totaltime in "+(System.nanoTime()-start)/1000000L+"ms");
 			}
 		}
-		if(AppConfig.LEGO_TRACKING) legoBrick.findLegoBrick(colFrameImg, callback);
 		
-//		legoBrick.getTrackedLegoBricks(cameraPose);
+		if(cameraPose.cameraPoseFound()) {
+			if(AppConfig.LEGO_TRACKING) legoBrick.findLegoBrick(colFrameImg, cameraPose, callback);
+			
+			if(AppConfig.LEGO_TRACKING_CAD){
+				CuboidMesh mesh = legoBrick.getTrackedLegoBricks(colFrameImg, cameraPose);
+				meshesToRender.add(mesh);
+			} else if(AppConfig.LEGO_TRACKING_LINES) {
+				List<LegoBrick> bricks = legoBrick.getBricks();
+				
+				w.addBricks(bricks.toArray(new LegoBrick[bricks.size()]));
+				List<LegoBrick> activeBricks = w.getActiveBricks();
+				for (LegoBrick legoBrick : activeBricks) {
+					bricksToRender.add(legoBrick.getMesh(new RenderOptions(true, new Color(0, 0, 1, 1), true)));
+				}
+			}
+		}
 		
-		if(AppConfig.LEMMING_RENDERING && cameraPose.cameraPoseFound()) {
+		if(false && AppConfig.LEMMING_RENDERING && cameraPose.cameraPoseFound()) {
 			long lemmingStart = System.nanoTime();
 			if(AppConfig.PARALLEL_LEMMING_UPDATES) {
 				LemmingGeneratorTask lgt = new LemmingGeneratorTask();
@@ -502,30 +534,37 @@ public class ArRenderer implements Renderer, PreviewCallback {
 	private void setupRenderHandlers() {
 		if(AppConfig.DEBUG_LOGGING) Log.d(TAG, "Starting renderhandlers init...");
 		
-		programId = new int[2+meshesToRender.size()];
-		vPositionHandler = new int[2+meshesToRender.size()];
-		mvpHandler = new int[2+meshesToRender.size()];
-		texColorHandler = new int[1+meshesToRender.size()];
+		int meshRendererSize = meshesToRender.size()+1;
+		
+		programId = new int[2+meshRendererSize];
+		vPositionHandler = new int[2+meshRendererSize];
+		mvpHandler = new int[2+meshRendererSize];
+		texColorHandler = new int[1+meshRendererSize];
 		
 		programId[0] = RenderingUtils.createProgramFromShaderSrc(vssCamera,fssCamera);
 		
+		// Camera handlers
 		vPositionHandler[0] = GLES20.glGetAttribLocation(programId[0], "vPosition");
 	    vTexCoordHandler = GLES20.glGetAttribLocation ( programId[0], "vTexCoord" );
 	    sTextureHandler = GLES20.glGetUniformLocation ( programId[0], "sTexture" );
 	    mvpHandler[0] = GLES20.glGetUniformLocation(programId[0], "u_MVP");
 	    
-	    for(int i = 0; i<meshesToRender.size();i++) {
-	    	MeshObject m = meshesToRender.get(i);
+	    // Other meshes handlers
+	    for(int i = 0; i<meshRendererSize;i++) {
+	    	MeshObject m;
+	    	if(i < meshesToRender.size()) m = meshesToRender.get(i);
+	    	else m = meshesToRender.get(0);
 	    	programId[1+i] = RenderingUtils.createProgramFromShaderSrc(m.getRenderOptions().vertexShader,m.getRenderOptions().fragmentShader);
 		    vPositionHandler[1+i] = GLES20.glGetAttribLocation(programId[1+i], "vPosition");
 		    mvpHandler[1+i] = GLES20.glGetUniformLocation(programId[1+i], "u_MVP");
 		    texColorHandler[i] = GLES20.glGetUniformLocation(programId[1+i], "color");
 	    }
-	    // For the Lemmings
-	    programId[1+meshesToRender.size()] = RenderingUtils.createProgramFromShaderSrc(RenderOptions.standardVss,RenderOptions.standardFss);
-	    vPositionHandler[1+meshesToRender.size()] = GLES20.glGetAttribLocation(programId[1+meshesToRender.size()], "vPosition");
-	    mvpHandler[1+meshesToRender.size()] = GLES20.glGetUniformLocation(programId[1+meshesToRender.size()], "u_MVP");
-	    texColorHandler[meshesToRender.size()] = GLES20.glGetUniformLocation(programId[meshesToRender.size()], "color");
+	    
+	    // Lemmings Handlers
+	    programId[1+meshRendererSize] = RenderingUtils.createProgramFromShaderSrc(RenderOptions.standardVss,RenderOptions.standardFss);
+	    vPositionHandler[1+meshRendererSize] = GLES20.glGetAttribLocation(programId[1+meshRendererSize], "vPosition");
+	    mvpHandler[1+meshRendererSize] = GLES20.glGetUniformLocation(programId[1+meshRendererSize], "u_MVP");
+	    texColorHandler[meshRendererSize] = GLES20.glGetUniformLocation(programId[meshRendererSize], "color");
 	    
 	    if(AppConfig.DEBUG_LOGGING) Log.d(TAG, "Renderhandlers init done...");
 	}

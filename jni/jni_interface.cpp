@@ -28,9 +28,10 @@
 #include "utilities.hpp"
 #include "app.hpp"
 #include "detect.hpp"
+ #include "brickDetectorLines.hpp"
 
 extern "C" {
-	#include "getRealTime.c"
+	#include "getRealTime.h"
 }
 
 #define APPNAME "be.wouterfranken.arboardgame"
@@ -78,6 +79,12 @@ extern "C"
 
 	JNIEXPORT void JNICALL Java_be_wouterfranken_arboardgame_rendering_tracking_LegoBrickTracker_generateHOGDescriptors
 			(JNIEnv *env, jobject object, jstring renderImgsPath);
+
+	JNIEXPORT void JNICALL Java_be_wouterfranken_arboardgame_rendering_tracking_LegoBrickTracker_findLegoBrickLines
+			(JNIEnv *env, jobject object, jlong bgrPointer, jfloat upAngle, jlong resultMatPtr);
+
+	JNIEXPORT jfloatArray JNICALL Java_be_wouterfranken_arboardgame_rendering_tracking_LegoBrickTracker_checkOverlap
+			(JNIEnv *env, jobject object, jlong inputPoints, jint idx);
 }
 
 JNIEXPORT void JNICALL Java_be_wouterfranken_arboardgame_rendering_tracking_CameraPoseTracker_loadCameraCalibration(
@@ -696,6 +703,7 @@ JNIEXPORT void JNICALL Java_be_wouterfranken_arboardgame_rendering_tracking_Came
     __android_log_print(ANDROID_LOG_DEBUG,"2D3DTime","InvRow time: %f\n",((float)(getRealTime() - startInvRow))*1000.0);
 
     double startMatMul = getRealTime();
+
     *points2d = (intrinsics*extrinsics)*points3d;
     __android_log_print(ANDROID_LOG_DEBUG,"2D3DTime","MatMul time: %f\n",((float)(getRealTime() - startMatMul))*1000.0);
 
@@ -795,19 +803,56 @@ JNIEXPORT void JNICALL Java_be_wouterfranken_arboardgame_rendering_tracking_Lego
 
 	Mat *resultMat = (Mat *)resultMatPtr;
 
-	vector<ResultingMatch> results = HogDetector::findBestMatches();
+	// NEVER USE JPG!!
+    // string testPath = dir + "/hogTestImg.png";
+    // LOGD("InputImg: %s\n",testPath.c_str());
+    // input = imread(testPath.c_str());
 
-	(*resultMat) = Mat(results.size(),7,CV_32FC1);
+	vector<ResultingMatch> results = HogDetector::findBestMatches(*(Mat *)bgrPointer);
+
+
+	/**
+	*  - Real height of template = 36.138484212 mm
+	*  - Focus lengte calibratie = 4.1mm
+	*  - F_x = 3984.316735664
+	*  - F_y = 3989.721360211
+	*  - F_x = f * m_x }
+	*  - F_y = f * m_y } => 3987.019047938 px / 4.1 mm = 973.102770783 px / mm
+	*  		To lower Resolution (640x480) => 150.766460501 px / mm
+	*
+	*  - Distance to template plane = 36.138484212 mm * 4.1 mm / height of template in image
+	*/
+
+	int maxIdx = -1;
+	double max = 0;
 
 	for(int i = 0; i < results.size();i++) {
-		(*resultMat).at<float>(i,0) = results[i].rho;
-		(*resultMat).at<float>(i,1) = results[i].phi;
-		(*resultMat).at<float>(i,2) = results[i].theta;
-		(*resultMat).at<float>(i,3) = results[i].location.x;
-		(*resultMat).at<float>(i,4) = results[i].location.y;
-		(*resultMat).at<float>(i,5) = results[i].templateSize.width;
-		(*resultMat).at<float>(i,6) = results[i].templateSize.height;
+		if(results[i].score > max) {
+			maxIdx = i;
+			max = results[i].score;
+		}
 	}
+
+	#define LOG_TAG "HOGDETECT"
+
+	// float brickPixelHeight = (411.0-222.0)*(results[maxIdx].templateSize.height/600.0);
+
+	float distanceToVpTemplateMm = (36.138484212 * 4.1) / (results[maxIdx].templateSize.height / 150.766460501);
+	float distanceToBrickMm = distanceToVpTemplateMm + (results[maxIdx].rho * 25.4);
+
+	LOGD("DistanceToBrick (mm): %f\n",distanceToBrickMm);
+
+	(*resultMat) = Mat(1,7,CV_32FC1);
+
+	// for(int i = 0; i < results.size();i++) {
+		(*resultMat).at<float>(0,0) = distanceToBrickMm * (1.0/10.0);
+		(*resultMat).at<float>(0,1) = results[maxIdx].phi;
+		(*resultMat).at<float>(0,2) = results[maxIdx].theta;
+		(*resultMat).at<float>(0,3) = results[maxIdx].location.x;
+		(*resultMat).at<float>(0,4) = results[maxIdx].location.y;
+		(*resultMat).at<float>(0,5) = results[maxIdx].templateSize.width;
+		(*resultMat).at<float>(0,6) = results[maxIdx].templateSize.height;
+	// }
 
 // 	Mat bgr = *(Mat *)bgrPointer;
 // 	Mat *brickPositions = (Mat *)brickPositionsPtr;
@@ -909,3 +954,33 @@ JNIEXPORT void JNICALL Java_be_wouterfranken_arboardgame_rendering_tracking_Lego
 // 	// imwrite("/sdcard/arbg/thresholded.png", *thresholded);
 // 	// imwrite("/sdcard/arbg/bgr.png", bgr);
 }
+
+/**
+* Find Lego Bricks Algorithm 4: Using LINE detection
+*/
+JNIEXPORT void JNICALL Java_be_wouterfranken_arboardgame_rendering_tracking_LegoBrickTracker_findLegoBrickLines(JNIEnv *env, jobject object, jlong bgrPointer, jfloat upAngle, jlong resultMatPtr) {
+	Mat frame = *(Mat *)bgrPointer;
+	Mat *result = (Mat *)resultMatPtr;
+
+	long start = getRealTime();
+	BrickDetectorLines::TrackBricks(frame, upAngle, *result);
+	LOGD("BrickDetection time (C++ part): %f\n",(float)((getRealTime()-start)*100.0f));
+}
+
+JNIEXPORT jfloatArray JNICALL Java_be_wouterfranken_arboardgame_rendering_tracking_LegoBrickTracker_checkOverlap(JNIEnv *env, jobject object, jlong inputPoints, jint idx) {
+	Mat inputThresh = *(Mat *)inputPoints;
+	jfloat overlapResult[2];
+
+	BrickDetectorLines::CheckOverlap(inputThresh, idx, overlapResult[0], overlapResult[1]);
+
+	jfloatArray javaResult;
+ 	javaResult = env->NewFloatArray(2);
+ 	if (javaResult == NULL) {
+    	return NULL; /* out of memory error thrown */
+ 	}
+ 	env->SetFloatArrayRegion(javaResult, 0, 2, overlapResult);
+
+	return javaResult;
+}
+
+
