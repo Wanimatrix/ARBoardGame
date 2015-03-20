@@ -17,6 +17,7 @@ import android.util.Log;
 import be.wouterfranken.arboardgame.R;
 import be.wouterfranken.arboardgame.app.AppConfig;
 import be.wouterfranken.arboardgame.utilities.AndroidUtils;
+import be.wouterfranken.arboardgame.utilities.MathUtilities;
 
 
 
@@ -34,7 +35,7 @@ public class CameraPoseTracker extends Tracker{
 	private Object lock = new Object();
 	private Object lockExtern = new Object();
 	private MatOfPoint points = new MatOfPoint();
-	private Mat intrinsics;
+	private static Mat intrinsics;
 	private String cameraIntDistPath;
 	
 	public CameraPoseTracker(Context context) {
@@ -174,11 +175,17 @@ public class CameraPoseTracker extends Tracker{
 	}
 	
 	public float[] get3DPointFrom2D(float u, float v, Mapper2D3D mapperMethod) {
+		Mat glMv = new Mat();
+		synchronized (lockExtern) {
+	    	mvExtern.copyTo(glMv);
+	    }
+		return get3DPointFrom2D(glMv, u, v, mapperMethod);
+	}
+	
+	public static float[] get3DPointFrom2D(Mat modelView, float u, float v, Mapper2D3D mapperMethod) {
 	    Mat glMv = new Mat();
 	    Mat tmp2 = new Mat();
-	    synchronized (lockExtern) {
-	    	mvExtern.copyTo(tmp2);
-	    }
+	    modelView.copyTo(tmp2);
 	    if(tmp2 == null || tmp2.empty()) return null;
 	    Core.transpose(tmp2, glMv);
 	    glMv.convertTo(glMv, CvType.CV_32FC1);
@@ -258,7 +265,7 @@ public class CameraPoseTracker extends Tracker{
 		}
 	}
 	
-	public Mat get2DPointFrom3D(Mat points3D, Mat glMvIn) {
+	public static Mat get2DPointFrom3D(Mat points3D, Mat glMvIn) {
 		Mat result = new Mat(3,points3D.cols(),points3D.type());
 		get2DPointsFrom3D(points3D.getNativeObjAddr(), glMvIn.getNativeObjAddr(), intrinsics.getNativeObjAddr(), result.getNativeObjAddr());
 		return result;
@@ -360,6 +367,16 @@ public class CameraPoseTracker extends Tracker{
 	    Core.gemm(rotation,translation,1,new Mat(),0,camPosition,0);
 	    
 	    return new float[]{(float) camPosition.get(0, 0)[0],(float) camPosition.get(1, 0)[0],(float) camPosition.get(2, 0)[0]};
+	}
+	
+	public float getOrientationDeg() {
+		float[] camPos = getCameraPosition();
+		camPos = MathUtilities.resize(MathUtilities.vector(new float[]{0,0,0}, camPos),1);
+		float acos = (float) (Math.acos(camPos[0])*(180.0f/Math.PI));
+		float asin = (float) (Math.asin(camPos[1])*(180.0f/Math.PI));
+		if (asin < 0)
+			return acos+180;
+		else return acos;
 	}
 	
 	public float[] getPositionOfPixelInWorld(int x, int y, Mat inputMv) {
@@ -471,5 +488,5 @@ public class CameraPoseTracker extends Tracker{
 	private native boolean getCameraPose(long frameImagePtr, long projMatPtr, long mvMatPtr);
 	private native void loadCameraCalibration(String cameraIntDistPath,long cameraMat, long distortion);
 	public native void getCalibrationData(long cameraMat, long distortion);
-	public native void get2DPointsFrom3D(long points3dPtr, long glMvPtr, long intrinsicsPtr, long points2dPtr);
+	public static native void get2DPointsFrom3D(long points3dPtr, long glMvPtr, long intrinsicsPtr, long points2dPtr);
 }

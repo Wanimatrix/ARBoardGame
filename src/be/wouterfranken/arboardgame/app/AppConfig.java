@@ -6,7 +6,7 @@ public class AppConfig {
 	public final static boolean FORCE_TARGET_DESC_RELOAD = true;
 	public final static int AMOUNT_PREVIEW_BUFFERS = 1;
 	public static boolean TOUCH_EVENT = false;
-	public static final float LEGO_CORNERS_CLOSENESS_BOUND = 0.8f+WorldConfig.BRICK_PERIMETER;
+	public static final float LEGO_CORNERS_CLOSENESS_BOUND = 0.8f;//0.8f+WorldConfig.BRICK_PERIMETER;
 	public static final int REQUIRED_LEGO_MERGES = 3;
 	public static final int MAX_LEGO_NO_MERGES = 3;
 	public static final int MAX_LEGO_NO_MERGES_BEFORE_REMOVAL = 5;

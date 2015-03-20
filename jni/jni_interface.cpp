@@ -81,10 +81,13 @@ extern "C"
 			(JNIEnv *env, jobject object, jstring renderImgsPath);
 
 	JNIEXPORT void JNICALL Java_be_wouterfranken_arboardgame_rendering_tracking_LegoBrickTracker_findLegoBrickLines
-			(JNIEnv *env, jobject object, jlong bgrPointer, jfloat upAngle, jlong resultMatPtr);
+			(JNIEnv *env, jobject object, jlong bgrPointer, jfloat upAngle, jlong resultMatPtr, jlong origContMatPtr);
 
 	JNIEXPORT jfloatArray JNICALL Java_be_wouterfranken_arboardgame_rendering_tracking_LegoBrickTracker_checkOverlap
 			(JNIEnv *env, jobject object, jlong inputPoints, jint idx);
+
+	JNIEXPORT jfloatArray JNICALL Java_be_wouterfranken_arboardgame_gameworld_LegoBrick_checkCurrentOverlap
+			(JNIEnv *env, jobject object, jlong inputPoints);
 }
 
 JNIEXPORT void JNICALL Java_be_wouterfranken_arboardgame_rendering_tracking_CameraPoseTracker_loadCameraCalibration(
@@ -958,12 +961,13 @@ JNIEXPORT void JNICALL Java_be_wouterfranken_arboardgame_rendering_tracking_Lego
 /**
 * Find Lego Bricks Algorithm 4: Using LINE detection
 */
-JNIEXPORT void JNICALL Java_be_wouterfranken_arboardgame_rendering_tracking_LegoBrickTracker_findLegoBrickLines(JNIEnv *env, jobject object, jlong bgrPointer, jfloat upAngle, jlong resultMatPtr) {
+JNIEXPORT void JNICALL Java_be_wouterfranken_arboardgame_rendering_tracking_LegoBrickTracker_findLegoBrickLines(JNIEnv *env, jobject object, jlong bgrPointer, jfloat upAngle, jlong resultMatPtr, jlong origContMatPtr) {
 	Mat frame = *(Mat *)bgrPointer;
 	Mat *result = (Mat *)resultMatPtr;
+	Mat *origContMat = (Mat *)origContMatPtr;
 
 	long start = getRealTime();
-	BrickDetectorLines::TrackBricks(frame, upAngle, *result);
+	BrickDetectorLines::TrackBricks(frame, upAngle, *result, *origContMat);
 	LOGD("BrickDetection time (C++ part): %f\n",(float)((getRealTime()-start)*100.0f));
 }
 
@@ -972,6 +976,22 @@ JNIEXPORT jfloatArray JNICALL Java_be_wouterfranken_arboardgame_rendering_tracki
 	jfloat overlapResult[2];
 
 	BrickDetectorLines::CheckOverlap(inputThresh, idx, overlapResult[0], overlapResult[1]);
+
+	jfloatArray javaResult;
+ 	javaResult = env->NewFloatArray(2);
+ 	if (javaResult == NULL) {
+    	return NULL; /* out of memory error thrown */
+ 	}
+ 	env->SetFloatArrayRegion(javaResult, 0, 2, overlapResult);
+
+	return javaResult;
+}
+
+JNIEXPORT jfloatArray JNICALL Java_be_wouterfranken_arboardgame_gameworld_LegoBrick_checkCurrentOverlap(JNIEnv *env, jobject object, jlong inputPoints) {
+	Mat inputThresh = *(Mat *)inputPoints;
+	jfloat overlapResult[2];
+
+	BrickDetectorLines::CheckCurrFrameOverlap(inputThresh, overlapResult[0], overlapResult[1]);
 
 	jfloatArray javaResult;
  	javaResult = env->NewFloatArray(2);

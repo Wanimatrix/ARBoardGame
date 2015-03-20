@@ -1,5 +1,7 @@
 package be.wouterfranken.arboardgame.utilities;
 
+import org.opencv.core.Point;
+
 public class MathUtilities {
 	/**
 	 * Calculates the angle (in degrees) between vectors (point0-point1) and (point2-point1)
@@ -47,6 +49,19 @@ public class MathUtilities {
 	}
 	
 	/**
+	 * Returns a point that is the endpoint of given vectors when its startpoint is the given startPoint.
+	 */
+	public static float[] vectorsToPoint(float[] startPoint, float[]... vec) {
+		float[] result = new float[]{startPoint[0],startPoint[1],startPoint[2]};
+		for (int i = 0; i < vec.length; i++) {
+			result[0] = result[0]+vec[i][0];
+			result[1] = result[1]+vec[i][1];
+			result[2] = result[2]+vec[i][2];
+		}
+		return result;
+	}
+	
+	/**
 	 * Multiplies given vector with given scalar.
 	 */
 	public static float[] multiply(float[] vec, float scalar) {
@@ -86,5 +101,23 @@ public class MathUtilities {
 	
 	public static float distance(float x0, float y0, float x1, float y1) {
 		return (float) Math.sqrt((x1 - x0)*(x1 - x0) + (y1 - y0)*(y1 - y0));
+	}
+	
+	
+	/**
+	 * Checks if given point lies left or right from line, defined by given points.
+	 * @return -1: left, 0: on the line, 1: right
+	 */
+	public static int leftOrRightFromLine(Point lineP1, Point lineP2, Point point) {
+		return (int) Math.signum((lineP2.x-lineP1.x)*(point.y-point.y) - (lineP2.y-lineP1.y)*(point.x-lineP1.x));
+	}
+	
+	/**
+	 * Translates an angle into a directional angle: 
+	 * 		- If angle < 0: add 180 degrees
+	 * 		- Else just return angle
+	 */
+	public static float angleToDirectionalAngle(float angle) {
+		return (angle < 0) ? angle+180 : angle;
 	}
 }

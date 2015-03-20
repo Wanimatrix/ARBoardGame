@@ -1,18 +1,15 @@
 package be.wouterfranken.arboardgame.rendering.tracking;
 
-import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 
-import org.apache.commons.collections.map.HashedMap;
 import org.opencv.core.Core;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
-import org.opencv.core.MatOfInt;
+import org.opencv.core.MatOfFloat;
+import org.opencv.core.MatOfFloat4;
 import org.opencv.core.MatOfPoint;
 import org.opencv.core.Point;
 import org.opencv.core.Scalar;
@@ -21,26 +18,22 @@ import org.opencv.highgui.Highgui;
 import org.opencv.imgproc.Imgproc;
 
 import android.content.Context;
-import android.hardware.Camera;
 import android.opengl.Matrix;
 import android.os.AsyncTask;
 import android.util.Log;
-import android.util.Pair;
 import android.util.SparseArray;
 import be.wouterfranken.arboardgame.app.AppConfig;
 import be.wouterfranken.arboardgame.gameworld.LegoBrick;
-import be.wouterfranken.arboardgame.gameworld.WorldConfig;
-import be.wouterfranken.arboardgame.gameworld.WorldCoordinate;
+import be.wouterfranken.arboardgame.gameworld.LegoBrickContainer;
 import be.wouterfranken.arboardgame.rendering.meshes.CuboidMesh;
 import be.wouterfranken.arboardgame.rendering.meshes.RenderOptions;
 import be.wouterfranken.arboardgame.rendering.tracking.CameraPoseTracker.Mapper2D3D;
-import be.wouterfranken.arboardgame.rendering.tracking.CameraPoseTracker.XYMapper2D3D;
 import be.wouterfranken.arboardgame.rendering.tracking.CameraPoseTracker.ZMapper2D3D;
 import be.wouterfranken.arboardgame.utilities.AndroidUtils;
 import be.wouterfranken.arboardgame.utilities.Color;
+import be.wouterfranken.arboardgame.utilities.Color.ColorName;
 import be.wouterfranken.arboardgame.utilities.DebugUtilities;
 import be.wouterfranken.arboardgame.utilities.MathUtilities;
-import be.wouterfranken.arboardgame.utilities.Color.ColorName;
 
 public class LegoBrickTracker extends Tracker{
 	private static final String TAG = LegoBrickTracker.class.getSimpleName();
@@ -51,7 +44,9 @@ public class LegoBrickTracker extends Tracker{
 	private Mat contourExtern = new Mat();
 	private Mat thresholdExtern = new Mat();
 	private Mat brickPositionData = new Mat();
-	private List<LegoBrick> bricks = new ArrayList<LegoBrick>();
+	private Mat originalContours = new Mat();
+	private List<LegoBrickContainer> brickCandidates = new ArrayList<LegoBrickContainer>();
+//	private List<LegoBrickContainer> brickContainers = new ArrayList<LegoBrickContainer>();
 	private Object lock = new Object();
 	private Object lockExtern = new Object();
 	
@@ -98,12 +93,13 @@ public class LegoBrickTracker extends Tracker{
 	}
 	
 	
-	public void findLegoBrick(Mat yuvFrameImage, CameraPoseTracker camPose, FrameTrackingCallback trackingCallback) {
+	public void findLegoBrick(Mat yuvFrameImage, Mat modelView, float orientation, FrameTrackingCallback trackingCallback,
+			List<LegoBrickContainer> brickCandidatesIn) {
 		if(AppConfig.DEBUG_LOGGING) Log.d(TAG,"Legobrick tracking ...");
 		
-		long start = System.nanoTime();
+		Log.d(TAG, "Orientation (in degrees): "+orientation);
 		
-		bricks.clear();
+		long start = System.nanoTime();
 		
 		if(AppConfig.LEGO_TRACKING_CAD) {
 			
@@ -111,8 +107,15 @@ public class LegoBrickTracker extends Tracker{
 		} else if(AppConfig.LEGO_TRACKING_LINES) {
 			Log.d(TAG,"LINES...");
 			
+			brickCandidates.clear();
+			
+			// Setup debug image.
+			Mat check = new Mat();
+			check = yuvFrameImage.clone();
+			
 			
 			// Calculate global UpVector
+			long startTrackLines = System.nanoTime();
 			Mat coord3D = Mat.ones(4, 2, CvType.CV_32FC1);
 			coord3D.put(0, 0, 0);
 			coord3D.put(1, 0, 0);
@@ -123,7 +126,7 @@ public class LegoBrickTracker extends Tracker{
 			
 			DebugUtilities.logMat("COORD3D", coord3D);
 			
-			Mat coord2D = camPose.get2DPointFrom3D(coord3D, camPose.getMvMat());
+			Mat coord2D = CameraPoseTracker.get2DPointFrom3D(coord3D, modelView);
 			
 			DebugUtilities.logMat("COORD2D", coord2D);
 			float[] vec = new float[]{(float) (coord2D.get(0,0)[0]/coord2D.get(2,0)[0]-coord2D.get(0,1)[0]/coord2D.get(2,1)[0]),
@@ -131,19 +134,21 @@ public class LegoBrickTracker extends Tracker{
 			float norm = (float) Math.sqrt(vec[0]*vec[0]+vec[1]*vec[1]);
 			vec = new float[]{vec[0]/norm, vec[1]/norm};
 			DebugUtilities.logGLMatrix("UpVector", vec, 2, 1);
-			float angleDeg = (float) (Math.acos(vec[0])*(180.0f/Math.PI)); 
-			Log.d(TAG, "UpAngle: "+angleDeg);
-	        angleDeg = (coord2D.get(1,0)[0] > coord2D.get(1,1)[0]) ? (angleDeg*-1) : angleDeg;
-	        Log.d(TAG, "UpAngle: "+angleDeg);
+			float upAngle = (float) (Math.acos(vec[0])*(180.0f/Math.PI)); 
+			Log.d(TAG, "UpAngle: "+upAngle);
+	        upAngle = (coord2D.get(1,0)[0] > coord2D.get(1,1)[0]) ? (upAngle*-1) : upAngle;
+	        Log.d(TAG, "UpAngle: "+upAngle);
+	        Log.d("PERFORMANCE_ANALYSIS", "Calculate GlobalUpVec: "+(System.nanoTime()-startTrackLines)/1000000L+"ms");
 	        
-	        long startCpp = System.nanoTime();
+	        startTrackLines = System.nanoTime();
 	        // Find legobrick contours
-			findLegoBrickLines(yuvFrameImage.getNativeObjAddr(), angleDeg, brickPositionData.getNativeObjAddr());
-			Log.d(TAG, "BrickDetection time (C++ part): "+(System.nanoTime()-startCpp)/1000000L+"ms");
+			findLegoBrickLines(yuvFrameImage.getNativeObjAddr(), upAngle, brickPositionData.getNativeObjAddr(), originalContours.getNativeObjAddr());
+			Log.d("PERFORMANCE_ANALYSIS", "BrickDetection time (C++ part): "+(System.nanoTime()-startTrackLines)/1000000L+"ms");
 			
 			long startJava = System.nanoTime();
 			
 			// Convert contours to appropriate data types
+			startTrackLines = System.nanoTime();
 			List<MatOfPoint> contours = new ArrayList<MatOfPoint>();
 			List<float[]> angles = new ArrayList<float[]>();
 			List<Integer> idxes = new ArrayList<Integer>();
@@ -163,13 +168,129 @@ public class LegoBrickTracker extends Tracker{
 				angles.add(tmpAngles);
 			}
 			Log.d(TAG, "Contour size: "+contours.size());
+			Log.d("PERFORMANCE_ANALYSIS", "Convert C++ contours: "+(System.nanoTime()-startTrackLines)/1000000L+"ms");
 			
 			
-			// Setup debug image.
-			Mat check = new Mat();
-			check = yuvFrameImage.clone();
+			// GENERATE ORIGINAL CONTOUR LIST
+//			List<MatOfPoint> originalContourList = new ArrayList<MatOfPoint>();
+//			Log.d("ORIGCONT", "Total Size: ("+originalContours.rows()+","+originalContours.cols()+")");
+//			for(int i = 0; i< originalContours.rows(); i++) {
+//				Point[] pts = new Point[(int) originalContours.get(i, 0)[0]];
+//				Log.d("ORIGCONT", "Contour Size: "+originalContours.get(i, 0)[0]);
+//				for(int j = 0; j < pts.length; j++) {
+//					pts[j] = new Point(originalContours.get(i, j*2+1)[0],originalContours.get(i, j*2+2)[0]);
+//					Log.d("ORIGCONT", "Point: ("+pts[j].x+","+pts[j].y+")");
+//				}
+//				originalContourList.add(new MatOfPoint(pts));
+//				Log.d("ORIGCONT", "List Size: "+originalContourList.size());
+//			}
+			
+			
+			// OLD SEARCH FOR HEIGHT!
+//			for (int i = 0; i < originalContourList.size(); i++) {
+//				Point[] contour = originalContourList.get(i).toArray();
+//				if(contour.length == 0) continue;
+//				
+//				// SEARCH FOR A BOTTOM PIXEL
+//			    Vector vecDown = new Vector();
+//			    float downAngle = upAngle; // Pixel y axis is in the inverted direction
+//			    float downAngleRad = (float) (downAngle * (Math.PI/180.0f));
+//			    vecDown.x = Math.cos(downAngleRad);
+//			    vecDown.y = Math.sin(downAngleRad);
+//
+//			    vecDown = vecDown.normalize();
+//
+//			    Point a = contour[0];
+//			    Point b = new Point(a.x+1,(-vecDown.x/vecDown.y)+a.y);
+//
+//
+//			    List<Integer> cornerHeight = new ArrayList<Integer>(contour.length);
+//			    for (int j = 0; j < contour.length; j++) {
+//					cornerHeight.add(-1);
+//				}
+//			    
+//			    int bottomIdx = 0;
+//			    for(int pidx = 1; pidx< contour.length; pidx++) {
+//			    	Core.line(check, a, new Vector(a,b).resize(500).add(b), new Scalar(255,0,0));
+//			    	Core.line(check, a, vecDown.resize(500).add(a), new Scalar(0,0,255));
+//					Point p = contour[pidx];
+//					Core.putText(check, MathUtilities.leftOrRightFromLine(a,b,p)+" == "+MathUtilities.leftOrRightFromLine(a,b,vecDown.resize(500).add(a)), 
+//							p, Core.FONT_HERSHEY_PLAIN, 1, new Scalar(0,0,0));
+//					if(MathUtilities.leftOrRightFromLine(a,b,p) == MathUtilities.leftOrRightFromLine(a,b,vecDown.resize(500).add(a))) {
+//						a = p;
+//						b = new Point(p.x+1,(-vecDown.x/vecDown.y)+p.y);
+//						bottomIdx = pidx;
+//					}
+//			    }
+//			    
+//			    int height = 0;
+//			    int firstUnknownIdx = -1;
+//			    int secondUnknownIdx = -1;
+//			    List<Integer> heightDiffIdxes = new ArrayList<Integer>();
+//			    cornerHeight.set(bottomIdx, 0);
+//			    int pidx = Utilities.getCircularIndex(bottomIdx+1, contour.length);
+//			    while(pidx != bottomIdx) {
+//			    	int factor = 0;
+//			    	if(firstUnknownIdx != 0)
+//			    		factor = firstUnknownIdx/Math.abs(firstUnknownIdx);
+//			    	
+//			    	Point prev = contour[Utilities.getCircularIndex(pidx+1*factor,contour.length)];
+//			    	Point p = contour[Utilities.getCircularIndex(pidx, contour.length)];
+//			    	Point next = contour[Utilities.getCircularIndex(pidx-1*factor, contour.length)];
+//	
+//			    	float angleDeg = new Vector(p, next).normalize().getAngleWithHorVector();
+//	
+//			    	if(MathUtilities.angleToDirectionalAngle(angleDeg) > (MathUtilities.angleToDirectionalAngle(upAngle)-25  % 180) 
+//			    		  && MathUtilities.angleToDirectionalAngle(angleDeg) < (MathUtilities.angleToDirectionalAngle(upAngle)+25 % 180)) {
+//			    		boolean up = true;
+//			    		// Determine the z0 and z1 pt of the up-edge
+//						float[] z0Pt = camPose.get3DPointFrom2D((float)p.x, (float)p.y, new CameraPoseTracker.ZMapper2D3D(height));
+//						float[] z1Pt = camPose.get3DPointFrom2D((float)next.x, (float)next.y, 
+//								new CameraPoseTracker.XYMapper2D3D(z0Pt[0],z0Pt[1]));
+//						if(z1Pt[2] <= 0) {
+//							z0Pt = camPose.get3DPointFrom2D((float)next.x, (float)next.y, new CameraPoseTracker.ZMapper2D3D(height));
+//							z1Pt = camPose.get3DPointFrom2D((float)p.x, (float)p.y, 
+//									new CameraPoseTracker.XYMapper2D3D(z0Pt[0],z0Pt[1]));
+//							up = false;
+//						}
+//			    	  
+//						int upSize = Math.round(z1Pt[2]/0.95f);
+//						if(up){ // Going UP
+//							cornerHeight.set(pidx, height);
+//							height += upSize;
+//						}
+//						else { // Going DOWN
+//							cornerHeight.set(pidx, height);
+//							height -= upSize;
+//						}
+//			    	} else if(height != 0 && MathUtilities.leftOrRightFromLine(prev,p,next) == 1*factor){ // Left turn, but not on bottom line!
+//			    		
+//			    		if(firstUnknownIdx == -1) {
+//			    			firstUnknownIdx = pidx;
+//			    			pidx = Utilities.getCircularIndex(bottomIdx-1, contour.length);
+//			    			height = 0;
+//			    			continue;
+//			    		} else {
+//			    			secondUnknownIdx = pidx;
+//			    			break;
+//			    		}
+//			    	}
+//			    	if(firstUnknownIdx == -1)
+//			    		pidx = Utilities.getCircularIndex(pidx+1, contour.length);
+//			    	else
+//			    		pidx = Utilities.getCircularIndex(pidx-1, contour.length);
+//			    }
+//			    
+//			    Core.circle(check, contour[bottomIdx], 3, new Scalar(255,0,0));
+//			    if(firstUnknownIdx != -1 && secondUnknownIdx != -1) {
+//				    Core.circle(check, contour[firstUnknownIdx], 3, new Scalar(0,255,0));
+//				    Core.circle(check, contour[secondUnknownIdx], 3, new Scalar(0,255,0));
+//			    }
+////			    if()
+//			}
 			
 			// Filter contours and convert to 3D LegoBricks
+			startTrackLines = System.nanoTime();
 			Iterator<MatOfPoint> it = contours.iterator();
 			List<Integer> contourOrigIdx = new ArrayList<Integer>(); // Holds the original indexes of accepted contours
 			List<ContourInformation> acceptedContours = new ArrayList<ContourInformation>();  // Holds the accepted contours
@@ -194,20 +315,20 @@ public class LegoBrickTracker extends Tracker{
 				upVIdx[1] = (upVIdx[0]+1 >= pts.length ? upVIdx[0]+1-pts.length : upVIdx[0]+1);
 				
 				// Determine the z0 and z1 pt of the up-edge
-				float[] z0Pt = camPose.get3DPointFrom2D((float)pts[upVIdx[0]].x, (float)pts[upVIdx[0]].y, new CameraPoseTracker.ZMapper2D3D(0));
-				float[] z1Pt = camPose.get3DPointFrom2D((float)pts[upVIdx[1]].x, (float)pts[upVIdx[1]].y, 
+				float[] z0Pt = CameraPoseTracker.get3DPointFrom2D(modelView, (float)pts[upVIdx[0]].x, (float)pts[upVIdx[0]].y, new CameraPoseTracker.ZMapper2D3D(0));
+				float[] z1Pt = CameraPoseTracker.get3DPointFrom2D(modelView, (float)pts[upVIdx[1]].x, (float)pts[upVIdx[1]].y, 
 						new CameraPoseTracker.XYMapper2D3D(z0Pt[0],z0Pt[1]));
 				if(z1Pt[2] > 0) {
 					anchorPtIdx = upVIdx[0];
 				} else {
-					z0Pt = camPose.get3DPointFrom2D((float)pts[upVIdx[1]].x, (float)pts[upVIdx[1]].y, new CameraPoseTracker.ZMapper2D3D(0));
-					z1Pt = camPose.get3DPointFrom2D((float)pts[upVIdx[0]].x, (float)pts[upVIdx[0]].y, 
+					z0Pt = CameraPoseTracker.get3DPointFrom2D(modelView, (float)pts[upVIdx[1]].x, (float)pts[upVIdx[1]].y, new CameraPoseTracker.ZMapper2D3D(0));
+					z1Pt = CameraPoseTracker.get3DPointFrom2D(modelView, (float)pts[upVIdx[0]].x, (float)pts[upVIdx[0]].y, 
 							new CameraPoseTracker.XYMapper2D3D(z0Pt[0],z0Pt[1]));
 					anchorPtIdx = upVIdx[1];
 				}
 				
 				// Get the directional angle of the up edge
-				float dirAngleLs = ((angles.get(i)[upVIdx[0]] < 0) ? angles.get(i)[upVIdx[0]]+180 : angles.get(i)[upVIdx[0]]);
+				float dirAngleLs = MathUtilities.angleToDirectionalAngle(angles.get(i)[upVIdx[0]]);
 				
 				// Get the directional angle of the global up vector, on the same place as the up-edge
 				float[] pt3D2 = new float[]{z0Pt[0],z0Pt[1],z0Pt[2]+1};
@@ -216,16 +337,16 @@ public class LegoBrickTracker extends Tracker{
 				coord3D.put(0, 0, pt3D2[0]);
 				coord3D.put(1, 0, pt3D2[1]);
 				coord3D.put(2, 0, pt3D2[2]);
-				coord2D = camPose.get2DPointFrom3D(coord3D, camPose.getMvMat());
+				coord2D = CameraPoseTracker.get2DPointFrom3D(coord3D, modelView);
 				
 				float[] pt2D2 = new float[]{(float) (coord2D.get(0,0)[0]/coord2D.get(2,0)[0]),(float) (coord2D.get(1,0)[0]/coord2D.get(2,0)[0])};
 				vec = new float[]{(float) (pt2D2[0]-pts[upVIdx[0]].x),(float) (pt2D2[1]-pts[upVIdx[0]].y)};
 				norm = (float) Math.sqrt(vec[0]*vec[0]+vec[1]*vec[1]);
 				vec = new float[]{vec[0]/norm,vec[1]/norm};
 				
-				angleDeg = (float) (Math.acos(vec[0])*(180.0f/Math.PI)); 
+				float angleDeg = (float) (Math.acos(vec[0])*(180.0f/Math.PI)); 
 				angleDeg = (pt2D2[1] > pts[upVIdx[0]].y) ? (angleDeg*-1) : angleDeg;
-				float dirAngleUp = ((angleDeg < 0) ? angleDeg+180 : angleDeg);
+				float dirAngleUp = MathUtilities.angleToDirectionalAngle(angleDeg);
 				
 				// Reject brick contours that have an up-edge that does not closely match the global up-vector
 				if(dirAngleLs > (dirAngleUp-10  % 180) && dirAngleLs < (dirAngleUp+10 % 180)) {
@@ -280,11 +401,16 @@ public class LegoBrickTracker extends Tracker{
 				Log.d(TAG, "UpVector Idxes: "+upVIdx[0]+","+upVIdx[1]);
 			}
 			
-			SparseArray<LegoBrick> acceptedBricks = new SparseArray<LegoBrick>();
+			Log.d("PERFORMANCE_ANALYSIS", "Filter contours: "+(System.nanoTime()-startTrackLines)/1000000L+"ms");
+			
+			List<LegoBrickContainer> acceptedBrickCandidates = new ArrayList<LegoBrickContainer>();
+			
+			long startCILoop = System.nanoTime();
 			
 			for (ContourInformation ci : acceptedContours) {
 				
 				// Calculate sizes and vectors of all sides.
+				startTrackLines = System.nanoTime();
 				int[] allSizes = new int[3];
 				float[][] sideVectors = new float[3][];
 				int j = 1;
@@ -301,8 +427,8 @@ public class LegoBrickTracker extends Tracker{
 					} else {
 						mapper = new ZMapper2D3D(ci.upSize*0.95f);
 					}
-					float[] p1 = camPose.get3DPointFrom2D((float)ci.points[ptIdx].x, (float)ci.points[ptIdx].y, mapper);
-					float[] p2 = camPose.get3DPointFrom2D((float)ci.points[ptIdx+1].x, (float)ci.points[ptIdx+1].y, mapper);
+					float[] p1 = CameraPoseTracker.get3DPointFrom2D(modelView, (float)ci.points[ptIdx].x, (float)ci.points[ptIdx].y, mapper);
+					float[] p2 = CameraPoseTracker.get3DPointFrom2D(modelView, (float)ci.points[ptIdx+1].x, (float)ci.points[ptIdx+1].y, mapper);
 					allSizes[j] = Math.round(MathUtilities.norm(MathUtilities.vector(p1, p2))/1.6f);
 					sideVectors[j] = MathUtilities.resize(MathUtilities.vector(p1, p2),1);
 					sideVectors[j][2] = 0; // Force z = 0 (vector must be in XY-plane!)
@@ -320,97 +446,304 @@ public class LegoBrickTracker extends Tracker{
 				else
 					sideVectors[2] = tmpSideVec;
 				sideVectors[2][2] = 0;
+				Log.d("PERFORMANCE_ANALYSIS", "Find sizes and side vectors: "+(System.nanoTime()-startTrackLines)/1000000L+"ms");
 				
-				float[][] cuboid = new float[8][];
-				cuboid[0] = ci.z0Pt;
-				cuboid[3] = MathUtilities.vectorToPoint(MathUtilities.resize(sideVectors[1],allSizes[1]*1.6f), cuboid[0]);
-				cuboid[2] = MathUtilities.vectorToPoint(MathUtilities.resize(sideVectors[2],allSizes[2]*1.6f), cuboid[3]);
-				cuboid[1] = MathUtilities.vectorToPoint(MathUtilities.resize(sideVectors[2],allSizes[2]*1.6f), cuboid[0]);
-				cuboid[4] = MathUtilities.vectorToPoint(MathUtilities.resize(sideVectors[0],allSizes[0]*0.95f), cuboid[0]);
-				cuboid[7] = MathUtilities.vectorToPoint(MathUtilities.resize(sideVectors[1],allSizes[1]*1.6f), cuboid[4]);
-				cuboid[6] = MathUtilities.vectorToPoint(MathUtilities.resize(sideVectors[2],allSizes[2]*1.6f), cuboid[7]);
-				cuboid[5] = MathUtilities.vectorToPoint(MathUtilities.resize(sideVectors[2],allSizes[2]*1.6f), cuboid[4]);
+				startTrackLines = System.nanoTime();
 				
-				// DEBUGGING!
-				coord3D = Mat.ones(4, 8, CvType.CV_32FC1);
-				coord3D.put(0, 0, cuboid[0][0]);
-				coord3D.put(1, 0, cuboid[0][1]);
-				coord3D.put(2, 0, cuboid[0][2]);
-				coord3D.put(0, 1, cuboid[1][0]);
-				coord3D.put(1, 1, cuboid[1][1]);
-				coord3D.put(2, 1, cuboid[1][2]);
-				coord3D.put(0, 2, cuboid[2][0]);
-				coord3D.put(1, 2, cuboid[2][1]);
-				coord3D.put(2, 2, cuboid[2][2]);
-				coord3D.put(0, 3, cuboid[3][0]);
-				coord3D.put(1, 3, cuboid[3][1]);
-				coord3D.put(2, 3, cuboid[3][2]);
-				coord3D.put(0, 4, cuboid[4][0]);
-				coord3D.put(1, 4, cuboid[4][1]);
-				coord3D.put(2, 4, cuboid[4][2]);
-				coord3D.put(0, 5, cuboid[5][0]);
-				coord3D.put(1, 5, cuboid[5][1]);
-				coord3D.put(2, 5, cuboid[5][2]);
-				coord3D.put(0, 6, cuboid[6][0]);
-				coord3D.put(1, 6, cuboid[6][1]);
-				coord3D.put(2, 6, cuboid[6][2]);
-				coord3D.put(0, 7, cuboid[7][0]);
-				coord3D.put(1, 7, cuboid[7][1]);
-				coord3D.put(2, 7, cuboid[7][2]);
-				coord2D = camPose.get2DPointFrom3D(coord3D, camPose.getMvMat());
+				int amountOfBricks = allSizes[1]*allSizes[2]*allSizes[0];
+				if(amountOfBricks == 0) continue;
+				Log.d(TAG, "Amount Of Bricks: "+amountOfBricks+": ("+allSizes[0]+","+allSizes[1]+","+allSizes[2]+")");
 				
-				Point[] reprojected2DPts = new Point[8];
-				reprojected2DPts[0] = new Point(coord2D.get(0,0)[0]/coord2D.get(2,0)[0],coord2D.get(1,0)[0]/coord2D.get(2,0)[0]);
-				reprojected2DPts[1] = new Point(coord2D.get(0,1)[0]/coord2D.get(2,1)[0],coord2D.get(1,1)[0]/coord2D.get(2,1)[0]);
-				reprojected2DPts[2] = new Point(coord2D.get(0,2)[0]/coord2D.get(2,2)[0],coord2D.get(1,2)[0]/coord2D.get(2,2)[0]);
-				reprojected2DPts[3] = new Point(coord2D.get(0,3)[0]/coord2D.get(2,3)[0],coord2D.get(1,3)[0]/coord2D.get(2,3)[0]);
-				reprojected2DPts[4] = new Point(coord2D.get(0,4)[0]/coord2D.get(2,4)[0],coord2D.get(1,4)[0]/coord2D.get(2,4)[0]);
-				reprojected2DPts[5] = new Point(coord2D.get(0,5)[0]/coord2D.get(2,5)[0],coord2D.get(1,5)[0]/coord2D.get(2,5)[0]);
-				reprojected2DPts[6] = new Point(coord2D.get(0,6)[0]/coord2D.get(2,6)[0],coord2D.get(1,6)[0]/coord2D.get(2,6)[0]);
-				reprojected2DPts[7] = new Point(coord2D.get(0,7)[0]/coord2D.get(2,7)[0],coord2D.get(1,7)[0]/coord2D.get(2,7)[0]);
+				float[][][] cuboids = new float[1][][];
+				sideVectors[0] = MathUtilities.resize(sideVectors[0],0.95f);
+				sideVectors[1] = MathUtilities.resize(sideVectors[1],1.6f);
+				sideVectors[2] = MathUtilities.resize(sideVectors[2],1.6f);
 				
-//				Mat threshold = new Mat(yuvFrameImage.size(), CvType.CV_8UC1);
-//				Imgproc.drawContours(threshold, contours, newIdx, new Scalar(255,255,255), -1);
-				float[] overlapResult = checkOverlap(new MatOfPoint(reprojected2DPts).getNativeObjAddr(), ci.origContIdx);
+				float[][] halfSideVectors = new float[3][];
+				halfSideVectors[0] = MathUtilities.resize(sideVectors[0], 0.95f/2);
+				halfSideVectors[1] = MathUtilities.resize(sideVectors[1], 1.6f/2);
+				halfSideVectors[2] = MathUtilities.resize(sideVectors[2], 1.6f/2);
 				
-				if(overlapResult[0] > 0.90f && overlapResult[1] > 0.90f) { //0.93-0.98
-					Log.d(TAG, "Contour with orig idx: "+overlapResult[0]+", "+overlapResult[1]);
-					if(acceptedBricks.get(ci.origContIdx) != null){
-						float[] previousOverlapResult = acceptedBricks.get(ci.origContIdx).getOverlap();
-						if((previousOverlapResult[0]+previousOverlapResult[1])/2 < (overlapResult[0]+overlapResult[1])/2) {
-							acceptedBricks.put(ci.origContIdx, new LegoBrick(cuboid, ColorName.BLUE, overlapResult));
+				List<LegoBrickContainer> tmpBricks = new ArrayList<LegoBrickContainer>();
+				
+				for (int k = 0; k < cuboids.length; k++) {
+					cuboids[k] = new float[amountOfBricks][];
+					cuboids[k][0] = new float[3];
+					
+					float[] anchorPt3D = CameraPoseTracker.get3DPointFrom2D(modelView, (float)ci.points[ci.anchorIdx].x, (float)ci.points[ci.anchorIdx].y, 
+							new CameraPoseTracker.ZMapper2D3D(k*0.95f));
+					
+					cuboids[k][0] = MathUtilities.vectorsToPoint(anchorPt3D, halfSideVectors[0], halfSideVectors[1], halfSideVectors[2]);
+					
+//					cuboids[k][0][0] = anchorPt3D;
+//					cuboids[k][0][3] = MathUtilities.vectorToPoint(sideVectors[1], cuboids[k][0][0]);
+//					cuboids[k][0][2] = MathUtilities.vectorToPoint(sideVectors[2], cuboids[k][0][3]);
+//					cuboids[k][0][1] = MathUtilities.vectorToPoint(sideVectors[2], cuboids[k][0][0]);
+//					cuboids[k][0][4] = MathUtilities.vectorToPoint(sideVectors[0], cuboids[k][0][0]);
+//					cuboids[k][0][7] = MathUtilities.vectorToPoint(sideVectors[1], cuboids[k][0][4]);
+//					cuboids[k][0][6] = MathUtilities.vectorToPoint(sideVectors[2], cuboids[k][0][7]);
+//					cuboids[k][0][5] = MathUtilities.vectorToPoint(sideVectors[2], cuboids[k][0][4]);
+				
+				
+				
+				
+				
+	//				acceptedBricks.put(ci.origContIdx, new LegoBrick(cuboids[0], ColorName.BLUE, null));
+					
+					if(tmpBricks.size() <= 0)
+						tmpBricks.add(new LegoBrickContainer(new LegoBrick(cuboids[k][0], halfSideVectors, ColorName.BLUE, orientation)));
+					else 
+						tmpBricks.get(0).add((new LegoBrick(cuboids[k][0], halfSideVectors, ColorName.BLUE, orientation)));
+					
+					MatOfFloat4 anchorBlock = new MatOfFloat4(new Mat(1, 4, CvType.CV_32FC1));
+					anchorBlock.put(0, 0, cuboids[k][0][0]);
+					anchorBlock.put(0, 1, cuboids[k][0][1]);
+					anchorBlock.put(0, 2, cuboids[k][0][2]);
+					anchorBlock.put(0, 3, 1);
+					
+					Mat translation = Mat.eye(4, 4, CvType.CV_32FC1);
+					int cuboidsIdx = 1;
+					for(int a = 0; a < allSizes[0];a++) {
+						for(int b = 0; b < allSizes[1];b++) {
+							for(int c = 0; c < allSizes[2];c++) {
+								if(a == 0 && b == 0 && c == 0) continue; // Anchorblock is already genereated
+								Log.d(TAG, "CuboidIdx: "+cuboidsIdx);
+								
+								// Generate a new brick by translation of the anchorBrick
+								MatOfFloat newBlock = new MatOfFloat();
+								
+								translation.put(0, 3, new float[]{sideVectors[1][0]*b+sideVectors[2][0]*c});
+								translation.put(1, 3, new float[]{sideVectors[1][1]*b+sideVectors[2][1]*c});
+								translation.put(2, 3, new float[]{sideVectors[0][2]*a});
+								Log.d(TAG, "GEMM: "+anchorBlock.size()+", translation: "+translation.size());
+								Core.gemm(anchorBlock, translation.t(), 1, new Mat(), 1, newBlock, 0);
+								cuboids[k][cuboidsIdx] = new float[3];
+//								for(int rowIdx = 0; rowIdx < cuboids[k][cuboidsIdx].length; rowIdx++) {
+//									cuboids[k][cuboidsIdx][rowIdx] = new float[3];
+								newBlock.get(0, 0, cuboids[k][cuboidsIdx]);
+	//								cuboids[cuboidsIdx][rowIdx] = ((MatOfFloat4)newBlock.row(rowIdx)).toArray();
+//								}
+								
+								if(tmpBricks.size() <= cuboidsIdx)
+									tmpBricks.add(new LegoBrickContainer(new LegoBrick(cuboids[k][cuboidsIdx], halfSideVectors, ColorName.BLUE, orientation)));
+								else 
+									tmpBricks.get(cuboidsIdx).add((new LegoBrick(cuboids[k][cuboidsIdx], halfSideVectors, ColorName.BLUE, orientation)));
+	//							acceptedBricks.put(ci.origContIdx, new LegoBrick(cuboids[cuboidsIdx], ColorName.BLUE, null));
+								cuboidsIdx++;
+							}
 						}
-					} else {
-						acceptedBricks.put(ci.origContIdx, new LegoBrick(cuboid, ColorName.BLUE, overlapResult));
 					}
-				} else {
-					Log.d(TAG, "Fail overlap test: "+overlapResult[0]+", "+ overlapResult[1]);
+					
+					acceptedBrickCandidates.addAll(tmpBricks);
 				}
 				
-//				Core.circle(check, anchPt, 3, new Scalar(0, 0, 255));
-//				Core.circle(check, testPt1, 3, new Scalar(255, 0, 0));
-//				Core.circle(check, testPt2, 3, new Scalar(255, 0, 0));
-//				Core.circle(check, testPt3, 3, new Scalar(255, 0, 0));
-//				Core.circle(check, testPt4, 4, new Scalar(255, 0, 0));
+				Log.d("PERFORMANCE_ANALYSIS", "Split brick in 2x2 bricks time: "+(System.nanoTime()-startTrackLines)/1000000L+"ms");
+				
+				startTrackLines = System.nanoTime();
+				
+				// Check input containers for overlap
+//				for (LegoBrickContainer legoBrickContainer : brickCandidatesIn) {
+//					Iterator<LegoBrick> brickIterator = legoBrickContainer.iterator();
+//					while(brickIterator.hasNext()) {
+//						LegoBrick brick = brickIterator.next();
+//						float[] overlapResult = brick.getOverlap(modelView);
+//						if(overlapResult[0] < 0.75f) {
+//							brick.voteRemoval();
+//							if(brick.getRemovalVotes() >= 4) {
+//								brickIterator.remove();
+//								Log.d(TAG, "Brick Removed");
+//							}
+//						}
+//					}
+//				}
+				
+//				Log.d(TAG, "Input container overlapCheck time: "+(System.nanoTime() - startOverlapCheck)/1000000.0+"ms");
 				
 				
+				
+				
+				// Overlap test!
+//				coord3D = Mat.ones(4, 8, CvType.CV_32FC1);
+//				coord3D.put(0, 0, cuboid[0][0]);
+//				coord3D.put(1, 0, cuboid[0][1]);
+//				coord3D.put(2, 0, cuboid[0][2]);
+//				coord3D.put(0, 1, cuboid[1][0]);
+//				coord3D.put(1, 1, cuboid[1][1]);
+//				coord3D.put(2, 1, cuboid[1][2]);
+//				coord3D.put(0, 2, cuboid[2][0]);
+//				coord3D.put(1, 2, cuboid[2][1]);
+//				coord3D.put(2, 2, cuboid[2][2]);
+//				coord3D.put(0, 3, cuboid[3][0]);
+//				coord3D.put(1, 3, cuboid[3][1]);
+//				coord3D.put(2, 3, cuboid[3][2]);
+//				coord3D.put(0, 4, cuboid[4][0]);
+//				coord3D.put(1, 4, cuboid[4][1]);
+//				coord3D.put(2, 4, cuboid[4][2]);
+//				coord3D.put(0, 5, cuboid[5][0]);
+//				coord3D.put(1, 5, cuboid[5][1]);
+//				coord3D.put(2, 5, cuboid[5][2]);
+//				coord3D.put(0, 6, cuboid[6][0]);
+//				coord3D.put(1, 6, cuboid[6][1]);
+//				coord3D.put(2, 6, cuboid[6][2]);
+//				coord3D.put(0, 7, cuboid[7][0]);
+//				coord3D.put(1, 7, cuboid[7][1]);
+//				coord3D.put(2, 7, cuboid[7][2]);
+//				coord2D = camPose.get2DPointFrom3D(coord3D, camPose.getMvMat());
+//				
+//				Point[] reprojected2DPts = new Point[8];
+//				reprojected2DPts[0] = new Point(coord2D.get(0,0)[0]/coord2D.get(2,0)[0],coord2D.get(1,0)[0]/coord2D.get(2,0)[0]);
+//				reprojected2DPts[1] = new Point(coord2D.get(0,1)[0]/coord2D.get(2,1)[0],coord2D.get(1,1)[0]/coord2D.get(2,1)[0]);
+//				reprojected2DPts[2] = new Point(coord2D.get(0,2)[0]/coord2D.get(2,2)[0],coord2D.get(1,2)[0]/coord2D.get(2,2)[0]);
+//				reprojected2DPts[3] = new Point(coord2D.get(0,3)[0]/coord2D.get(2,3)[0],coord2D.get(1,3)[0]/coord2D.get(2,3)[0]);
+//				reprojected2DPts[4] = new Point(coord2D.get(0,4)[0]/coord2D.get(2,4)[0],coord2D.get(1,4)[0]/coord2D.get(2,4)[0]);
+//				reprojected2DPts[5] = new Point(coord2D.get(0,5)[0]/coord2D.get(2,5)[0],coord2D.get(1,5)[0]/coord2D.get(2,5)[0]);
+//				reprojected2DPts[6] = new Point(coord2D.get(0,6)[0]/coord2D.get(2,6)[0],coord2D.get(1,6)[0]/coord2D.get(2,6)[0]);
+//				reprojected2DPts[7] = new Point(coord2D.get(0,7)[0]/coord2D.get(2,7)[0],coord2D.get(1,7)[0]/coord2D.get(2,7)[0]);
+//				
+//				float[] overlapResult = checkOverlap(new MatOfPoint(reprojected2DPts).getNativeObjAddr(), ci.origContIdx);
+//				
+//				if(overlapResult[0] > 0.90f && overlapResult[1] > 0.90f) { //0.93-0.98
+//					Log.d(TAG, "Contour with orig idx: "+overlapResult[0]+", "+overlapResult[1]);
+//					if(acceptedBricks.get(ci.origContIdx) != null){
+//						float[] previousOverlapResult = acceptedBricks.get(ci.origContIdx).getOverlap();
+//						if((previousOverlapResult[0]+previousOverlapResult[1])/2 < (overlapResult[0]+overlapResult[1])/2) {
+//							acceptedBricks.put(ci.origContIdx, new LegoBrick(cuboid, ColorName.BLUE, overlapResult));
+//						}
+//					} else {
+//						acceptedBricks.put(ci.origContIdx, new LegoBrick(cuboid, ColorName.BLUE, overlapResult));
+//					}
+//				} else {
+//					Log.d(TAG, "Fail overlap test: "+overlapResult[0]+", "+ overlapResult[1]);
+//				}
 			}
 			
-			Log.d(TAG, "Accepted bricksSize: "+acceptedBricks.size());
 			
-			int key = 0;
-			for(int ab = 0; ab < acceptedBricks.size(); ab++) {
-			   key = acceptedBricks.keyAt(ab);
-			   bricks.add(acceptedBricks.get(key));
+			long start2 = System.nanoTime();
+			// Check new containers for overlap and add them to the brickCandidates
+			List<LegoBrick> tmpBricksArray = new ArrayList<LegoBrick>();
+			for (LegoBrickContainer legoBrickContainer : acceptedBrickCandidates) {
+				tmpBricksArray.addAll(legoBrickContainer);
 			}
+			
+			for (LegoBrickContainer legoBrickContainer : brickCandidatesIn) {
+				tmpBricksArray.addAll(legoBrickContainer);
+			}
+			Log.d("PERFORMANCE_ANALYSIS", "CHECKPOINT1 time: "+(System.nanoTime() - start2)/1000000.0+"ms");
+			
+			start2 = System.nanoTime();
+			coord3D = Mat.ones(4, tmpBricksArray.size()*8, CvType.CV_32FC1);
+			for (int l = 0; l < tmpBricksArray.size(); l++) {
+				LegoBrick b = tmpBricksArray.get(l);
+				float[][] cuboid = b.getCuboid();
+				for (int m = 0; m < 8; m++) {
+					coord3D.put(0, l*8+m, cuboid[m][0]);
+					coord3D.put(1, l*8+m, cuboid[m][1]);
+					coord3D.put(2, l*8+m, cuboid[m][2]);
+				}
+			}
+			Log.d("PERFORMANCE_ANALYSIS", "CHECKPOINT2 time: "+(System.nanoTime() - start2)/1000000.0+"ms");
+			
+			long startOverlapCalc = System.nanoTime();
+			coord2D = CameraPoseTracker.get2DPointFrom3D(coord3D, modelView);
+			Log.d("PERFORMANCE_ANALYSIS", "OverlapCalc time: "+(System.nanoTime() - startOverlapCalc)/1000000.0+"ms");
+			
+			Log.d(TAG, "COORD2D size: "+coord2D.cols()+" VS "+tmpBricksArray.size());
+			
+			start2 = System.nanoTime();
+			List<float[]> overlap = new ArrayList<float[]>();
+			for (int l = 0; l < tmpBricksArray.size(); l++) {
+				Point[] tmpPts = new Point[8];
+				for (int m = 0; m < 8; m++) {
+					tmpPts[m] = new Point(coord2D.get(0,l*8+m)[0]/coord2D.get(2,l*8+m)[0],coord2D.get(1,l*8+m)[0]/coord2D.get(2,l*8+m)[0]);
+				}
+				overlap.add(tmpBricksArray.get(l).getOverlap(tmpPts));
+			}
+			
+			Log.d("PERFORMANCE_ANALYSIS", "CHECKPOINT3 time: "+(System.nanoTime() - start2)/1000000.0+"ms");
+			
+			start2 = System.nanoTime();
+			int counter = 0;
+			for (int k = 0; k < acceptedBrickCandidates.size()+brickCandidatesIn.size(); k++) {
+				boolean isNewDetected = (k < acceptedBrickCandidates.size());
+				LegoBrickContainer lc = isNewDetected ? acceptedBrickCandidates.get(k) : brickCandidatesIn.get(k-acceptedBrickCandidates.size());
+				Iterator<LegoBrick> lcIterator = lc.iterator();
+				while(lcIterator.hasNext()) {
+					LegoBrick lb = lcIterator.next();
+					float[] overlapResult = overlap.get(counter);
+//					long startOverlapCalc = System.nanoTime();
+//					float[] overlapResult = legoBrickContainer.get(l).getOverlap(camPose);
+//					Log.d(TAG, "OverlapCalc time: "+(System.nanoTime() - startOverlapCalc)/1000000.0+"ms");
+					
+					if(overlapResult[0] < 0.75f) {
+//						bricks.add(legoBrickContainer.get(l));
+						if(isNewDetected)
+							lcIterator.remove();
+						else {
+							lb.voteRemoval();
+							if(lb.getRemovalVotes() >= 3)
+								lcIterator.remove();
+						}
+					}
+					counter++;
+				}
+				if(isNewDetected && !lc.isEmpty()) this.brickCandidates.add(lc);
+//				int[] mergeResult = legoBrickContainer.mergeCheck(bricks.toArray(new LegoBrick[bricks.size()]));
+//				for (int l = 0; l < mergeResult.length; l++) {
+//					if(mergeResult[l] != -1) {
+//						bricks.get(mergeResult[l]).voteUp(5);
+//					} else {
+//						
+//					}
+//				}
+			}
+			
+			Log.d("PERFORMANCE_ANALYSIS", "CHECKPOINT4 time: "+(System.nanoTime() - start2)/1000000.0+"ms");
+			
+			Log.d(TAG, "OverlapChecker loop1 times: "+acceptedBrickCandidates.size());
+//			Log.d(TAG, "OverlapChecker time loop1: "+(System.nanoTime() - startOverlapCheck)/1000000.0+"ms");
+			Log.d("PERFORMANCE_ANALYSIS", "Overlap Checker time: "+(System.nanoTime()-startTrackLines)/1000000L+"ms");
+			
+//			Log.d(TAG, "AcceptedBricks size: "+acceptedBricks.size());
+			
+			
+			Log.d(TAG, "CILoop amount: "+acceptedContours.size());
+			Log.d("PERFORMANCE_ANALYSIS", "CILoop time: "+(System.nanoTime() - startCILoop)/1000000.0+"ms");
+			
+//			long startOverlapCheck = System.nanoTime();
+//			Iterator<LegoBrick> iter = bricks.iterator();
+//			while (iter.hasNext()) {
+//				LegoBrick legoBrick = iter.next();
+//				if(legoBrick.isVisible(camPose)) {
+//					legoBrick.addVisibleFrame();
+////				
+//					float[] overlapResult = legoBrick.getOverlap(camPose);
+//					if(overlapResult[0] < 0.9f) {
+//						legoBrick.punish(1);
+//	//						iter.remove();
+//	//						continue;
+//					}
+//				}
+//			}
+//			Log.d(TAG, "OverlapChecker loop2 times: "+bricks.size());
+//			Log.d(TAG, "OverlapChecker time loop2: "+(System.nanoTime() - startOverlapCheck)/1000000.0+"ms");
+			
+//			Log.d(TAG, "Accepted bricksSize: "+acceptedBricks.size());
+			
+//			int key = 0;
+//			for(int ab = 0; ab < acceptedBricks.size(); ab++) {
+//			   key = acceptedBricks.keyAt(ab);
+//			   bricks.add(acceptedBricks.get(key));
+//			}
 			
 //			Imgproc.drawContours(check, contours, -1, new Scalar(0, 255, 0));
 //			Highgui.imwrite("/sdcard/arbg/check.png", check);
 			
-			trackingCallback.trackingDone(LegoBrickTracker.class);
+//			trackingCallback.trackingDone(LegoBrickTracker.class);
 			
 			if(AppConfig.DEBUG_TIMING) Log.d(TAG, "LegoBrick found in "+(System.nanoTime()-start)/1000000L+"ms");
 			if(AppConfig.DEBUG_TIMING) Log.d(TAG, "LegoBrick (Java-part) found in "+(System.nanoTime()-startJava)/1000000L+"ms");
+			
+			
 		} else if(AppConfig.PARALLEL_LEGO_TRACKING) {
 			FindLegoBrick task = new FindLegoBrick();
 			task.start = start;
@@ -440,8 +773,8 @@ public class LegoBrickTracker extends Tracker{
 //				);
 	}
 	
-	public List<LegoBrick> getBricks() {
-		return bricks;
+	public List<LegoBrickContainer> getNewBrickCandidates() {
+		return brickCandidates;
 	}
 	
 //	public float[][] getGLContour() {
@@ -838,7 +1171,7 @@ public class LegoBrickTracker extends Tracker{
 							Log.d(TAG, "RESULTING CUBOID Point "+i+": ("+cuboid[k][i][0]+","+cuboid[k][i][1]+","+cuboid[k][i][2]+")");
 						}
 		    		}
-		    		bricks[k] = new LegoBrick(cuboid[k],Color.ColorName.values()[(int) ocvContours[k][0]], null);
+		    		bricks[k] = new LegoBrick(cuboid[k],Color.ColorName.values()[(int) ocvContours[k][0]], camPose.getOrientationDeg());
 		    	} else return new LegoBrick[0];
 	    	}
 	    	return bricks;
@@ -914,6 +1247,6 @@ public class LegoBrickTracker extends Tracker{
 	private native void findLegoBrick3(long bgrPointer, long resultMatPtr);
 //	private native void findLegoBrick3(long camFrameImage, String renderImgsPath, long brickPosPtr);
 	private native void generateHOGDescriptors(String renderImgsPath);
-	private native void findLegoBrickLines(long bgrPointer, float upAngle, long resultMatPtr);
+	private native void findLegoBrickLines(long bgrPointer, float upAngle, long resultMatPtr, long origContMatPtr);
 	private native float[] checkOverlap(long inputPoints, int idx);
 }
