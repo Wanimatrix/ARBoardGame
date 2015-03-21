@@ -38,7 +38,7 @@ public class LegoBrickContainer extends ArrayList<LegoBrick> {
 	}
 	
 	public boolean readyToBecomeRealBrick() {
-		if(this.size() == 1 && this.get(0).getMergeCount() >= 5 && this.get(0).getOrientations().size() > 3)
+		if(this.size() == 1 && this.get(0).getMergeCount() >= 5) // && this.get(0).getOrientations().size() > 3)
 		{
 			Log.d("REALBRICK", "Removal votes: "+this.get(0).getRemovalVotes());
 			return true;

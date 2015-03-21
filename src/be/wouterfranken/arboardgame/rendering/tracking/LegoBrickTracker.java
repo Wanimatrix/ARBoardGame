@@ -2,6 +2,7 @@ package be.wouterfranken.arboardgame.rendering.tracking;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 
@@ -650,14 +651,18 @@ public class LegoBrickTracker extends Tracker{
 			Log.d(TAG, "COORD2D size: "+coord2D.cols()+" VS "+tmpBricksArray.size());
 			
 			start2 = System.nanoTime();
-			List<float[]> overlap = new ArrayList<float[]>();
+//			List<float[]> overlap = new ArrayList<float[]>();
+			Mat bricksMat = new Mat(tmpBricksArray.size(),8*2, CvType.CV_32FC1);
 			for (int l = 0; l < tmpBricksArray.size(); l++) {
-				Point[] tmpPts = new Point[8];
+//				Point[] tmpPts = new Point[8];
 				for (int m = 0; m < 8; m++) {
-					tmpPts[m] = new Point(coord2D.get(0,l*8+m)[0]/coord2D.get(2,l*8+m)[0],coord2D.get(1,l*8+m)[0]/coord2D.get(2,l*8+m)[0]);
+					bricksMat.put(l, m*2, coord2D.get(0,l*8+m)[0]/coord2D.get(2,l*8+m)[0]);
+					bricksMat.put(l, m*2+1, coord2D.get(1,l*8+m)[0]/coord2D.get(2,l*8+m)[0]);
+//					tmpPts[m] = new Point(coord2D.get(0,l*8+m)[0]/coord2D.get(2,l*8+m)[0],coord2D.get(1,l*8+m)[0]/coord2D.get(2,l*8+m)[0]);
 				}
-				overlap.add(tmpBricksArray.get(l).getOverlap(tmpPts));
+//				overlap.add(tmpBricksArray.get(l).getOverlap(tmpPts));
 			}
+			float[] overlap = getOverlap(bricksMat.getNativeObjAddr());
 			
 			Log.d("PERFORMANCE_ANALYSIS", "CHECKPOINT3 time: "+(System.nanoTime() - start2)/1000000.0+"ms");
 			
@@ -669,12 +674,12 @@ public class LegoBrickTracker extends Tracker{
 				Iterator<LegoBrick> lcIterator = lc.iterator();
 				while(lcIterator.hasNext()) {
 					LegoBrick lb = lcIterator.next();
-					float[] overlapResult = overlap.get(counter);
+//					float[] overlapResult = overlap.get(counter);
 //					long startOverlapCalc = System.nanoTime();
 //					float[] overlapResult = legoBrickContainer.get(l).getOverlap(camPose);
 //					Log.d(TAG, "OverlapCalc time: "+(System.nanoTime() - startOverlapCalc)/1000000.0+"ms");
 					
-					if(overlapResult[0] < 0.75f) {
+					if(overlap[counter] < 0.75f) {
 //						bricks.add(legoBrickContainer.get(l));
 						if(isNewDetected)
 							lcIterator.remove();
@@ -796,6 +801,8 @@ public class LegoBrickTracker extends Tracker{
 //		}
 //		return result;
 //	}
+	
+	public native float[] getOverlap(long bricksPointer);
 	
 	public float[][] getOcvContour() {
 		Mat tmp = new Mat();

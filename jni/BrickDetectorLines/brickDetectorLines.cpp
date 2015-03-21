@@ -190,7 +190,7 @@ void BrickDetectorLines::TrackBricks(Mat& frame, float upAngle, Mat& result, Mat
     // for(float i = 1; newArea/origArea >= 0.98; i+=0.01) {
       // previous = tmpContour;
       //0.01*arcLength(contours[c], true)
-      approxPolyDP(Mat(contours[c]), tmpContour, 0.01*arcLength(contours[c], true), true);
+      approxPolyDP(Mat(contours[c]), tmpContour, 0.003*arcLength(contours[c], true), true);
     //   if(tmpContour.size() >= 2){
     //     newArea = contourArea(tmpContour);
     //   }
@@ -455,6 +455,11 @@ void BrickDetectorLines::TrackBricks(Mat& frame, float upAngle, Mat& result, Mat
   return;
 }
 
+void BrickDetectorLines::getCurrentFrameThresholdAndOverlap(Mat& frameThreshold, int& frameOverlap) {
+  frameThreshold = currentFrameThreshold;
+  frameOverlap = currentFrameNonZero;
+}
+
 void BrickDetectorLines::CheckOverlap(Mat& inputPoints, int origContourIdx, float& inputOverlapResult, float& origOverlapResult) {
   Mat origThreshold = originalContourThresholds[origContourIdx];
 
@@ -480,11 +485,17 @@ void BrickDetectorLines::CheckOverlap(Mat& inputPoints, int origContourIdx, floa
   LOGD("Contour with orig idx %d: inputRatio(%f) origRatio(%f)", origContourIdx, inputOverlapResult, origOverlapResult);
 }
 
-void BrickDetectorLines::CheckCurrFrameOverlap(Mat& inputPoints, float& inputOverlapResult, float& origOverlapResult) {
+void BrickDetectorLines::CheckCurrFrameOverlap(Mat& inputPoints, float& inputOverlapResult) {
   vector<vector<Point >> inputContours(1);
 
   double start = getRealTime();
   convexHull(inputPoints,inputContours[0],true);
+  Rect bound = boundingRect(Mat(inputContours[0]));
+  if(bound.x < 0 && abs(bound.x) < bound.width) bound.x = 0;
+  else if(bound.y < 0 && abs(bound.y) < bound.height) bound.y = 0;
+  else if(bound.x+bound.width > currentFrameThreshold.size().width) bound.x = currentFrameThreshold.size().width;
+  else if(bound.y+bound.height > currentFrameThreshold.size().height) bound.y = currentFrameThreshold.size().height;
+  LOGD("ROI size: (%d,%d);(%d,%d)",bound.width,bound.height,bound.x,bound.y);
   __android_log_print(ANDROID_LOG_DEBUG,"PERFORMANCE_ANALYSIS","Convex hull calculated in %f ms...",((float)(getRealTime() - start))*1000.0);
 
   Mat inputPtsThreshold = Mat::zeros(currentFrameThreshold.size(), currentFrameThreshold.type());
@@ -493,17 +504,20 @@ void BrickDetectorLines::CheckCurrFrameOverlap(Mat& inputPoints, float& inputOve
   drawContours(inputPtsThreshold, inputContours, 0, Scalar(255,255,255), -1);
   __android_log_print(ANDROID_LOG_DEBUG,"PERFORMANCE_ANALYSIS","Contours drawn in %f ms...",((float)(getRealTime() - start))*1000.0);
 
+  Mat inputBounded = Mat(inputPtsThreshold, bound);
+  Mat frameBounded = Mat(currentFrameThreshold, bound);
+
   start = getRealTime();
   double start2 = getRealTime();
-  int inputNonZero = countNonZero(inputPtsThreshold);
-  __android_log_print(ANDROID_LOG_DEBUG,"PERFORMANCE_ANALYSIS","CountNonZero input in %f ms...",((float)(getRealTime() - start))*1000.0);
+  int inputNonZero = countNonZero(inputBounded);
+  __android_log_print(ANDROID_LOG_DEBUG,"PERFORMANCE_ANALYSIS","CountNonZero input in %f ms...",((float)(getRealTime() - start2))*1000.0);
   start2 = getRealTime();
-  int origNonZero = currentFrameNonZero;
-  __android_log_print(ANDROID_LOG_DEBUG,"PERFORMANCE_ANALYSIS","CountNonZero frame in %f ms...",((float)(getRealTime() - start))*1000.0);
-  Mat result;
+  // int origNonZero = currentFrameNonZero;
+  __android_log_print(ANDROID_LOG_DEBUG,"PERFORMANCE_ANALYSIS","CountNonZero frame in %f ms...",((float)(getRealTime() - start2))*1000.0);
+  Mat result(inputBounded.size(), CV_8UC1);
   start2 = getRealTime();
-  bitwise_and(inputPtsThreshold, currentFrameThreshold, result);
-  __android_log_print(ANDROID_LOG_DEBUG,"PERFORMANCE_ANALYSIS","And thresholds in %f ms...",((float)(getRealTime() - start))*1000.0);
+  bitwise_and(inputBounded, frameBounded, result, inputBounded);
+  __android_log_print(ANDROID_LOG_DEBUG,"PERFORMANCE_ANALYSIS","And thresholds in %f ms...",((float)(getRealTime() - start2))*1000.0);
 
   // LOGIMG( "inputT",  inputPtsThreshold);
   // LOGIMG( "currentT",  currentFrameThreshold);
@@ -513,11 +527,12 @@ void BrickDetectorLines::CheckCurrFrameOverlap(Mat& inputPoints, float& inputOve
   // bitwise_or(debug,result,debug);
 
   start2 = getRealTime();
-  int resultNonZero = countNonZero(result);
-  __android_log_print(ANDROID_LOG_DEBUG,"PERFORMANCE_ANALYSIS","CountNonZero result in %f ms...",((float)(getRealTime() - start))*1000.0);
+  int resultNonZero = countNonZero(frameBounded);
+  __android_log_print(ANDROID_LOG_DEBUG,"PERFORMANCE_ANALYSIS","CountNonZero result in %f ms...",((float)(getRealTime() - start2))*1000.0);
+  start2 = getRealTime();
   inputOverlapResult = resultNonZero/(float)inputNonZero;
-  origOverlapResult = resultNonZero/(float)origNonZero;
-  __android_log_print(ANDROID_LOG_DEBUG,"PERFORMANCE_ANALYSIS","Calculation of overlap in %f ms...",((float)(getRealTime() - start))*1000.0);
+  // origOverlapResult = resultNonZero/(float)origNonZero;
+  __android_log_print(ANDROID_LOG_DEBUG,"PERFORMANCE_ANALYSIS","Calculation of overlap in %f ms...",((float)(getRealTime() - start2))*1000.0);
 
   // ostringstream ostr;
   // ostr << inputOverlapResult;
@@ -525,5 +540,5 @@ void BrickDetectorLines::CheckCurrFrameOverlap(Mat& inputPoints, float& inputOve
   // LOGIMG( "overlapDebug",  debug);
 
 
-  LOGD("inputRatio(%f) origRatio(%f)", inputOverlapResult, origOverlapResult);
+  LOGD("inputRatio(%f)", inputOverlapResult);
 }

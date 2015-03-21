@@ -88,6 +88,9 @@ extern "C"
 
 	JNIEXPORT jfloatArray JNICALL Java_be_wouterfranken_arboardgame_gameworld_LegoBrick_checkCurrentOverlap
 			(JNIEnv *env, jobject object, jlong inputPoints);
+
+	JNIEXPORT jfloatArray JNICALL Java_be_wouterfranken_arboardgame_rendering_tracking_LegoBrickTracker_getOverlap
+			(JNIEnv *env, jobject object, jlong bricksPointer);
 }
 
 JNIEXPORT void JNICALL Java_be_wouterfranken_arboardgame_rendering_tracking_CameraPoseTracker_loadCameraCalibration(
@@ -989,16 +992,52 @@ JNIEXPORT jfloatArray JNICALL Java_be_wouterfranken_arboardgame_rendering_tracki
 
 JNIEXPORT jfloatArray JNICALL Java_be_wouterfranken_arboardgame_gameworld_LegoBrick_checkCurrentOverlap(JNIEnv *env, jobject object, jlong inputPoints) {
 	Mat inputThresh = *(Mat *)inputPoints;
-	jfloat overlapResult[2];
+	jfloat overlapResult[1];
 
-	BrickDetectorLines::CheckCurrFrameOverlap(inputThresh, overlapResult[0], overlapResult[1]);
+	BrickDetectorLines::CheckCurrFrameOverlap(inputThresh, overlapResult[0]);
 
 	jfloatArray javaResult;
- 	javaResult = env->NewFloatArray(2);
+ 	javaResult = env->NewFloatArray(1);
  	if (javaResult == NULL) {
     	return NULL; /* out of memory error thrown */
  	}
- 	env->SetFloatArrayRegion(javaResult, 0, 2, overlapResult);
+ 	env->SetFloatArrayRegion(javaResult, 0, 1, overlapResult);
+
+	return javaResult;
+}
+
+JNIEXPORT jfloatArray JNICALL Java_be_wouterfranken_arboardgame_rendering_tracking_LegoBrickTracker_getOverlap(JNIEnv *env, jobject object, jlong bricksPointer) {
+	Mat bricksPoints = *(Mat *)bricksPointer;
+	int amountBricks = bricksPoints.rows;
+	jfloat overlapResult[amountBricks];
+
+	#pragma omp parallel for num_threads(4)
+	for (int i = 0; i < amountBricks; ++i)
+	{
+
+		LOGD("OPENMP threads: %d",omp_get_num_threads());
+
+		vector<Point> points;
+		for(int pidx = 0; pidx < 8; pidx++) {
+			points.push_back(Point(bricksPoints.at<float>(i,pidx*2), bricksPoints.at<float>(i,pidx*2+1)));
+		}
+		// float tmp;
+		Mat pts(points);
+		float result;
+		BrickDetectorLines::CheckCurrFrameOverlap(pts, result);
+
+		#pragma omp critical
+		{
+			overlapResult[i] = result;
+		}
+	}
+
+	jfloatArray javaResult;
+ 	javaResult = env->NewFloatArray(amountBricks);
+ 	if (javaResult == NULL) {
+    	return NULL; /* out of memory error thrown */
+ 	}
+ 	env->SetFloatArrayRegion(javaResult, 0, amountBricks, overlapResult);
 
 	return javaResult;
 }
