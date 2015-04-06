@@ -20,29 +20,34 @@ public class WorldLines {
 	private List<Star> stars = new ArrayList<Star>();
 	private Object starLock = new Object();
 	private Object brickLock = new Object();
-	private Map<WorldCoordinate,WorldNode> theWorld = new HashMap<WorldCoordinate,WorldNode>();
+//	private Map<WorldCoordinate,WorldNode> theWorld = new HashMap<WorldCoordinate,WorldNode>();
 	private boolean worldGenerated = false;
 	
+	private final Grid worldGrid;
+	
 	public WorldLines() {
+		
+//		for(float x = WorldConfig.BORDER.getXStart();x<=WorldConfig.BORDER.getXEnd();x+=WorldConfig.NODE_DISTANCE) {
+//			for(float y = WorldConfig.BORDER.getYStart();y<=WorldConfig.BORDER.getYEnd();y+=WorldConfig.NODE_DISTANCE) {
+//				WorldNode newNode = new WorldNode();
+//				WorldCoordinate current = new WorldCoordinate(x,y);
+//				if(AppConfig.DEBUG_LOGGING) Log.d(TAG, "WORLD Node generation, current node: "+current);
+//				WorldCoordinate left = new WorldCoordinate(x-WorldConfig.NODE_DISTANCE,y);
+//				WorldCoordinate bottom = new WorldCoordinate(x,y-WorldConfig.NODE_DISTANCE);
+//				if(theWorld.get(left) != null) {
+//					theWorld.get(left).setRight(current);
+//					newNode.setLeft(left);
+//				} 
+//				if(theWorld.get(bottom) != null) {
+//					theWorld.get(bottom).setTop(current);
+//					newNode.setBottom(bottom);
+//				}
+//				theWorld.put(current, newNode);
+//			}
+//		}
+		
 		// Generate the world, fully linked.
-		for(float x = WorldConfig.BORDER.getXStart();x<=WorldConfig.BORDER.getXEnd();x+=WorldConfig.NODE_DISTANCE) {
-			for(float y = WorldConfig.BORDER.getYStart();y<=WorldConfig.BORDER.getYEnd();y+=WorldConfig.NODE_DISTANCE) {
-				WorldNode newNode = new WorldNode();
-				WorldCoordinate current = new WorldCoordinate(x,y);
-				if(AppConfig.DEBUG_LOGGING) Log.d(TAG, "WORLD Node generation, current node: "+current);
-				WorldCoordinate left = new WorldCoordinate(x-WorldConfig.NODE_DISTANCE,y);
-				WorldCoordinate bottom = new WorldCoordinate(x,y-WorldConfig.NODE_DISTANCE);
-				if(theWorld.get(left) != null) {
-					theWorld.get(left).setRight(current);
-					newNode.setLeft(left);
-				} 
-				if(theWorld.get(bottom) != null) {
-					theWorld.get(bottom).setTop(current);
-					newNode.setBottom(bottom);
-				}
-				theWorld.put(current, newNode);
-			}
-		}
+		worldGrid = new Grid(WorldConfig.BORDER,WorldConfig.NODE_DISTANCE);
 		
 		if(AppConfig.DEBUG_LOGGING) Log.d(TAG, "World is generated!");
 		worldGenerated = true;
@@ -52,37 +57,41 @@ public class WorldLines {
 		return worldGenerated;
 	}
 	
-	private void activateBrick(LegoBrick brick) {
-		float[][] brickCorners = brick.getCuboid();
-		float[] xBounds = brick.getXBounds();
-		float[] yBounds = brick.getYBounds();
-		WorldCoordinate xBnd = WorldCoordinate.getClosestWorldCoordinate(xBounds, true, false);
-		WorldCoordinate yBnd = WorldCoordinate.getClosestWorldCoordinate(yBounds, true, false);
-		
-		// If the brick is anywhere out of borders: don't add this brick to the world.
-		if(xBnd.x < WorldConfig.BORDER.getXStart() || xBnd.y > WorldConfig.BORDER.getXEnd()
-				|| yBnd.x < WorldConfig.BORDER.getYStart() || yBnd.y > WorldConfig.BORDER.getYEnd()) return;
-		
-		brick.setActive(true);
-		
-		for(float x = xBnd.x;x<=xBnd.y;x+=WorldConfig.NODE_DISTANCE) {
-			for(float y = yBnd.x;y<=yBnd.y;y+=WorldConfig.NODE_DISTANCE) {
-				int result0 = MathUtilities.pointLeftOfEdge(new float[]{x,y,0}, brickCorners[0], brickCorners[1]);
-				int result1 = MathUtilities.pointLeftOfEdge(new float[]{x,y,0}, brickCorners[1], brickCorners[2]);
-				int result2 = MathUtilities.pointLeftOfEdge(new float[]{x,y,0}, brickCorners[2], brickCorners[3]);
-				int result3 = MathUtilities.pointLeftOfEdge(new float[]{x,y,0}, brickCorners[3], brickCorners[0]);
-				if(result0 == result1 && result1 == result2 && result2 == result3) {
-					WorldNode node = theWorld.get(new WorldCoordinate(x, y));
-					if(node.getLeft() != null) theWorld.get(node.getLeft()).setRight(null);
-					if(node.getBottom() != null) theWorld.get(node.getBottom()).setTop(null);
-					if(node.getRight() != null) theWorld.get(node.getRight()).setLeft(null);
-					if(node.getTop() != null) theWorld.get(node.getTop()).setBottom(null);
-					node.setLeft(null);
-					node.setRight(null);
-					node.setTop(null);
-					node.setBottom(null);
-					brick.addCoordinate(new WorldCoordinate(x, y));
-					if(AppConfig.DEBUG_LOGGING) Log.d(TAG, "Added BrickCoordinate: "+(new WorldCoordinate(x, y)));
+	public void activateAllBricks() {
+		for (LegoBrick brick : bricks) {
+			float[][] brickCorners = brick.getCuboid();
+			float[] xBounds = brick.getXBounds();
+			float[] yBounds = brick.getYBounds();
+			WorldCoordinate xBnd = WorldCoordinate.getClosestWorldCoordinate(xBounds, true, false);
+			WorldCoordinate yBnd = WorldCoordinate.getClosestWorldCoordinate(yBounds, true, false);
+			
+			// If the brick is anywhere out of borders: don't add this brick to the world.
+			if(xBnd.x < WorldConfig.BORDER.getXStart() || xBnd.y > WorldConfig.BORDER.getXEnd()
+					|| yBnd.x < WorldConfig.BORDER.getYStart() || yBnd.y > WorldConfig.BORDER.getYEnd()) return;
+			
+			brick.setActive(true);
+			
+			for(float x = xBnd.x;x<=xBnd.y;x+=WorldConfig.NODE_DISTANCE) {
+				for(float y = yBnd.x;y<=yBnd.y;y+=WorldConfig.NODE_DISTANCE) {
+					int result0 = MathUtilities.pointLeftOfEdge(new float[]{x,y,0}, brickCorners[0], brickCorners[1]);
+					int result1 = MathUtilities.pointLeftOfEdge(new float[]{x,y,0}, brickCorners[1], brickCorners[2]);
+					int result2 = MathUtilities.pointLeftOfEdge(new float[]{x,y,0}, brickCorners[2], brickCorners[3]);
+					int result3 = MathUtilities.pointLeftOfEdge(new float[]{x,y,0}, brickCorners[3], brickCorners[0]);
+					if(result0 == result1 && result1 == result2 && result2 == result3) {
+						GridNode node = worldGrid.getGridNode(new WorldCoordinate(x, y));
+						node.setAccessible(false);
+//						if(node.getLeft() != null) worldGrid.getGridNode(node.getLeft().getCoordinate()).setRight(null);
+//						if(node.getBottom() != null) worldGrid.getGridNode(node.getBottom().getCoordinate()).setTop(null);
+//						if(node.getRight() != null) worldGrid.getGridNode(node.getRight().getCoordinate()).setLeft(null);
+//						if(node.getTop() != null) worldGrid.getGridNode(node.getTop().getCoordinate()).setBottom(null);
+//						node.setLeft(null);
+//						node.setRight(null);
+//						node.setTop(null);
+//						node.setBottom(null);
+						
+//						brick.addCoordinate(new WorldCoordinate(x, y));
+//						if(AppConfig.DEBUG_LOGGING) Log.d(TAG, "Added BrickCoordinate: "+(new WorldCoordinate(x, y)));
+					}
 				}
 			}
 		}
@@ -108,6 +117,7 @@ public class WorldLines {
 						Math.round(MathUtilities.norm(candidate.get(0).getHalfSideVectors()[0])*2/1.6f)+","+
 						Math.round(MathUtilities.norm(candidate.get(0).getHalfSideVectors()[0])*2/1.6f)+","+"))");
 					
+					candidate.get(0).resetRemoval();
 					bricks.add(candidate.get(0));
 					candidatesIt.remove();
 				}
@@ -128,6 +138,7 @@ public class WorldLines {
 					DebugUtilities.logGLMatrix("BRICK Pt", cub3D[i], 1, 3);
 				
 				if(bc.readyToBecomeRealBrick()) { 
+					bc.get(0).resetRemoval();
 					bricks.add(bc.get(0));
 					Log.d(TAG, "This brick just became real: (removal = "+bc.get(0).getRemovalVotes()+"), (mergeCnt = "+bc.get(0).getMergeCount()+")");
 				}
@@ -219,6 +230,10 @@ public class WorldLines {
 		return result;
 	}
 	
+	public void removeBrick(LegoBrick b) {
+		bricks.remove(b);
+	}
+	
 //	public int getActiveBrickAmount() {
 //		
 //		int count = 0;
@@ -261,11 +276,25 @@ public class WorldLines {
 		return starMeshes;
 	}
 	
-	public WorldNode getNode(WorldCoordinate co) {
-		return theWorld.get(co);
+	public GridNode getGridNode(WorldCoordinate coordinate) {
+		return worldGrid.getGridNode(coordinate);
 	}
 	
-	public int getSize() {
-		return theWorld.size();
+	@Override
+	public String toString() {
+		String result = "";
+		for (WorldCoordinate co : worldGrid.getCoordinates()) {
+			if(getGridNode(co).isAccessible())
+				result += co+", ";
+		}
+		return result;
 	}
+	
+//	public WorldNode getNode(WorldCoordinate co) {
+//		return theWorld.get(co);
+//	}
+	
+//	public int getSize() {
+//		return theWorld.size();
+//	}
 }

@@ -15,12 +15,12 @@ public class Color {
 		BLUE
 	}
 	
-	public final static Map<ColorName, Color> COLOR_MAP;
+	public final static Map<ColorName, int[]> COLOR_MAP;
 	static {
-		COLOR_MAP = new HashMap<ColorName, Color>();
-		COLOR_MAP.put(ColorName.RED, new Color(1, 0, 0, 1));
-		COLOR_MAP.put(ColorName.YELLOW, new Color(1, 1, 0, 1));
-		COLOR_MAP.put(ColorName.BLUE, new Color(0, 0, 1, 1));
+		COLOR_MAP = new HashMap<ColorName, int[]>();
+		COLOR_MAP.put(ColorName.RED, new int[]{1, 0, 0, 1});
+		COLOR_MAP.put(ColorName.YELLOW, new int[]{1, 1, 0, 1});
+		COLOR_MAP.put(ColorName.BLUE, new int[]{0, 0, 1, 1});
 	}
 	
 	
@@ -29,5 +29,18 @@ public class Color {
 		this.g = g;
 		this.b = b;
 		this.a = a;
+	}
+	
+	public Color(ColorName name) {
+		int[] theColor = COLOR_MAP.get(name);
+		this.r = theColor[0];
+		this.g = theColor[1];
+		this.b = theColor[2];
+		this.a = theColor[3];
+	}
+	
+	@Override
+	public String toString() {
+		return r+", "+g+", "+b+", "+a;
 	}
 }

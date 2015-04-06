@@ -5,6 +5,7 @@ import javax.microedition.khronos.egl.EGLConfig;
 import android.util.Log;
 import be.wouterfranken.arboardgame.app.AppConfig;
 import be.wouterfranken.arboardgame.app.CameraView;
+import be.wouterfranken.arboardgame.app.GamePhaseManager;
 import be.wouterfranken.arboardgame.rendering.tracking.CameraPoseTracker;
 
 import com.google.vrtoolkit.cardboard.CardboardView.StereoRenderer;
@@ -21,9 +22,9 @@ public class CameraViewRenderer implements StereoRenderer{
 	private CameraView view;
 	private long renderDataTimer;
 	
-	public CameraViewRenderer(CameraView view) {
+	public CameraViewRenderer(CameraView view, CameraPoseTracker cameraPoseTracker, GamePhaseManager gpManager) {
 		this.view = view;
-		arRenderer = new ArRenderer(this.view, new CameraPoseTracker(this.view.getContext()));
+		arRenderer = new ArRenderer(this.view, cameraPoseTracker, gpManager);
 		finalRenderer = new FinalRenderer(view);
 	}
 	
@@ -112,5 +113,4 @@ public class CameraViewRenderer implements StereoRenderer{
 		
 		finalRenderer.onRendererShutdown();
 	}
-	
 }

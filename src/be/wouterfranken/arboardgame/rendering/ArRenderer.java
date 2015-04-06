@@ -4,33 +4,27 @@ import java.io.IOException;
 import java.nio.Buffer;
 import java.nio.IntBuffer;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Comparator;
 import java.util.List;
 
 import javax.microedition.khronos.egl.EGLConfig;
 import javax.microedition.khronos.opengles.GL10;
 
-import org.opencv.core.CvType;
-import org.opencv.core.Mat;
-import org.opencv.imgproc.Imgproc;
-
-import android.content.Context;
 import android.graphics.ImageFormat;
 import android.graphics.SurfaceTexture;
 import android.hardware.Camera;
 import android.hardware.Camera.Parameters;
 import android.hardware.Camera.PreviewCallback;
-import android.hardware.Camera.Size;
 import android.opengl.GLES11Ext;
 import android.opengl.GLES20;
 import android.opengl.GLSurfaceView;
 import android.opengl.GLSurfaceView.Renderer;
 import android.opengl.Matrix;
-import android.os.AsyncTask;
 import android.util.Log;
 import be.wouterfranken.arboardgame.app.AppConfig;
+import be.wouterfranken.arboardgame.app.GamePhaseManager;
 import be.wouterfranken.arboardgame.gameworld.LegoBrick;
-import be.wouterfranken.arboardgame.gameworld.LegoBrickContainer;
-import be.wouterfranken.arboardgame.gameworld.LemmingsGenerator;
 import be.wouterfranken.arboardgame.gameworld.WorldConfig;
 import be.wouterfranken.arboardgame.gameworld.WorldLines;
 import be.wouterfranken.arboardgame.rendering.meshes.CuboidMesh;
@@ -38,8 +32,7 @@ import be.wouterfranken.arboardgame.rendering.meshes.FullSquadMesh;
 import be.wouterfranken.arboardgame.rendering.meshes.MeshObject;
 import be.wouterfranken.arboardgame.rendering.meshes.RenderOptions;
 import be.wouterfranken.arboardgame.rendering.tracking.CameraPoseTracker;
-import be.wouterfranken.arboardgame.rendering.tracking.FrameTrackingCallback;
-import be.wouterfranken.arboardgame.rendering.tracking.LegoBrickTracker;
+import be.wouterfranken.arboardgame.rendering.tracking.LegoBrickTracker2;
 import be.wouterfranken.arboardgame.utilities.Color;
 import be.wouterfranken.arboardgame.utilities.RenderingUtils;
 
@@ -47,8 +40,6 @@ public class ArRenderer implements Renderer, PreviewCallback {
 	
 	private final static String TAG = ArRenderer.class.getSimpleName();
 	private List<MeshObject> meshesToRender = new ArrayList<MeshObject>();
-	private GLSurfaceView view;
-	private Context context;
 	
 	private Camera camera;
 	private int[] tex;
@@ -57,16 +48,12 @@ public class ArRenderer implements Renderer, PreviewCallback {
 	private Buffer pVertexVBG;
 	
 	private CameraPoseTracker cameraPose;
-	private LegoBrickTracker legoBrick;
 	
     private float[] mvp = new float[16];
     private float[] glProj = null;
     private float[] glMv = null;
     
-    private LemmingsGenerator lemmingsGenerator;
-    private List<MeshObject> lemmingMeshesToRender = new ArrayList<MeshObject>();
-    private Object lock = new Object();
-    private List<MeshObject> bricksToRender = new ArrayList<MeshObject>();
+    private GamePhaseManager gpMan;
     
     // RENDER TO TEXTURE VARIABLES
  	int[] fb, depthRb, renderTex; // the framebuffer, the renderbuffer and the texture to render
@@ -104,10 +91,9 @@ public class ArRenderer implements Renderer, PreviewCallback {
 		"  gl_FragColor = texture2D(sTexture,texCoord);\n" +
 		"}";
 	
-	public ArRenderer(GLSurfaceView view, CameraPoseTracker cameraPose) {
+	public ArRenderer(GLSurfaceView view, CameraPoseTracker cameraPose, GamePhaseManager gpManager) {
 		this.cameraPose = cameraPose;
-		this.legoBrick = new LegoBrickTracker(view.getContext());
-		this.view = view;
+		this.gpMan = gpManager;
 		
 		// Add here the meshes that are needed for rendering.
 //		GameBoardOverlayMesh gbo = new GameBoardOverlayMesh(new float[]{AppConfig.BOARD_SIZE[0],AppConfig.BOARD_SIZE[1]}, new RenderOptions(true, new Color(1,0,0,0.5f)));
@@ -174,7 +160,6 @@ public class ArRenderer implements Renderer, PreviewCallback {
 		initFrameBuffer();
 		
 		setupCameraTex();
-		lemmingsGenerator = new LemmingsGenerator(legoBrick, cameraPose);
 		
 		GLES20.glClearColor(1.0f, 1.0f, 0.0f, 1.0f);
 		GLES20.glDisable(GLES20.GL_DEPTH_TEST);
@@ -229,9 +214,7 @@ public class ArRenderer implements Renderer, PreviewCallback {
 	    glMv = cameraPose.getMv();
 		glProj = cameraPose.getProj();
 		List<MeshObject> lemmMeshesTmp = new ArrayList<MeshObject>();
-		synchronized (lock) {
-			lemmMeshesTmp.addAll(lemmingMeshesToRender);
-		}
+		lemmMeshesTmp.addAll(gpMan.getLemmingsToRender());
 	    
 		 // Render virtual layer to texture
 		GLES20.glUseProgram(programId[1]);
@@ -251,22 +234,47 @@ public class ArRenderer implements Renderer, PreviewCallback {
 				renderMesh(meshesToRender.get(i), i);
 			}
 			
-			synchronized (bricksToRender) {
-				for (int i = 0; i< bricksToRender.size();i++) {
-					renderMesh(bricksToRender.get(i), meshesToRender.size());
+			synchronized (gpMan.getBricksToRender()) {
+				List<MeshObject> bricks = gpMan.getBricksToRender();
+				MeshObject[] bricksArray = bricks.toArray(new MeshObject[bricks.size()]);
+				Arrays.sort(bricksArray, new Comparator<MeshObject>() {
+
+					@Override
+					public int compare(MeshObject lhs, MeshObject rhs) {
+						if(lhs.getRenderOptions().col.g > rhs.getRenderOptions().col.g)
+							return 1;
+						else if(lhs.getRenderOptions().col.g == rhs.getRenderOptions().col.g) {
+							if(lhs.getRenderOptions().col.g == 1)
+								if(lhs.getRenderOptions().col.r > rhs.getRenderOptions().col.r)
+									return 1;
+								else if(lhs.getRenderOptions().col.r < rhs.getRenderOptions().col.r)
+									return -1;
+							return 0;
+						}
+						else return -1;
+					}
+					
+				});
+				for (int i = 0; i< bricksArray.length;i++) {
+					renderMesh(bricksArray[i], meshesToRender.size());
 				}
 			}
 			
+			
+			// TODO: Fix this to be able to play the game
 			if(AppConfig.LEMMING_RENDERING) {
 				for (int i = 0; i< lemmMeshesTmp.size();i++) {
 					renderMesh(lemmMeshesTmp.get(i), meshesToRender.size());
 				}
 			}
 			
-			List<MeshObject> starMeshes = lemmingsGenerator.getStarMeshes();
+			List<MeshObject> starMeshes = gpMan.getStarsToRender();
 			for (int i = 0; i< starMeshes.size();i++) {
 				renderMesh(starMeshes.get(i), meshesToRender.size());
 			}
+			
+			
+			
 			
 //			List<MeshObject> brickMeshes = lemmingsGenerator.getActiveBrickMeshes(new RenderOptions(true, new Color(0, 0, 1, 1),false));
 //			for (MeshObject mesh : brickMeshes) {
@@ -372,6 +380,7 @@ public class ArRenderer implements Renderer, PreviewCallback {
 		
 		GLES20.glVertexAttribPointer(vPositionHandler[1+index], 3, GLES20.GL_FLOAT, false, 4*3, m.getVertices());
 	    GLES20.glEnableVertexAttribArray(vPositionHandler[1+index]);
+	   if(ro.col.b  == 0) Log.d(TAG, "RenderColor: "+ro.col.r+", "+ro.col.g+", "+ro.col.b+", "+ro.col.a);
 	    GLES20.glUniform4f(texColorHandler[index], ro.col.r, ro.col.g, ro.col.b, ro.col.a); // 1 0 0 0.5
 	    
 	    Matrix.setIdentityM(mvp, 0);
@@ -400,12 +409,6 @@ public class ArRenderer implements Renderer, PreviewCallback {
 	 **************************
 	 */
 	
-//	int frameCount = 0;
-//	long previousFrameTime = 0;
-//	int frameWaitAmount = 0;
-	
-	BrickDetectorTask bdt = new BrickDetectorTask();
-	
 	@Override
 	public void onPreviewFrame(byte[] frameData, Camera camera) {
 		if(AppConfig.DEBUG_LOGGING) Log.d(TAG, "Updating camera pose ...");
@@ -413,199 +416,10 @@ public class ArRenderer implements Renderer, PreviewCallback {
 		Log.d("PROGRAM_FLOW", "START ON PREVIEW FRAME");
 		
 		Log.d(TAG, "Focal length: "+camera.getParameters().getFocalLength()+"mm");
-		long start = System.nanoTime();
 		
-//		if(previousFrameTime != 0) {
-//			if(frameCount == 0) {
-//				frameWaitAmount = (int) (15*previousFrameTime);
-//			}
-//			frameCount = (frameCount + 1) % frameWaitAmount;
-//		}
-		
-//		view.requestRender();
-		
-		cameraPose.frameTick();
-		legoBrick.frameTick();
-		
-		
-		Size size = camera.getParameters().getPreviewSize();
-		long start2 = System.nanoTime();
-		Mat colFrameImg = new Mat();
-		Mat yuv = new Mat( (int)(size.height*1.5), size.width, CvType.CV_8UC1 );
-		yuv.put( 0, 0, frameData );
-		Imgproc.cvtColor( yuv, colFrameImg, Imgproc.COLOR_YUV2BGR_NV21, 3);
-		if(AppConfig.DEBUG_TIMING) Log.d(TAG, "YUV2RGB (OpenCV) in "+(System.nanoTime()-start2)/1000000L+"ms");
-		
-		FrameTrackingCallback callback = new FrameTrackingCallback(frameData, camera,start);
-
-		if(AppConfig.CAMERA_POSE_ESTIMATION) { 
-			cameraPose.updateCameraPose(colFrameImg, callback);
-			Log.d("PROGRAM_FLOW", "CAMERA POSE UPDATED");
-			if(!cameraPose.cameraPoseFound()) {
-				camera.addCallbackBuffer(frameData);
-				if(AppConfig.DEBUG_TIMING) Log.d(TAG, "Totaltime in "+(System.nanoTime()-start)/1000000L+"ms");
-			}
-		}
-		
-		
-		
-		if(cameraPose.cameraPoseFound()) {
-			Log.d("PROGRAM_FLOW", "CAMERA POSE FOUND");
-			if(AppConfig.LEGO_TRACKING) {
-				if(AppConfig.LEGO_TRACKING_CAD){
-					legoBrick.findLegoBrick(colFrameImg, cameraPose.getMvMat(), -1, callback, null);
-					CuboidMesh mesh = legoBrick.getTrackedLegoBricks(colFrameImg, cameraPose);
-					meshesToRender.add(mesh);
-				} else if(AppConfig.LEGO_TRACKING_LINES) {
-					if(bdt.getStatus() == AsyncTask.Status.FINISHED || bdt.getStatus() == AsyncTask.Status.PENDING) {
-						bdt = new BrickDetectorTask();
-						bdt.start = System.nanoTime();
-						bdt.setupFrameTrackingCallback(callback);
-						bdt.setupCameraPoseInfo(cameraPose);
-						bdt.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, colFrameImg);
-					}
-					callback.trackingDone(LegoBrickTracker.class);
-				} else {
-					legoBrick.findLegoBrick(colFrameImg, cameraPose.getMvMat(), -1, callback, null);
-				}
-			}
-		}
-		
-		if(false && AppConfig.LEMMING_RENDERING && cameraPose.cameraPoseFound()) {
-			long lemmingStart = System.nanoTime();
-			if(AppConfig.PARALLEL_LEMMING_UPDATES) {
-				LemmingGeneratorTask lgt = new LemmingGeneratorTask();
-				lgt.setupFrameTrackingCallback(callback);
-				lgt.start = lemmingStart;
-				lgt.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
-			} else {
-				lemmingsGenerator.frameTick();
-				if(AppConfig.DEBUG_TIMING) Log.d(TAG, "Lemming frameUpdate in "+(System.nanoTime()-lemmingStart)/1000000L+"ms");
-				callback.trackingDone(LemmingsGenerator.class);
-			}
-			synchronized (lock) {
-				lemmingMeshesToRender.clear();
-				lemmingMeshesToRender.addAll(lemmingsGenerator.getLemmingMeshes());
-			}
-		} else if(AppConfig.LEMMING_RENDERING) {
-			callback.trackingDone(LemmingsGenerator.class);
-		}
+		gpMan.frameTick(frameData, camera);
 		
 		Log.d("PROGRAM_FLOW", "END ON PREVIEW FRAME");
-	}
-	
-	private class LemmingGeneratorTask extends AsyncTask<Void, Void, Void> {
-		private FrameTrackingCallback trackingCallback;
-		private long start;
-		
-		@Override
-		protected Void doInBackground(Void... params) {
-			lemmingsGenerator.frameTick();
-			return null;
-		}
-		
-		@Override
-		protected void onPostExecute(Void result) {
-			super.onPostExecute(result);
-			if(AppConfig.DEBUG_TIMING) Log.d(TAG, "Lemming frameUpdate in "+(System.nanoTime()-start)/1000000L+"ms");
-			this.trackingCallback.trackingDone(LemmingsGenerator.class);
-		}
-		
-		private void setupFrameTrackingCallback(FrameTrackingCallback trackingCallback) {
-			this.trackingCallback = trackingCallback;
-		}
-	}
-	
-	private class BrickDetectorTask extends AsyncTask<Mat, Void, List<LegoBrick>> {
-		private FrameTrackingCallback trackingCallback;
-		private long start;
-		private Mat modelView;
-		private float orientation;
-		
-		@Override
-		protected List<LegoBrick> doInBackground(Mat... params) {
-//			long startFind = System.nanoTime();
-			legoBrick.findLegoBrick(params[0], modelView, orientation, trackingCallback, w.getCandidateBricks());
-//			Log.d(TAG, "Find brick time: "+(System.nanoTime() - startFind)/1000000.0+"ms");
-			List<LegoBrickContainer> newBrickCand = legoBrick.getNewBrickCandidates();
-			
-			w.addBricks(newBrickCand.toArray(new LegoBrickContainer[newBrickCand.size()]));
-//			bricksToRender.clear();
-			List<LegoBrick> bricks = new ArrayList<LegoBrick>();
-			
-			List<LegoBrickContainer> brickContList = w.getCandidateBricks();
-			long maxMerges = 0;
-			int[] indexes = new int[2];
-			for (int i = 0; i < brickContList.size(); i++) {
-				for (int j = 0; j < brickContList.get(i).size(); j++) {
-					LegoBrick b = brickContList.get(i).get(j);
-					if(b.getMergeCount() > maxMerges) {
-						maxMerges = b.getMergeCount();
-						indexes[0] = i;
-						indexes[1] = j;
-					}
-				}
-			}
-			
-			Log.d(TAG, "Maximum merges: "+maxMerges);
-			
-			boolean showCands = false;
-			if(showCands) {
-				List<LegoBrickContainer> brickCont = w.getCandidateBricks();
-				for (LegoBrickContainer legoBrickContainer : brickCont) {
-					bricks.addAll(legoBrickContainer);
-				}
-			}
-			else {
-				bricks.addAll(w.getBricks());
-//				for (LegoBrick legoBrick : bricks) {
-//					Log.d(TAG, "Accepted brick CP: "+legoBrick.getCenterPoint()[0]+", "+legoBrick.getCenterPoint()[1]+", "+legoBrick.getCenterPoint()[2]);
-//					for (float[] vec : legoBrick.getHalfSideVectors()) {
-//						Log.d(TAG, "Accepted brick HV: "+vec[0]+", "+vec[1]+", "+vec[2]);
-//					}
-//				}
-			}
-			
-			//w.getBricks();
-//			Log.d(TAG, "Active bricks: "+newBrickCand.size());
-			
-//			for (LegoBrick legoBrick : bricks) {
-//				if(legoBrick.getVisibleFrames() > 10 && ((float)legoBrick.getVotes()/legoBrick.getVisibleFrames()) > 0)
-//				bricksToRender.add(legoBrick.getMesh(new RenderOptions(true, new Color(1, 0, 0, 1), true)));
-//				else {
-//					Log.d(TAG, "VisFrames: "+ legoBrick.getVisibleFrames()+ "; VOTES: "+legoBrick.getVotes()+"; RATIO: "+((float)legoBrick.getVotes()/legoBrick.getVisibleFrames()));
-//				}
-//			}
-//			Log.d(TAG, "BricksToRender: "+bricksToRender.size());
-			
-			Log.d("PROGRAM_FLOW", "BRICKS TO BE RENDERED UPDATED");
-			return bricks;
-		}
-		
-		@Override
-		protected void onPostExecute(List<LegoBrick> bricks) {
-			synchronized (bricksToRender) {
-				bricksToRender.clear();
-				for (LegoBrick legoBrick : bricks) {
-					bricksToRender.add(legoBrick.getMesh(new RenderOptions(true, new Color(1, 0, 0, 1), true)));
-				}
-			}
-			
-			super.onPostExecute(bricks);
-			if(AppConfig.DEBUG_TIMING) Log.d(TAG, "Brick detection in "+(System.nanoTime()-start)/1000000L+"ms");
-//			this.trackingCallback.trackingDone(LegoBrickTracker.class);
-		}
-		
-		private void setupFrameTrackingCallback(FrameTrackingCallback trackingCallback) {
-			this.trackingCallback = trackingCallback;
-		}
-		
-		public void setupCameraPoseInfo(CameraPoseTracker camPose) {
-			Mat mv = camPose.getMvMat();
-			this.modelView = new Mat(mv.size(), mv.type());
-			mv.copyTo(modelView);
-			this.orientation = camPose.getOrientationDeg();
-		}
 	}
 	
 	/**
@@ -621,8 +435,31 @@ public class ArRenderer implements Renderer, PreviewCallback {
 		params.setPreviewFpsRange(AppConfig.FPS_RANGE[0], AppConfig.FPS_RANGE[1]);
 		params.setPreviewSize(AppConfig.PREVIEW_RESOLUTION[0], AppConfig.PREVIEW_RESOLUTION[1]);
 		params.set("orientation", "landscape");
-		params.setFlashMode(Parameters.FLASH_MODE_TORCH);
+//		params.setFlashMode(Parameters.FLASH_MODE_TORCH);
 //		params.setFocusMode(Camera.Parameters.FOCUS_MODE_CONTINUOUS_VIDEO);
+		
+//		new Thread(new Runnable() {
+//			
+//			@Override
+//			public void run() {
+//				Camera.Parameters params = camera.getParameters();
+//				try {
+//					Thread.sleep(3000);
+//				} catch (InterruptedException e) {
+//					e.printStackTrace();
+//				}
+//				
+//				Log.d(TAG, "Sleep done!");
+//				if(params.isAutoExposureLockSupported()) params.setAutoExposureLock(true);
+//				if(params.isAutoWhiteBalanceLockSupported()) params.setAutoWhiteBalanceLock(true);
+//				camera.setParameters(params);
+//			}
+//		}).start();
+		
+//		params.setWhiteBalance(Camera.Parameters.WHITE_BALANCE_FLUORESCENT);
+//		params.setExposureCompensation(params.getMaxExposureCompensation());
+		
+		
 		camera.setParameters(params);
 		camera.startPreview();
 		

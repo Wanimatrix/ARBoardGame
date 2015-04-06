@@ -31,6 +31,7 @@ using namespace cv;
 
 vector<Mat > originalContourThresholds;
 Mat currentFrameThreshold;
+vector<float> currentFrameAreas;
 int currentFrameNonZero;
 
 /// Function Headers
@@ -42,58 +43,297 @@ int currentFrameNonZero;
 #define RIGHT_OR_LEFT_FROM_LINE(lineA, lineB, pt) SIGN(((lineB).x-(lineA).x)*((pt).y-(lineA).y) - ((lineB).y-(lineA).y)*((pt).x-(lineA).x))
 #define PI 3.141592f
 
+#define IMAGE_WIDTH  640
+#define IMAGE_HEIGHT 480
+#define S (IMAGE_WIDTH/8)
+#define T (0.01f)
+
 #define LOG_TAG "BRICK_LINES_DETECTOR"
 
-void BrickDetectorLines::TrackBricks(Mat& frame, float upAngle, Mat& result, Mat& origContoursMat)
+// void adaptiveThreshold(unsigned char* input, unsigned char* bin)
+// {
+//   unsigned long* integralImg = 0;
+//   int i, j;
+//   long sum=0;
+//   int count=0;
+//   int index;
+//   int x1, y1, x2, y2;
+//   int s2 = S/2;
+
+//   // create the integral image
+//   LOGD("Start creating the Integral img...");
+//   integralImg = (unsigned long*)malloc(IMAGE_WIDTH*IMAGE_HEIGHT*sizeof(unsigned long*));
+//   LOGD("Memory allocated...");
+
+
+//   for (i=0; i<IMAGE_WIDTH; i++)
+//   {
+//     LOGD("Loop over WIDTH");
+//     // reset this column sum
+//     sum = 0;
+
+//     for (j=0; j<IMAGE_HEIGHT; j++)
+//     {
+//       LOGD("Loop over HEIGHT");
+//       index = j*IMAGE_WIDTH+i;
+
+//       sum += input[index];
+//       if (i==0)
+//         integralImg[index] = sum;
+//       else
+//         integralImg[index] = integralImg[index-1] + sum;
+//     }
+//   }
+
+//   // perform thresholding
+//   LOGD("Performing threshold...");
+//   for (i=0; i<IMAGE_WIDTH; i++)
+//   {
+//     for (j=0; j<IMAGE_HEIGHT; j++)
+//     {
+//       index = j*IMAGE_WIDTH+i;
+
+//       // set the SxS region
+//       x1=i-s2; x2=i+s2;
+//       y1=j-s2; y2=j+s2;
+
+//       // check the border
+//       if (x1 < 0) x1 = 0;
+//       if (x2 >= IMAGE_WIDTH) x2 = IMAGE_WIDTH-1;
+//       if (y1 < 0) y1 = 0;
+//       if (y2 >= IMAGE_HEIGHT) y2 = IMAGE_HEIGHT-1;
+      
+//       count = (x2-x1)*(y2-y1);
+
+//       // I(x,y)=s(x2,y2)-s(x1,y2)-s(x2,y1)+s(x1,x1)
+//       sum = integralImg[y2*IMAGE_WIDTH+x2] -
+//           integralImg[y1*IMAGE_WIDTH+x2] -
+//           integralImg[y2*IMAGE_WIDTH+x1] +
+//           integralImg[y1*IMAGE_WIDTH+x1];
+
+//       if ((long)(input[index]*count) < (long)(sum*(1.0-T)))
+//         bin[index] = 0;
+//       else
+//         bin[index] = 255;
+//     }
+//   }
+
+//   LOGD("Freeing data...");
+
+//   free (integralImg);
+
+//   LOGD("Thresholding done...");
+// }
+
+void BrickDetectorLines::TrackBricks(Mat& frame, float upAngle, Mat& colorCalibration, Mat& result, Mat& origContoursMat)
 {
   Mat hsv;
   originalContourThresholds.clear();
   currentFrameThreshold = Mat::zeros(frame.size(), CV_8UC1);
+  currentFrameAreas.clear();
 
 
   double start = getRealTime();
   cvtColor(frame, hsv, CV_BGR2HSV);
 
-  // medianBlur(hsv, hsv, 5); // PERFORMANCE LOSS
+  /* OLD THRESHOLD */
 
-  // Threshold, to keep only colors in the frame.
-  Mat thresh;
-  // int lowerbounds[] = {0,80,80}; // Light @ NIGHT
-  // int lowerbounds[] = {0,140,80}; // Better for Light @ HOME DAYTIME
-  int lowerbounds[] = {0,160,80}; // Better for Light @ KOT DAYTIME
-  vector<int> lbs(begin(lowerbounds),end(lowerbounds));
-  int upperbounds[] = {255,255,255};
-  vector<int> ubs(begin(upperbounds),end(upperbounds));
-  inRange(hsv, lbs, ubs, thresh);
-  // medianBlur(thresh, thresh, 5); // PERFORMANCE LOSS
+  // // medianBlur(hsv, hsv, 5); // PERFORMANCE LOSS
 
-  int morph_size = 1;
-  Mat element = getStructuringElement( MORPH_RECT, Size( 2*morph_size + 1, 2*morph_size+1 ), Point( morph_size, morph_size ) );
-  morphologyEx( thresh, thresh, MORPH_CLOSE, element, Point(-1,-1), 1);
-  morphologyEx( thresh, thresh, MORPH_OPEN, element, Point(-1,-1), 1);
+  // // Threshold, to keep only colors in the frame.
+  // Mat thresh;
+  // // int lowerbounds[] = {0,80,80}; // Light @ NIGHT
+  // // int lowerbounds[] = {0,140,80}; // Better for Light @ HOME DAYTIME
+  // int lowerbounds[] = {0,215,37}; // Better for Light @ KOT DAYTIME
+  // vector<int> lbs(begin(lowerbounds),end(lowerbounds));
+  // int upperbounds[] = {39,255,187};
+  // vector<int> ubs(begin(upperbounds),end(upperbounds));
+  // inRange(hsv, lbs, ubs, thresh);
 
-  // int morph_elem = 0;
-  // int morph_size = 0;
-  // Mat element = getStructuringElement( morph_elem, Size( 2*morph_size + 1, 2*morph_size+1 ), Point( morph_size, morph_size ) );
-  // /// Apply the specified morphology operation
-  // morphologyEx( thresh, thresh, 0, element );
+  // // Mat grayFrame;
+  // // cvtColor(frame, grayFrame, CV_BGR2GRAY);
+  // // Mat bin = Mat(grayFrame.size(),CV_8UC1);
+  // LOGD("Before thresholding...");
+  // // adaptiveThreshold((unsigned char *)grayFrame.data, (unsigned char *)bin.data);
 
-  // int morph_size = 8;
-  // Mat element = getStructuringElement( MORPH_CROSS, Size( 2*morph_size + 1, 2*morph_size+1 ), Point( morph_size, morph_size ) );
+  // LOGD("After thresholding...");
+
+  // // medianBlur(thresh, thresh, 5); // PERFORMANCE LOSS
+
+  // int morph_size = 1;
+  // Mat element = getStructuringElement( MORPH_RECT, Size( 2*morph_size + 1, 2*morph_size+1 ), Point( morph_size, morph_size ) );
   // morphologyEx( thresh, thresh, MORPH_CLOSE, element, Point(-1,-1), 1);
+  // morphologyEx( thresh, thresh, MORPH_OPEN, element, Point(-1,-1), 1);
+
+  // // int morph_elem = 0;
+  // // int morph_size = 0;
+  // // Mat element = getStructuringElement( morph_elem, Size( 2*morph_size + 1, 2*morph_size+1 ), Point( morph_size, morph_size ) );
+  // // /// Apply the specified morphology operation
+  // // morphologyEx( thresh, thresh, 0, element );
+
+  // // int morph_size = 8;
+  // // Mat element = getStructuringElement( MORPH_CROSS, Size( 2*morph_size + 1, 2*morph_size+1 ), Point( morph_size, morph_size ) );
+  // // morphologyEx( thresh, thresh, MORPH_CLOSE, element, Point(-1,-1), 1);
+
+  // Mat bricksCutFromImg;
+  // Mat mask;
+  // Mat inv_mask;
+  // vector<Mat> channels;
+  // channels.push_back(thresh);
+  // channels.push_back(thresh);
+  // channels.push_back(thresh);
+  // merge(channels, mask);
+  // // bitwise_and(mask, frame, bricksCutFromImg);
+  // // bitwise_not(mask, inv_mask);
+  // // bricksCutFromImg = bricksCutFromImg + inv_mask;
+  // bricksCutFromImg = mask;
+
+  /* End Old Threshold */
+
+  // BEGIN NEW BRICK DETECTION
+
+  LOGD("BRICK DETECTION");
+
+  double startMasking = getRealTime();
+
+  ostringstream o;
 
   Mat bricksCutFromImg;
-  Mat mask;
-  Mat inv_mask;
-  vector<Mat> channels;
-  channels.push_back(thresh);
-  channels.push_back(thresh);
-  channels.push_back(thresh);
-  merge(channels, mask);
-  bitwise_and(mask, frame, bricksCutFromImg);
-  bitwise_not(mask, inv_mask);
-  // bricksCutFromImg = bricksCutFromImg + inv_mask;
-  bricksCutFromImg = mask;
+  Mat finalMask;  
+  vector<Mat> hsvChannels;
+  LOGD("SPLIT");
+  split(hsv,hsvChannels);
+
+  LOGD("EQ");
+  equalizeHist(hsvChannels[1], hsvChannels[1]);
+  // merge(hsvChannels, hsv);
+
+  int lowerbounds[] = {255,255,255};
+  int upperbounds[] = {0,0,0};
+
+  LOGD("FOR");
+  for (int col = 0; col < colorCalibration.cols/6; ++col)
+  {
+
+    Mat colorMask;
+    LOGD("FOR2");
+
+    double mean[] = {colorCalibration.at<double>(0,col*6+0),colorCalibration.at<double>(0,col*6+2),colorCalibration.at<double>(0,col*6+4)};
+    double stddev[] = {colorCalibration.at<double>(0,col*6+1),colorCalibration.at<double>(0,col*6+3),colorCalibration.at<double>(0,col*6+5)};
+
+    for (int i = 0; i < 3; ++i)
+    {
+      int currentLower = (int)(mean[i]-3*stddev[i]-10);
+      int currentUpper = (int)(mean[i]+3*stddev[i]+10);
+      if(currentLower < lowerbounds[i])
+        if(i == 2) {
+          lowerbounds[i] = max(18,currentLower);
+        } else {
+          lowerbounds[i] = max(0,currentLower);
+        }
+      if(currentUpper > upperbounds[i])
+        upperbounds[i] = min(255,currentUpper);
+    }
+
+    int lb[] = {(int)(mean[0]-3*stddev[0]-10),(int)(mean[1]-3*stddev[1]-10),(int)(mean[2]-3*stddev[2]-10)};
+    // vector<int> lbs(begin(lowerbounds),end(lowerbounds));
+    int ub[] = {(int)(mean[0]+3*stddev[0]+10),(int)(mean[1]+3*stddev[1]+10),(int)(mean[2]+3*stddev[2]+10)};
+    // vector<int> ubs(begin(upperbounds),end(upperbounds));
+    // inRange(hsv, lbs, ubs, colorMask);
+
+    LOGD("Lowerbound: %d,%d,%d",lb[0],lb[1],lb[2]);
+    LOGD("Upperbound: %d,%d,%d",ub[0],ub[1],ub[2]);
+
+    // split(hsv, hsvChannels);
+
+    // for (int i = 0; i < hsvChannels.size(); ++i)
+    // {
+    //   Mat tmpMask;
+    //   Mat mask0;
+    //   Mat mask1;
+
+    // //   LOGD("MEAN-STDDEV");
+    //   double mean = colorCalibration.at<double>(0,col*6+2*i);
+    //   double stddev = colorCalibration.at<double>(0,col*6+2*i+1);
+
+    // //   LOGD("THRESHOLDING");
+
+    //   threshold(hsvChannels[i], mask0, mean+3*stddev+10, 255, THRESH_BINARY_INV);
+    //   threshold(hsvChannels[i], mask1, mean-3*stddev-10, 255, THRESH_BINARY);
+    //   bitwise_and(mask0, mask1, tmpMask);
+
+    //   o.str("");
+    //   o << col << "," << i;
+
+    //   imwrite("/sdcard/arbg/hsvMask"+o.str()+".png",tmpMask);
+
+    // //   LOGD("COLORMASK TOTAL: %d",colorMask.total());
+
+    // //   if(colorMask.total() == 0) {
+    // //     colorMask = tmpMask;
+    // //   } else {
+    // //     bitwise_and(tmpMask, colorMask, colorMask);
+    // //   }
+    // }
+  
+    // Mat element = getStructuringElement(MORPH_ELLIPSE, Size(3,3));
+    // morphologyEx(colorMask, colorMask, MORPH_CLOSE, element);
+    // morphologyEx(colorMask, colorMask, MORPH_OPEN, element);
+
+    // o.str("");
+    // o << col;
+
+    // imwrite("/sdcard/arbg/colormask"+o.str()+".png",colorMask);
+
+    // if(finalMask.total() == 0) {
+    //   finalMask = colorMask;
+    // } else {
+    //   bitwise_or(finalMask, colorMask, finalMask);
+    // }
+  }
+
+  lowerbounds[0] = 0;
+  upperbounds[0] = 255;
+  upperbounds[2] = 255;
+
+  LOGD("Lowerbound: %d,%d,%d",lowerbounds[0],lowerbounds[1],lowerbounds[2]);
+  LOGD("Upperbound: %d,%d,%d",upperbounds[0],upperbounds[1],upperbounds[2]);
+
+  vector<int> lbs(begin(lowerbounds),end(lowerbounds));
+  vector<int> ubs(begin(upperbounds),end(upperbounds));
+  inRange(hsv, lbs, ubs, finalMask);
+
+  int morph_size = 1;
+  Mat element = getStructuringElement( MORPH_ELLIPSE, Size( 2*morph_size + 1, 2*morph_size+1 ), Point( morph_size, morph_size ) );
+  morphologyEx( finalMask, finalMask, MORPH_CLOSE, element, Point(-1,-1), 1);
+  // morphologyEx( finalMask, finalMask, MORPH_OPEN, element, Point(-1,-1), 1);
+
+
+  Mat fullMask = Mat(finalMask.size(), CV_8UC3);
+  int fromTo[] = {0,0,0,1,0,2};
+  mixChannels(&finalMask, 1, &fullMask, 1, fromTo, 3);
+  bricksCutFromImg = fullMask;
+  // bitwise_and(fullMask, frame, bricksCutFromImg);
+
+  // vector<Mat> bricksCutFromImgChannels;
+  // split(bricksCutFromImg, bricksCutFromImgChannels);
+
+  // for (int i = 0; i < bricksCutFromImgChannels.size(); ++i)
+  // {
+  //   o.str("");
+  //   o << i;
+
+  //   imwrite("/sdcard/arbg/hsvMask"+o.str()+".png",bricksCutFromImgChannels[i]);
+  // }
+
+  // DEBUG
+  // -----
+  // imwrite("/sdcard/arbg/bricksCut.png",bricksCutFromImg);
+
+  // __android_log_print(ANDROID_LOG_DEBUG,"BrickDetectTime","Masking time: %f\n",((float)(getRealTime() - startMasking))*1000.0);
+
+  // END NEW BRICK DETECTION
+
 
   // imshow("before morphing", bricksCutFromImg);
 
@@ -297,6 +537,7 @@ void BrickDetectorLines::TrackBricks(Mat& frame, float upAngle, Mat& result, Mat
     drawContours( contourThreshold, originalContours, c, Scalar(255,255,255), CV_FILLED);
     originalContourThresholds.push_back(contourThreshold);
     bitwise_or(currentFrameThreshold, contourThreshold, currentFrameThreshold);
+    currentFrameAreas.push_back(contourArea(originalContours[c]));
 
 
 
@@ -433,31 +674,37 @@ void BrickDetectorLines::TrackBricks(Mat& frame, float upAngle, Mat& result, Mat
   __android_log_print(ANDROID_LOG_DEBUG,"BrickDetectTime","Contour filter+conversion time: %f\n",((float)(getRealTime() - start))*1000.0);
 
 
-  // for( int c = 0; c< goodContours.size(); c++ ) {
-  //   Scalar color = Scalar( 0, 255,0);
-  //   drawContours( out, goodContours, c, color, 2, 3, hierarchy[c], 0, Point() );
-  // }
+  for( int c = 0; c< goodContours.size(); c++ ) {
+    Scalar color = Scalar( 0, 255,0);
+    drawContours( out, goodContours, c, color, 2, 3, hierarchy[c], 0, Point() );
+  }
 
   // /// Drawing a circle around corners
   // for( int j = 0; j < corners.size() ; j++ )
-  //    { 
-  //           circle( bricksCutFromImg, corners[j], 5,  Scalar(0), 2, 8, 0 );
-  //    }
+     // { 
+            // circle( bricksCutFromImg, corners[j], 5,  Scalar(0), 2, 8, 0 );
+     // }
 
   
 
-
+  // LOGIMG("frameThreshold",  currentFrameThreshold);
   // LOGIMG("frame",  frame);
   // LOGIMG("thresh",  thresh);
+
+  // LOGD("LOG BINARY...");
+
+  // LOGIMG("bin",  bin);
+
+  // LOGD("LOG BINARY DONE...");
   // LOGIMG( "bricksCut",  bricksCutFromImg);
   // LOGIMG( "external",  out);
   // LOGIMG( "frameThreshold",  currentFrameThreshold);
   return;
 }
 
-void BrickDetectorLines::getCurrentFrameThresholdAndOverlap(Mat& frameThreshold, int& frameOverlap) {
+void BrickDetectorLines::getCurrentFrameThreshold(Mat& frameThreshold) {
   frameThreshold = currentFrameThreshold;
-  frameOverlap = currentFrameNonZero;
+  // frameOverlap = currentFrameNonZero;
 }
 
 void BrickDetectorLines::CheckOverlap(Mat& inputPoints, int origContourIdx, float& inputOverlapResult, float& origOverlapResult) {
@@ -485,17 +732,43 @@ void BrickDetectorLines::CheckOverlap(Mat& inputPoints, int origContourIdx, floa
   LOGD("Contour with orig idx %d: inputRatio(%f) origRatio(%f)", origContourIdx, inputOverlapResult, origOverlapResult);
 }
 
-void BrickDetectorLines::CheckCurrFrameOverlap(Mat& inputPoints, float& inputOverlapResult) {
+void BrickDetectorLines::CheckCurrFrameOverlap(Mat& inputPoints, float& inputOverlapResult, int index) {
   vector<vector<Point >> inputContours(1);
 
   double start = getRealTime();
   convexHull(inputPoints,inputContours[0],true);
+
+  for(int i = 0; i < inputContours[0].size(); i++) {
+    Point p = inputContours[0][i];
+    if(p.x < 0 || p.y < 0 || p.x >= currentFrameThreshold.cols || p.y >= currentFrameThreshold.rows) {
+      inputOverlapResult = 999; // brick is (partly) out of the frame: consider it overlapping
+      return;
+    }
+  }
+
   Rect bound = boundingRect(Mat(inputContours[0]));
-  if(bound.x < 0 && abs(bound.x) < bound.width) bound.x = 0;
-  else if(bound.y < 0 && abs(bound.y) < bound.height) bound.y = 0;
-  else if(bound.x+bound.width > currentFrameThreshold.size().width) bound.x = currentFrameThreshold.size().width;
-  else if(bound.y+bound.height > currentFrameThreshold.size().height) bound.y = currentFrameThreshold.size().height;
+
+
+  // if(bound.x < 0)
+
+  // if(bound.x < 0 && bound.x+bound.width > 0) bound.x = 0;
+  // else if(bound.y < 0 && bound.y+bound.height > 0) bound.y = 0;
+  // else if(bound.x+bound.width >= currentFrameThreshold.cols && bound.x < currentFrameThreshold.cols && bound.x >= 0) bound.width = currentFrameThreshold.cols-bound.x;
+  // else if(bound.y+bound.height >= currentFrameThreshold.rows && bound.y < currentFrameThreshold.rows && bound.y >= 0) bound.height = currentFrameThreshold.rows-bound.y;
+  // else if(bound.x < 0 || bound.x+bound.width > currentFrameThreshold.cols || bound.y < 0 || bound.y+bound.height > currentFrameThreshold.rows) {
+  //   inputOverlapResult = 999; 
+  //   return;
+  // }
+
+  for (int i = 0; i < currentFrameAreas.size(); ++i) {
+    if(currentFrameAreas[i] < 500) {
+      inputOverlapResult = 999;
+      return;
+    }
+  }
+
   LOGD("ROI size: (%d,%d);(%d,%d)",bound.width,bound.height,bound.x,bound.y);
+  LOGD("currentFrameThreshold Sizes(cols,rows): (%d,%d)",currentFrameThreshold.cols, currentFrameThreshold.rows);
   __android_log_print(ANDROID_LOG_DEBUG,"PERFORMANCE_ANALYSIS","Convex hull calculated in %f ms...",((float)(getRealTime() - start))*1000.0);
 
   Mat inputPtsThreshold = Mat::zeros(currentFrameThreshold.size(), currentFrameThreshold.type());
@@ -504,13 +777,23 @@ void BrickDetectorLines::CheckCurrFrameOverlap(Mat& inputPoints, float& inputOve
   drawContours(inputPtsThreshold, inputContours, 0, Scalar(255,255,255), -1);
   __android_log_print(ANDROID_LOG_DEBUG,"PERFORMANCE_ANALYSIS","Contours drawn in %f ms...",((float)(getRealTime() - start))*1000.0);
 
+
+  LOGD("Bounded input");
   Mat inputBounded = Mat(inputPtsThreshold, bound);
+  LOGD("Bounded frame");
   Mat frameBounded = Mat(currentFrameThreshold, bound);
 
   start = getRealTime();
   double start2 = getRealTime();
   int inputNonZero = countNonZero(inputBounded);
   __android_log_print(ANDROID_LOG_DEBUG,"PERFORMANCE_ANALYSIS","CountNonZero input in %f ms...",((float)(getRealTime() - start2))*1000.0);
+
+
+  // start2 = getRealTime();
+  // int test = countNonZero(inputPtsThreshold);
+  // __android_log_print(ANDROID_LOG_DEBUG  , "NONZEROCOUNTER","(C++) Index: %d, result: %d, time: %f",index, test,((float)(getRealTime() - start2))*1000.0);
+
+
   start2 = getRealTime();
   // int origNonZero = currentFrameNonZero;
   __android_log_print(ANDROID_LOG_DEBUG,"PERFORMANCE_ANALYSIS","CountNonZero frame in %f ms...",((float)(getRealTime() - start2))*1000.0);
@@ -523,11 +806,14 @@ void BrickDetectorLines::CheckCurrFrameOverlap(Mat& inputPoints, float& inputOve
   // LOGIMG( "currentT",  currentFrameThreshold);
 
   // Mat debug;
+  // Mat result2;
+  // // bitwise_or(inputBounded/2, frameBounded/2, debug);
+  // bitwise_and(inputPtsThreshold, currentFrameThreshold, result2, inputPtsThreshold);
   // bitwise_or(inputPtsThreshold/2, currentFrameThreshold/2, debug);
-  // bitwise_or(debug,result,debug);
+  // bitwise_or(debug,result2,debug);
 
   start2 = getRealTime();
-  int resultNonZero = countNonZero(frameBounded);
+  int resultNonZero = countNonZero(result);
   __android_log_print(ANDROID_LOG_DEBUG,"PERFORMANCE_ANALYSIS","CountNonZero result in %f ms...",((float)(getRealTime() - start2))*1000.0);
   start2 = getRealTime();
   inputOverlapResult = resultNonZero/(float)inputNonZero;
@@ -537,8 +823,15 @@ void BrickDetectorLines::CheckCurrFrameOverlap(Mat& inputPoints, float& inputOve
   // ostringstream ostr;
   // ostr << inputOverlapResult;
   // putText(debug, ostr.str(), Point(50,50), 0.5, 1, Scalar(255,255,255));
-  // LOGIMG( "overlapDebug",  debug);
+  // for (int i = 0; i < currentFrameAreas.size(); ++i)
+  // {
+  //   ostr.str("");
+  //   ostr << currentFrameAreas[i];
+  //   putText(debug, ostr.str(), Point(50,100+50*i), 0.5, 1, Scalar(255,255,255));
+  // }
+  // if(inputOverlapResult < 0.75) LOGIMG( "overlapDebug",  debug);
 
 
   LOGD("inputRatio(%f)", inputOverlapResult);
+  
 }

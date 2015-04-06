@@ -1,19 +1,35 @@
 package be.wouterfranken.arboardgame.rendering.tracking;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Random;
 
+import org.opencv.android.Utils;
 import org.opencv.core.Core;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
+import org.opencv.core.MatOfByte;
 import org.opencv.core.MatOfDouble;
+import org.opencv.core.MatOfFloat;
+import org.opencv.core.MatOfInt;
 import org.opencv.core.MatOfPoint;
+import org.opencv.core.MatOfPoint2f;
 import org.opencv.core.Point;
+import org.opencv.core.Point3;
+import org.opencv.core.Rect;
 import org.opencv.core.Scalar;
+import org.opencv.core.Size;
+import org.opencv.highgui.Highgui;
 import org.opencv.imgproc.Imgproc;
+import org.opencv.utils.Converters;
 
 import android.content.Context;
+import android.graphics.PointF;
 import android.os.AsyncTask;
 import android.util.Log;
+import android.util.Pair;
 import be.wouterfranken.arboardgame.R;
 import be.wouterfranken.arboardgame.app.AppConfig;
 import be.wouterfranken.arboardgame.utilities.AndroidUtils;
@@ -75,6 +91,7 @@ public class CameraPoseTracker extends Tracker{
 			setMv(mv);
 			setProj(proj);
 			trackingCallback.trackingDone(CameraPoseTracker.class);
+			
 			if(AppConfig.DEBUG_TIMING) Log.d(TAG, "CameraPose found in "+(System.nanoTime()-start)/1000000L+"ms");
 		} else {
 			FindCameraPose task = new FindCameraPose();
@@ -371,11 +388,11 @@ public class CameraPoseTracker extends Tracker{
 	
 	public float getOrientationDeg() {
 		float[] camPos = getCameraPosition();
+		camPos[2] = 0; // Map on Z=0 plane
 		camPos = MathUtilities.resize(MathUtilities.vector(new float[]{0,0,0}, camPos),1);
 		float acos = (float) (Math.acos(camPos[0])*(180.0f/Math.PI));
-		float asin = (float) (Math.asin(camPos[1])*(180.0f/Math.PI));
-		if (asin < 0)
-			return acos+180;
+		if (camPos[1] < 0)
+			return 360-acos;
 		else return acos;
 	}
 	

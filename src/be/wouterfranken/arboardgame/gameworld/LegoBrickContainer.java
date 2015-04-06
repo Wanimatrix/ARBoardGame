@@ -5,6 +5,7 @@ import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 
+import be.wouterfranken.arboardgame.rendering.tracking.BrickTrackerConfig;
 import android.util.Log;
 
 @SuppressWarnings("serial")
@@ -38,7 +39,8 @@ public class LegoBrickContainer extends ArrayList<LegoBrick> {
 	}
 	
 	public boolean readyToBecomeRealBrick() {
-		if(this.size() == 1 && this.get(0).getMergeCount() >= 5) // && this.get(0).getOrientations().size() > 3)
+		if(this.size() == 1 && this.get(0).getMergeCount() >= BrickTrackerConfig.NECESS_MERGE_COUNTS 
+				&& this.get(0).getOrientations().size() >= BrickTrackerConfig.NECESS_ORIENTATIONS)
 		{
 			Log.d("REALBRICK", "Removal votes: "+this.get(0).getRemovalVotes());
 			return true;

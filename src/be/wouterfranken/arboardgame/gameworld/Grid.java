@@ -2,6 +2,7 @@ package be.wouterfranken.arboardgame.gameworld;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 
 import android.util.Log;
 import be.wouterfranken.arboardgame.app.AppConfig;
@@ -33,5 +34,18 @@ public class Grid {
 	
 	public GridNode getGridNode(WorldCoordinate coordinate) {
 		return theGrid.get(coordinate);
+	}
+	
+	Set<WorldCoordinate> getCoordinates() {
+		return theGrid.keySet();
+	}
+	
+	@Override
+	public String toString() {
+		String result = "";
+		for (WorldCoordinate co : theGrid.keySet()) {
+			result += co+", ";
+		}
+		return result;
 	}
 }

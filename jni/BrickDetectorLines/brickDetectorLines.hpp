@@ -7,10 +7,10 @@ using namespace cv;
 
 class BrickDetectorLines {
 public:
-    static void TrackBricks(Mat&, float, Mat&, Mat&);
+    static void TrackBricks(Mat&, float, Mat&, Mat&, Mat&);
     static void CheckOverlap(Mat&, int, float&, float&); 
-    static void CheckCurrFrameOverlap(Mat&, float&);
-    static void getCurrentFrameThresholdAndOverlap(Mat&, int&);
+    static void CheckCurrFrameOverlap(Mat&, float&, int);
+    static void getCurrentFrameThreshold(Mat&);
 };
 
 #endif // DETECT_HPP

@@ -34,7 +34,7 @@ public class Lemming {
 		this.pathGenerator = new Pathfinder();
 	}
 	
-	public void generatePath(WorldCoordinate start, WorldCoordinate goal, World2 w) {
+	public void generatePath(WorldCoordinate start, WorldCoordinate goal, WorldLines w) {
 		if(AppConfig.DEBUG_LOGGING) Log.d(TAG, "Start path generation...");
 		path = pathGenerator.findPath2(start, goal, w);
 		if(AppConfig.DEBUG_LOGGING) Log.d(TAG, "Path size: "+path.size());
@@ -63,7 +63,7 @@ public class Lemming {
 		return mesh;
 	}
 	
-	public synchronized void updateLocation(WorldCoordinate end, World2 w) {
+	public synchronized void updateLocation(WorldCoordinate end, WorldLines w) {
 		long startFrameUpdate = System.nanoTime();
 		float fps = AppConfig.FPS_RANGE[1]/1000.0f; // max frame/sec
 		float todoDistance = speed/fps;

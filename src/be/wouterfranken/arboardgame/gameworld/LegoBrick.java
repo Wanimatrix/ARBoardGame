@@ -6,14 +6,10 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
-import org.opencv.core.Core;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 import org.opencv.core.MatOfPoint;
 import org.opencv.core.Point;
-import org.opencv.core.Scalar;
-import org.opencv.highgui.Highgui;
-import org.opencv.imgproc.Imgproc;
 
 import android.util.ArrayMap;
 import android.util.Log;
@@ -21,6 +17,7 @@ import be.wouterfranken.arboardgame.app.AppConfig;
 import be.wouterfranken.arboardgame.rendering.meshes.CuboidMesh;
 import be.wouterfranken.arboardgame.rendering.meshes.MeshObject;
 import be.wouterfranken.arboardgame.rendering.meshes.RenderOptions;
+import be.wouterfranken.arboardgame.rendering.tracking.BrickTrackerConfig;
 import be.wouterfranken.arboardgame.rendering.tracking.CameraPoseTracker;
 import be.wouterfranken.arboardgame.utilities.Color;
 import be.wouterfranken.arboardgame.utilities.MathUtilities;
@@ -36,7 +33,7 @@ public class LegoBrick {
 	private float[] yBounds;
 	private float[] size;
 	private List<Float> orientations;
-	private Color.ColorName color;
+	private Color color;
 	private long mergeCount;
 	private int noMergeCount;
 	private long votes;
@@ -45,20 +42,17 @@ public class LegoBrick {
 	private boolean active;
 	private List<WorldCoordinate> coord = new ArrayList<WorldCoordinate>();
 	
-	private float[] overlap;
-	
 	public LegoBrick(float[][] cuboid, Color.ColorName color, float orientation) {
 		
 	}
 	
-	public LegoBrick(float[] centerPoint, float[][] halfSideVectors, Color.ColorName color, float orientation) {
+	public LegoBrick(float[] centerPoint, float[][] halfSideVectors, float orientation) {
 		this.centerPoint = centerPoint;
 		this.halfSideVectors = halfSideVectors;
 		
 		calculateCuboid();
 		
-		this.color = color;
-		this.overlap = overlap;
+		this.color = new Color(1,0,0,1);
 		this.orientations = new ArrayList<Float>();
 		this.orientations.add(orientation);
 		Log.d(TAG, "Orientations amount: "+orientations.size());
@@ -123,7 +117,6 @@ public class LegoBrick {
 	private Map<Integer, Integer> isCloseTo(LegoBrick other) {
 		Map<Integer, Integer> poseMap = new ArrayMap<Integer, Integer>();
 		poseMap.put(0, 0);
-		Mat closeTest = Mat.zeros(100, 100, CvType.CV_8UC3);
 		
 		if(MathUtilities.norm(MathUtilities.vector(centerPoint, other.centerPoint)) < AppConfig.LEGO_CORNERS_CLOSENESS_BOUND) {
 			float angleDeg1t = (float) (Math.acos((float)halfSideVectors[1][0])*(180.0f/Math.PI)); 
@@ -245,12 +238,18 @@ public class LegoBrick {
 //			voteForSize(MathUtilities.norm(MathUtilities.vector(corners[0], corners[3])),
 //					MathUtilities.norm(MathUtilities.vector(corners[0], corners[1])));
 			
-			mergeOrientations(other.getOrientations());
+//			mergeOrientations(other.getOrientations());
 			
 			calculateCuboid();
 			
 			noMergeCount = 0;
 			mergeCount++;
+			
+			updateColor();
+			
+			Log.d(TAG, "COLOR: "+this.color.r+", "+this.color.g+", "+this.color.b+", "+this.color.a+"; MergeCount: "+mergeCount);
+			
+			
 			return o;	
 		}
 		noMergeCount++;
@@ -406,7 +405,7 @@ public class LegoBrick {
 	}
 	
 	public MeshObject getMesh(RenderOptions ro) {
-		return new CuboidMesh(getCuboid(), new RenderOptions(ro.useMVP, Color.COLOR_MAP.get(color), ro.lightPosition, ro.fragmentShader, ro.vertexShader));
+		return new CuboidMesh(getCuboid(), new RenderOptions(ro.useMVP, color, ro.lightPosition, ro.fragmentShader, ro.vertexShader));
 	}
 	
 	float[][] cuboid;
@@ -445,8 +444,12 @@ public class LegoBrick {
 		return yBounds;
 	}
 	
-	public Color.ColorName getColor() {
+	public Color getColor() {
 		return color;
+	}
+	
+	public void setColor(Color color) {
+		this.color = color;
 	}
 	
 	public void addCoordinate(WorldCoordinate node) {
@@ -491,6 +494,10 @@ public class LegoBrick {
 		this.removalVotes++;
 	}
 	
+	public void resetRemoval() {
+		this.removalVotes = 0;
+	}
+	
 	public long getRemovalVotes() {
 		return removalVotes;
 	}
@@ -519,6 +526,8 @@ public class LegoBrick {
 		}
 		
 		this.orientations.addAll(orientations);
+		
+		updateColor();
 	}
 	
 	public List<Float> getOrientations() {
@@ -531,6 +540,22 @@ public class LegoBrick {
 	
 	public float[][] getHalfSideVectors() {
 		return halfSideVectors;
+	}
+	
+	public float getPercentCompleted() {
+		float max = BrickTrackerConfig.NECESS_MERGE_COUNTS + BrickTrackerConfig.NECESS_ORIENTATIONS - 2;
+		float mergeCompleted = Math.min((mergeCount - 1),(BrickTrackerConfig.NECESS_MERGE_COUNTS - 1));
+		float orientCompleted = Math.min((orientations.size() - 1),(BrickTrackerConfig.NECESS_ORIENTATIONS - 1));
+		Log.d(TAG, "BRICKCOMPLETED merges: "+mergeCompleted+", orientations: "+orientCompleted);
+		return (mergeCompleted+orientCompleted)/max;
+	}
+	
+	public void updateColor() {
+		float completed = getPercentCompleted();
+		if(completed == 1)
+			this.color = new Color(1,1,0, 1);
+		else 
+			this.color = new Color(1-completed, completed,0, 1);
 	}
 	
 	private native float[] checkCurrentOverlap(long inputPoints);

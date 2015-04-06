@@ -26,6 +26,7 @@ import android.util.SparseArray;
 import be.wouterfranken.arboardgame.app.AppConfig;
 import be.wouterfranken.arboardgame.gameworld.LegoBrick;
 import be.wouterfranken.arboardgame.gameworld.LegoBrickContainer;
+import be.wouterfranken.arboardgame.gameworld.WorldLines;
 import be.wouterfranken.arboardgame.rendering.meshes.CuboidMesh;
 import be.wouterfranken.arboardgame.rendering.meshes.RenderOptions;
 import be.wouterfranken.arboardgame.rendering.tracking.CameraPoseTracker.Mapper2D3D;
@@ -50,10 +51,12 @@ public class LegoBrickTracker extends Tracker{
 //	private List<LegoBrickContainer> brickContainers = new ArrayList<LegoBrickContainer>();
 	private Object lock = new Object();
 	private Object lockExtern = new Object();
+//	private CountNonZero cnt;
 	
 	private Context ctx;
 	
 	public LegoBrickTracker(Context ctx) {
+//		cnt = new CountNonZero(ctx);
 		this.ctx = ctx;
 		if(AppConfig.LEGO_TRACKING_CAD) { // Load all LegoBrick CAD renderings
 			try {
@@ -95,7 +98,7 @@ public class LegoBrickTracker extends Tracker{
 	
 	
 	public void findLegoBrick(Mat yuvFrameImage, Mat modelView, float orientation, FrameTrackingCallback trackingCallback,
-			List<LegoBrickContainer> brickCandidatesIn) {
+			WorldLines currentWorld) {
 		if(AppConfig.DEBUG_LOGGING) Log.d(TAG,"Legobrick tracking ...");
 		
 		Log.d(TAG, "Orientation (in degrees): "+orientation);
@@ -492,9 +495,9 @@ public class LegoBrickTracker extends Tracker{
 	//				acceptedBricks.put(ci.origContIdx, new LegoBrick(cuboids[0], ColorName.BLUE, null));
 					
 					if(tmpBricks.size() <= 0)
-						tmpBricks.add(new LegoBrickContainer(new LegoBrick(cuboids[k][0], halfSideVectors, ColorName.BLUE, orientation)));
+						tmpBricks.add(new LegoBrickContainer(new LegoBrick(cuboids[k][0], halfSideVectors, orientation)));
 					else 
-						tmpBricks.get(0).add((new LegoBrick(cuboids[k][0], halfSideVectors, ColorName.BLUE, orientation)));
+						tmpBricks.get(0).add((new LegoBrick(cuboids[k][0], halfSideVectors, orientation)));
 					
 					MatOfFloat4 anchorBlock = new MatOfFloat4(new Mat(1, 4, CvType.CV_32FC1));
 					anchorBlock.put(0, 0, cuboids[k][0][0]);
@@ -526,9 +529,9 @@ public class LegoBrickTracker extends Tracker{
 //								}
 								
 								if(tmpBricks.size() <= cuboidsIdx)
-									tmpBricks.add(new LegoBrickContainer(new LegoBrick(cuboids[k][cuboidsIdx], halfSideVectors, ColorName.BLUE, orientation)));
+									tmpBricks.add(new LegoBrickContainer(new LegoBrick(cuboids[k][cuboidsIdx], halfSideVectors, orientation)));
 								else 
-									tmpBricks.get(cuboidsIdx).add((new LegoBrick(cuboids[k][cuboidsIdx], halfSideVectors, ColorName.BLUE, orientation)));
+									tmpBricks.get(cuboidsIdx).add((new LegoBrick(cuboids[k][cuboidsIdx], halfSideVectors, orientation)));
 	//							acceptedBricks.put(ci.origContIdx, new LegoBrick(cuboids[cuboidsIdx], ColorName.BLUE, null));
 								cuboidsIdx++;
 							}
@@ -626,9 +629,12 @@ public class LegoBrickTracker extends Tracker{
 				tmpBricksArray.addAll(legoBrickContainer);
 			}
 			
-			for (LegoBrickContainer legoBrickContainer : brickCandidatesIn) {
+			for (LegoBrickContainer legoBrickContainer : currentWorld.getCandidateBricks()) {
 				tmpBricksArray.addAll(legoBrickContainer);
 			}
+			
+			tmpBricksArray.addAll(currentWorld.getBricks());
+			
 			Log.d("PERFORMANCE_ANALYSIS", "CHECKPOINT1 time: "+(System.nanoTime() - start2)/1000000.0+"ms");
 			
 			start2 = System.nanoTime();
@@ -653,45 +659,83 @@ public class LegoBrickTracker extends Tracker{
 			start2 = System.nanoTime();
 //			List<float[]> overlap = new ArrayList<float[]>();
 			Mat bricksMat = new Mat(tmpBricksArray.size(),8*2, CvType.CV_32FC1);
+//			Point[] tmpPts0 = new Point[8];
 			for (int l = 0; l < tmpBricksArray.size(); l++) {
-//				Point[] tmpPts = new Point[8];
 				for (int m = 0; m < 8; m++) {
 					bricksMat.put(l, m*2, coord2D.get(0,l*8+m)[0]/coord2D.get(2,l*8+m)[0]);
 					bricksMat.put(l, m*2+1, coord2D.get(1,l*8+m)[0]/coord2D.get(2,l*8+m)[0]);
-//					tmpPts[m] = new Point(coord2D.get(0,l*8+m)[0]/coord2D.get(2,l*8+m)[0],coord2D.get(1,l*8+m)[0]/coord2D.get(2,l*8+m)[0]);
+//					if(l == 0) {
+//						tmpPts0[m] = new Point(coord2D.get(0,m)[0]/coord2D.get(2,m)[0],coord2D.get(1,m)[0]/coord2D.get(2,m)[0]);
+//					}
 				}
 //				overlap.add(tmpBricksArray.get(l).getOverlap(tmpPts));
 			}
+			
 			float[] overlap = getOverlap(bricksMat.getNativeObjAddr());
+			
+			
+			// TRYING TO USE RENDERSCRIPT, GIVES WRONG VALUES
+//			if(tmpBricksArray.size() > 0) {
+//				Mat convex = new Mat();
+//				Mat currFrameThresh = new Mat();
+//				Mat pts = new MatOfPoint(tmpPts0);
+//				getConvexHull(pts.getNativeObjAddr(), convex.getNativeObjAddr(), currFrameThresh.getNativeObjAddr());
+//				
+////				Highgui.imwrite("/sdcard/arbg/convex.png", convex);
+////				Mat result = new Mat();
+////				Core.bitwise_and(convex, currFrameThresh, result);
+////				Highgui.imwrite("/sdcard/arbg/result.png", result);
+//				int nonZero;
+//				try {
+//					long nonzeroTime = System.nanoTime();
+//					nonZero = cnt.getCountNonZero(convex);
+//					
+//				} catch (Exception e) {
+//					Log.e("NONZEROCOUNTER", e.getMessage());
+//				}
+//			}
 			
 			Log.d("PERFORMANCE_ANALYSIS", "CHECKPOINT3 time: "+(System.nanoTime() - start2)/1000000.0+"ms");
 			
 			start2 = System.nanoTime();
 			int counter = 0;
-			for (int k = 0; k < acceptedBrickCandidates.size()+brickCandidatesIn.size(); k++) {
-				boolean isNewDetected = (k < acceptedBrickCandidates.size());
-				LegoBrickContainer lc = isNewDetected ? acceptedBrickCandidates.get(k) : brickCandidatesIn.get(k-acceptedBrickCandidates.size());
-				Iterator<LegoBrick> lcIterator = lc.iterator();
-				while(lcIterator.hasNext()) {
-					LegoBrick lb = lcIterator.next();
-//					float[] overlapResult = overlap.get(counter);
-//					long startOverlapCalc = System.nanoTime();
-//					float[] overlapResult = legoBrickContainer.get(l).getOverlap(camPose);
-//					Log.d(TAG, "OverlapCalc time: "+(System.nanoTime() - startOverlapCalc)/1000000.0+"ms");
-					
-					if(overlap[counter] < 0.75f) {
-//						bricks.add(legoBrickContainer.get(l));
-						if(isNewDetected)
-							lcIterator.remove();
-						else {
-							lb.voteRemoval();
-							if(lb.getRemovalVotes() >= 3)
-								lcIterator.remove();
+			for (int k = 0; k < overlap.length; k++) {
+				if(k >= acceptedBrickCandidates.size()+currentWorld.getCandidateBricks().size()) {
+					LegoBrick b = tmpBricksArray.get(k);
+					Log.d("REALBRICKREMOVAL", "Realbrick, overlap check: "+overlap[counter]);
+					if(overlap[counter] < 0.5f) {
+						b.voteRemoval();
+						if(b.getRemovalVotes() >= 3) {
+							Log.d("REALBRICKREMOVAL", "Real brick was removed!");
+							currentWorld.removeBrick(b);
 						}
 					}
 					counter++;
+				} else {
+					boolean isNewDetected = (k < acceptedBrickCandidates.size());
+					LegoBrickContainer lc = isNewDetected ? acceptedBrickCandidates.get(k) : currentWorld.getCandidateBricks().get(k-acceptedBrickCandidates.size());
+					Iterator<LegoBrick> lcIterator = lc.iterator();
+					while(lcIterator.hasNext()) {
+						LegoBrick lb = lcIterator.next();
+	//					float[] overlapResult = overlap.get(counter);
+	//					long startOverlapCalc = System.nanoTime();
+	//					float[] overlapResult = legoBrickContainer.get(l).getOverlap(camPose);
+	//					Log.d(TAG, "OverlapCalc time: "+(System.nanoTime() - startOverlapCalc)/1000000.0+"ms");
+						
+						if(overlap[counter] < 0.75f) {
+	//						bricks.add(legoBrickContainer.get(l));
+							if(isNewDetected)
+								lcIterator.remove();
+							else {
+								lb.voteRemoval();
+								if(lb.getRemovalVotes() >= 3)
+									lcIterator.remove();
+							}
+						}
+						counter++;
+					}
+					if(isNewDetected && !lc.isEmpty()) this.brickCandidates.add(lc);
 				}
-				if(isNewDetected && !lc.isEmpty()) this.brickCandidates.add(lc);
 //				int[] mergeResult = legoBrickContainer.mergeCheck(bricks.toArray(new LegoBrick[bricks.size()]));
 //				for (int l = 0; l < mergeResult.length; l++) {
 //					if(mergeResult[l] != -1) {
@@ -1256,4 +1300,5 @@ public class LegoBrickTracker extends Tracker{
 	private native void generateHOGDescriptors(String renderImgsPath);
 	private native void findLegoBrickLines(long bgrPointer, float upAngle, long resultMatPtr, long origContMatPtr);
 	private native float[] checkOverlap(long inputPoints, int idx);
+	private native void getConvexHull(long bricksPointer, long convexThreshPtr, long currFrameThreshPtr);
 }

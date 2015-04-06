@@ -80,17 +80,23 @@ extern "C"
 	JNIEXPORT void JNICALL Java_be_wouterfranken_arboardgame_rendering_tracking_LegoBrickTracker_generateHOGDescriptors
 			(JNIEnv *env, jobject object, jstring renderImgsPath);
 
-	JNIEXPORT void JNICALL Java_be_wouterfranken_arboardgame_rendering_tracking_LegoBrickTracker_findLegoBrickLines
-			(JNIEnv *env, jobject object, jlong bgrPointer, jfloat upAngle, jlong resultMatPtr, jlong origContMatPtr);
+	JNIEXPORT void JNICALL Java_be_wouterfranken_arboardgame_rendering_tracking_LegoBrickTracker2_findLegoBrickLines
+			(JNIEnv *env, jobject object, jlong bgrPointer, jfloat upAngle, jlong colorCalibrationPtr, jlong resultMatPtr, jlong origContMatPtr);
 
-	JNIEXPORT jfloatArray JNICALL Java_be_wouterfranken_arboardgame_rendering_tracking_LegoBrickTracker_checkOverlap
+	JNIEXPORT jfloatArray JNICALL Java_be_wouterfranken_arboardgame_rendering_tracking_LegoBrickTracker2_checkOverlap
 			(JNIEnv *env, jobject object, jlong inputPoints, jint idx);
 
 	JNIEXPORT jfloatArray JNICALL Java_be_wouterfranken_arboardgame_gameworld_LegoBrick_checkCurrentOverlap
 			(JNIEnv *env, jobject object, jlong inputPoints);
 
-	JNIEXPORT jfloatArray JNICALL Java_be_wouterfranken_arboardgame_rendering_tracking_LegoBrickTracker_getOverlap
+	JNIEXPORT jfloatArray JNICALL Java_be_wouterfranken_arboardgame_rendering_tracking_LegoBrickTracker2_getOverlap
 			(JNIEnv *env, jobject object, jlong bricksPointer);
+
+	JNIEXPORT void JNICALL Java_be_wouterfranken_arboardgame_rendering_tracking_LegoBrickTracker2_getConvexHull
+			(JNIEnv *env, jobject object, jlong bricksPointer, jlong convexThreshPtr, jlong currFrameThreshPtr);
+
+	JNIEXPORT void JNICALL Java_be_wouterfranken_arboardgame_app_ColorCalibration_getConvexHull
+			(JNIEnv *env, jobject object, jlong pointsPointer, jlong convexHullPtr);
 }
 
 JNIEXPORT void JNICALL Java_be_wouterfranken_arboardgame_rendering_tracking_CameraPoseTracker_loadCameraCalibration(
@@ -964,17 +970,18 @@ JNIEXPORT void JNICALL Java_be_wouterfranken_arboardgame_rendering_tracking_Lego
 /**
 * Find Lego Bricks Algorithm 4: Using LINE detection
 */
-JNIEXPORT void JNICALL Java_be_wouterfranken_arboardgame_rendering_tracking_LegoBrickTracker_findLegoBrickLines(JNIEnv *env, jobject object, jlong bgrPointer, jfloat upAngle, jlong resultMatPtr, jlong origContMatPtr) {
+JNIEXPORT void JNICALL Java_be_wouterfranken_arboardgame_rendering_tracking_LegoBrickTracker2_findLegoBrickLines(JNIEnv *env, jobject object, jlong bgrPointer, jfloat upAngle, jlong colorCalibrationPtr, jlong resultMatPtr, jlong origContMatPtr) {
 	Mat frame = *(Mat *)bgrPointer;
 	Mat *result = (Mat *)resultMatPtr;
 	Mat *origContMat = (Mat *)origContMatPtr;
+	Mat colorCalibration = *(Mat *)colorCalibrationPtr;
 
 	long start = getRealTime();
-	BrickDetectorLines::TrackBricks(frame, upAngle, *result, *origContMat);
-	LOGD("BrickDetection time (C++ part): %f\n",(float)((getRealTime()-start)*100.0f));
+	BrickDetectorLines::TrackBricks(frame, upAngle, colorCalibration, *result, *origContMat);
+	LOGD("BrickDetection time (C++ part): %f\n",(float)((getRealTime()-start)*1000.0f));
 }
 
-JNIEXPORT jfloatArray JNICALL Java_be_wouterfranken_arboardgame_rendering_tracking_LegoBrickTracker_checkOverlap(JNIEnv *env, jobject object, jlong inputPoints, jint idx) {
+JNIEXPORT jfloatArray JNICALL Java_be_wouterfranken_arboardgame_rendering_tracking_LegoBrickTracker2_checkOverlap(JNIEnv *env, jobject object, jlong inputPoints, jint idx) {
 	Mat inputThresh = *(Mat *)inputPoints;
 	jfloat overlapResult[2];
 
@@ -994,7 +1001,7 @@ JNIEXPORT jfloatArray JNICALL Java_be_wouterfranken_arboardgame_gameworld_LegoBr
 	Mat inputThresh = *(Mat *)inputPoints;
 	jfloat overlapResult[1];
 
-	BrickDetectorLines::CheckCurrFrameOverlap(inputThresh, overlapResult[0]);
+	BrickDetectorLines::CheckCurrFrameOverlap(inputThresh, overlapResult[0], 0);
 
 	jfloatArray javaResult;
  	javaResult = env->NewFloatArray(1);
@@ -1006,16 +1013,16 @@ JNIEXPORT jfloatArray JNICALL Java_be_wouterfranken_arboardgame_gameworld_LegoBr
 	return javaResult;
 }
 
-JNIEXPORT jfloatArray JNICALL Java_be_wouterfranken_arboardgame_rendering_tracking_LegoBrickTracker_getOverlap(JNIEnv *env, jobject object, jlong bricksPointer) {
+JNIEXPORT jfloatArray JNICALL Java_be_wouterfranken_arboardgame_rendering_tracking_LegoBrickTracker2_getOverlap(JNIEnv *env, jobject object, jlong bricksPointer) {
 	Mat bricksPoints = *(Mat *)bricksPointer;
 	int amountBricks = bricksPoints.rows;
 	jfloat overlapResult[amountBricks];
 
-	#pragma omp parallel for num_threads(4)
+	// #pragma omp parallel for num_threads(4)
 	for (int i = 0; i < amountBricks; ++i)
 	{
 
-		LOGD("OPENMP threads: %d",omp_get_num_threads());
+		// LOGD("OPENMP threads: %d",omp_get_num_threads());
 
 		vector<Point> points;
 		for(int pidx = 0; pidx < 8; pidx++) {
@@ -1024,9 +1031,9 @@ JNIEXPORT jfloatArray JNICALL Java_be_wouterfranken_arboardgame_rendering_tracki
 		// float tmp;
 		Mat pts(points);
 		float result;
-		BrickDetectorLines::CheckCurrFrameOverlap(pts, result);
+		BrickDetectorLines::CheckCurrFrameOverlap(pts, result, i);
 
-		#pragma omp critical
+		// #pragma omp critical
 		{
 			overlapResult[i] = result;
 		}
@@ -1042,4 +1049,27 @@ JNIEXPORT jfloatArray JNICALL Java_be_wouterfranken_arboardgame_rendering_tracki
 	return javaResult;
 }
 
+JNIEXPORT void JNICALL Java_be_wouterfranken_arboardgame_rendering_tracking_LegoBrickTracker2_getConvexHull(JNIEnv *env, jobject object, jlong bricksPointer, jlong convexThreshPtr, jlong currFrameThreshPtr) {
+	Mat bricksPoints = *(Mat *)bricksPointer;
+	Mat *convexThresh = (Mat *)convexThreshPtr;
+	Mat *currFrameThresh = (Mat *)currFrameThreshPtr;
+
+	BrickDetectorLines::getCurrentFrameThreshold(*currFrameThresh);
+
+	vector<vector<Point >> inputContours(1);
+	convexHull(bricksPoints,inputContours[0],true);
+	*convexThresh = Mat(currFrameThresh->size(), currFrameThresh->type());
+	drawContours(*convexThresh, inputContours, 0, Scalar(255,255,255), -1);
+}
+
+JNIEXPORT void JNICALL Java_be_wouterfranken_arboardgame_app_ColorCalibration_getConvexHull(JNIEnv *env, jobject object, jlong pointsPointer, jlong convexHullPtr) {
+	Mat points = *(Mat *)pointsPointer;
+	Mat *convexH = (Mat *)convexHullPtr;
+
+	vector<vector<Point >> inputContours(1);
+
+	convexHull(points,inputContours[0],true);
+
+	*convexH = Mat(inputContours[0]).clone();
+}
 

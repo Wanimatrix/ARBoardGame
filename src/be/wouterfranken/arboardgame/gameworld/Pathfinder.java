@@ -6,13 +6,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.PriorityQueue;
 
-import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 
-import android.os.Process;
 import android.util.Log;
 import be.wouterfranken.arboardgame.app.AppConfig;
-import be.wouterfranken.arboardgame.rendering.tracking.CameraPoseTracker;
 
 // TODO: Generate new path after passing node EACH TIME (even if passing multiple nodes in 1 frame). (FIX THIS IN Lemming class)
 // TODO: Fix that we sense the new node after each time, even if path was null before.
@@ -64,7 +61,7 @@ public class Pathfinder {
 		}
 	}
 	
-	private boolean computePath(final WorldCoordinate start, final WorldCoordinate goal, World2 w) {
+	private boolean computePath(final WorldCoordinate start, final WorldCoordinate goal, WorldLines w) {
 		PathNode current;
 		while(!open.isEmpty()) {
 			current = open.remove();
@@ -100,7 +97,7 @@ public class Pathfinder {
 		return false;
 	}
 	
-	private LemmingPath stepPath(WorldCoordinate start, WorldCoordinate goal, World2 w) {
+	private LemmingPath stepPath(WorldCoordinate start, WorldCoordinate goal, WorldLines w) {
 		if(AppConfig.DEBUG_LOGGING) Log.d("PATHFINDER", "Stepping to next node...");
 		PathNode startNode = getNode(w.getGridNode(start));
 		//nodes.get(start);
@@ -113,7 +110,8 @@ public class Pathfinder {
 			
 			if(AppConfig.DEBUG_LOGGING) Log.d("PATHFINDER", "Sensing the blocking of bricks at the new node...");
 			
-			List<PathNode> nbs = startNode.senseAccessibleNeighbours(currentThreshold, w.getCameraPoseTracker(), currentMv);
+			List<PathNode> nbs = startNode.senseAccessibleNeighbours();
+//			List<PathNode> nbs = startNode.senseAccessibleNeighbours(currentThreshold, w.getCameraPoseTracker(), currentMv);
 //			if(nbs.size() == 0) Process.killProcess(Process.myPid());
 			Log.d("PATHFINDER", "New node has "+nbs.size()+" accessible neighbours");
 //			WorldCoordinate[] pureNeighboursCoords = new WorldCoordinate[]{
@@ -185,7 +183,7 @@ public class Pathfinder {
 		return path;
 	}
 	
-	private boolean performNewSearch(final WorldCoordinate start, final WorldCoordinate goal, World2 w) {
+	private boolean performNewSearch(final WorldCoordinate start, final WorldCoordinate goal, WorldLines w) {
 		if(AppConfig.DEBUG_LOGGING) Log.d("PATHFINDER", "Starting new search...");
 		PathNode startNode = getNode(w.getGridNode(start));
 		//nodes.get(start);
@@ -194,8 +192,8 @@ public class Pathfinder {
 		startNode.setGScore(0);
 		open = new PriorityQueue<PathNode>();
 		closed = new ArrayList<PathNode>();
-		this.currentMv = w.getCameraPoseTracker().getMvMat();
-		this.currentThreshold = w.getBrickThreshold();
+//		this.currentMv = w.getCameraPoseTracker().getMvMat();
+//		this.currentThreshold = w.getBrickThreshold();
 //		startNode.setFScore(startNode.getGScore()+startNode.getHScore());
 		open.add(startNode);
 		if(AppConfig.DEBUG_LOGGING) Log.d("PATHFINDER","Starting path computation...");
@@ -204,7 +202,7 @@ public class Pathfinder {
 		return true;
 	}
 	
-	public LemmingPath findPath2(final WorldCoordinate start, final WorldCoordinate goal, World2 w) {
+	public LemmingPath findPath2(final WorldCoordinate start, final WorldCoordinate goal, WorldLines w) {
 		long startTime = System.nanoTime();
 		Log.d("PATHFINDER", "Search started @"+start+" to "+goal);
 		if(path != null && path.get(0).equals(start)) return path;
@@ -391,40 +389,47 @@ public class Pathfinder {
 			return result;
 		}
 		
-		public List<PathNode> senseAccessibleNeighbours(Mat brickThreshold, CameraPoseTracker cameraPose, Mat mv) {
+		public List<PathNode> senseAccessibleNeighbours() {
 			List<PathNode> result = new ArrayList<PathNode>();
 			
-			List<GridNode> nbs = theNode.getNeighbours();
-//			long start = System.nanoTime();
-			Mat coord3D = Mat.ones(4, nbs.size(), CvType.CV_32FC1);
-			for (int i = 0;i<nbs.size();i++) {
-				WorldCoordinate wcoord = nbs.get(i).getCoordinate();
-//				Log.d(TAG, "COORD: "+wcoord);
-				coord3D.put(0, i, wcoord.x);
-				coord3D.put(1, i, wcoord.y);
-				coord3D.put(2, i, 0);
+			for (GridNode node : theNode.getNeighbours()) {
+				if(node.isAccessible())
+					result.add(new PathNode(node));
 			}
-//			time[0] += System.nanoTime()-start;
-//			start = System.nanoTime();
-			Mat coord2D = cameraPose.get2DPointFrom3D(coord3D, mv);
-//			time[1] += System.nanoTime()-start;
 			
-//			start = System.nanoTime();
-			for (int i = 0;i<nbs.size();i++) {
-//				coord2D.put(0, i, );
-//				coord2D.put(1, i, ;
-//				int row = ;
-//				int col = ;
-				double threshValue = brickThreshold.get(
-						(int)(coord2D.get(1,i)[0]*Math.pow(coord2D.get(2,i)[0],-1)),
-						(int)(coord2D.get(0,i)[0]*Math.pow(coord2D.get(2,i)[0],-1)))[0];
-//				Log.d(TAG, "treshValue: "+threshValue);
-				if(brickThreshold.empty() || threshValue == 0) {
-					result.add(getNode(nbs.get(i)));
-				}
-			}
-//			time[2] += System.nanoTime()-start;
 			return result;
+			
+//			List<GridNode> nbs = theNode.getNeighbours();
+////			long start = System.nanoTime();
+//			Mat coord3D = Mat.ones(4, nbs.size(), CvType.CV_32FC1);
+//			for (int i = 0;i<nbs.size();i++) {
+//				WorldCoordinate wcoord = nbs.get(i).getCoordinate();
+////				Log.d(TAG, "COORD: "+wcoord);
+//				coord3D.put(0, i, wcoord.x);
+//				coord3D.put(1, i, wcoord.y);
+//				coord3D.put(2, i, 0);
+//			}
+////			time[0] += System.nanoTime()-start;
+////			start = System.nanoTime();
+//			Mat coord2D = cameraPose.get2DPointFrom3D(coord3D, mv);
+////			time[1] += System.nanoTime()-start;
+//			
+////			start = System.nanoTime();
+//			for (int i = 0;i<nbs.size();i++) {
+////				coord2D.put(0, i, );
+////				coord2D.put(1, i, ;
+////				int row = ;
+////				int col = ;
+//				double threshValue = brickThreshold.get(
+//						(int)(coord2D.get(1,i)[0]*Math.pow(coord2D.get(2,i)[0],-1)),
+//						(int)(coord2D.get(0,i)[0]*Math.pow(coord2D.get(2,i)[0],-1)))[0];
+////				Log.d(TAG, "treshValue: "+threshValue);
+//				if(brickThreshold.empty() || threshValue == 0) {
+//					result.add(getNode(nbs.get(i)));
+//				}
+//			}
+////			time[2] += System.nanoTime()-start;
+//			return result;
 		}
 		
 		@Override
