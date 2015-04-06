@@ -7,15 +7,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.PriorityQueue;
 
-import org.opencv.core.Core;
-import org.opencv.core.CvType;
-import org.opencv.core.Mat;
-import org.opencv.highgui.Highgui;
-
 import android.util.Log;
-import android.util.Pair;
 import be.wouterfranken.arboardgame.app.AppConfig;
-import be.wouterfranken.arboardgame.rendering.tracking.CameraPoseTracker;
 
 public class PathFinderOrig {
 private static final String TAG = PathFinderOrig.class.getSimpleName();

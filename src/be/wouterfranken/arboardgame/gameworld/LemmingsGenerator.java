@@ -82,14 +82,17 @@ public class LemmingsGenerator extends Tracker{
 			if(amount == 0) return;
 		}
 		Lemming l;
-		if(AppConfig.TREE_ADAPTIVE_ASTAR) {
-			l = new Lemming(WorldConfig.LEMMINGS_SIZE, WorldConfig.LEMMING_HEIGHT, start.x, start.y, WorldConfig.LEMMINGS_SPEED_WITH_STARS, WorldConfig.LEMMINGS_COLOR);
-			l.generatePath(start, end, world);
-		} else {
-			LemmingPath path = PathFinderOrig.findPath(start, end, world);
-			if(path == null) return;//throw new IllegalStateException("You cannot place a LegoBrick on top of the startPosition!");
-			l = new Lemming(WorldConfig.LEMMINGS_SIZE, WorldConfig.LEMMING_HEIGHT, start.x, start.y, path, WorldConfig.LEMMINGS_SPEED_WITH_STARS, WorldConfig.LEMMINGS_COLOR);
+//		if(AppConfig.TREE_ADAPTIVE_ASTAR) {
+//			l = new Lemming(WorldConfig.LEMMINGS_SIZE, WorldConfig.LEMMING_HEIGHT, start.x, start.y, WorldConfig.LEMMINGS_SPEED_WITH_STARS, WorldConfig.LEMMINGS_COLOR);
+//			l.generatePath(start, end, world);
+//		} else {
+//			LemmingPath path = PathFinderOrig.findPath(start, end, world);
+		if(Lemming.path == null) {
+			return;//if(!Lemming.generatePath(start, end, world)) return;
 		}
+//			if(Lemming.path == null) return;//throw new IllegalStateException("You cannot place a LegoBrick on top of the startPosition!");
+		l = new Lemming(WorldConfig.LEMMINGS_SIZE, WorldConfig.LEMMING_HEIGHT, start.x, start.y, WorldConfig.LEMMINGS_SPEED_WITH_STARS, WorldConfig.LEMMINGS_COLOR);
+//		}
 		synchronized (lock) {
 			synchronized (amountLock) {
 				if(amount == 0) return;
@@ -119,6 +122,10 @@ public class LemmingsGenerator extends Tracker{
 			starMeshes.add(starMesh);
 		}
 		return starMeshes;
+	}
+	
+	public void generatePath() {
+		Lemming.generatePath(start, end, world);
 	}
 	
 //	public List<MeshObject> getActiveBrickMeshes(RenderOptions ro) {
