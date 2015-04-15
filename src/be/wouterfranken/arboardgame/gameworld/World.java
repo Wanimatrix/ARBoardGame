@@ -91,7 +91,7 @@ public class World {
 			Iterator<LegoBrick> i = bricks.iterator();
 			while(i.hasNext()) {
 				LegoBrick b = i.next();
-				int mergeIdx = b.mergeCheck(bricksToAdd);
+				int mergeIdx = b.mergeCheck(bricksToAdd, -1);
 				if(b.readyToBeActive()) activateBrick(b);
 				if(b.readyToBeRemoved()) removeBrick(i);
 				else if(b.readyToBeInactive()) deactivateBrick(b);

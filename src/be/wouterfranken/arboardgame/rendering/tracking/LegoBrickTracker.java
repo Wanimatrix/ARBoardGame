@@ -495,9 +495,9 @@ public class LegoBrickTracker extends Tracker{
 	//				acceptedBricks.put(ci.origContIdx, new LegoBrick(cuboids[0], ColorName.BLUE, null));
 					
 					if(tmpBricks.size() <= 0)
-						tmpBricks.add(new LegoBrickContainer(new LegoBrick(cuboids[k][0], halfSideVectors, orientation)));
+						tmpBricks.add(new LegoBrickContainer(new LegoBrick(cuboids[k][0], halfSideVectors, orientation, 0)));
 					else 
-						tmpBricks.get(0).add((new LegoBrick(cuboids[k][0], halfSideVectors, orientation)));
+						tmpBricks.get(0).add((new LegoBrick(cuboids[k][0], halfSideVectors, orientation,0 )));
 					
 					MatOfFloat4 anchorBlock = new MatOfFloat4(new Mat(1, 4, CvType.CV_32FC1));
 					anchorBlock.put(0, 0, cuboids[k][0][0]);
@@ -529,9 +529,9 @@ public class LegoBrickTracker extends Tracker{
 //								}
 								
 								if(tmpBricks.size() <= cuboidsIdx)
-									tmpBricks.add(new LegoBrickContainer(new LegoBrick(cuboids[k][cuboidsIdx], halfSideVectors, orientation)));
+									tmpBricks.add(new LegoBrickContainer(new LegoBrick(cuboids[k][cuboidsIdx], halfSideVectors, orientation, 0)));
 								else 
-									tmpBricks.get(cuboidsIdx).add((new LegoBrick(cuboids[k][cuboidsIdx], halfSideVectors, orientation)));
+									tmpBricks.get(cuboidsIdx).add((new LegoBrick(cuboids[k][cuboidsIdx], halfSideVectors, orientation, 0)));
 	//							acceptedBricks.put(ci.origContIdx, new LegoBrick(cuboids[cuboidsIdx], ColorName.BLUE, null));
 								cuboidsIdx++;
 							}

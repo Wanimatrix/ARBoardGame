@@ -2,6 +2,8 @@ package be.wouterfranken.arboardgame.rendering;
 
 import java.io.IOException;
 import java.nio.Buffer;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.nio.IntBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -11,6 +13,11 @@ import java.util.List;
 import javax.microedition.khronos.egl.EGLConfig;
 import javax.microedition.khronos.opengles.GL10;
 
+import org.opencv.core.CvType;
+import org.opencv.core.Mat;
+import org.opencv.core.Size;
+import org.opencv.imgproc.Imgproc;
+
 import android.graphics.ImageFormat;
 import android.graphics.SurfaceTexture;
 import android.hardware.Camera;
@@ -18,6 +25,7 @@ import android.hardware.Camera.Parameters;
 import android.hardware.Camera.PreviewCallback;
 import android.opengl.GLES11Ext;
 import android.opengl.GLES20;
+import android.opengl.GLES30;
 import android.opengl.GLSurfaceView;
 import android.opengl.GLSurfaceView.Renderer;
 import android.opengl.Matrix;
@@ -55,11 +63,14 @@ public class ArRenderer implements Renderer, PreviewCallback {
     
     private GamePhaseManager gpMan;
     
+    
     // RENDER TO TEXTURE VARIABLES
- 	int[] fb, depthRb, renderTex; // the framebuffer, the renderbuffer and the texture to render
+ 	int[] fb, depthRb, renderTex, pbo; // the framebuffer, the renderbuffer and the texture to render
  	int texW = AppConfig.PREVIEW_RESOLUTION[0];           // the texture's width
  	int texH = AppConfig.PREVIEW_RESOLUTION[1];           // the texture's height
  	IntBuffer texBuffer;          //  Buffer to store the texture
+ 	
+ 	private Mat renderedFrame = new Mat(texH,texW,CvType.CV_8UC3);
  	
  	// RENDERING HANDLERS
  	private int[] programId;
@@ -73,6 +84,7 @@ public class ArRenderer implements Renderer, PreviewCallback {
 	
     // CAMERA SHADERS
 	private final String vssCamera =
+		"#version 100\n" +
 		"attribute vec2 vPosition;\n" +
 		"attribute vec2 vTexCoord;\n" +
 		"uniform mat4 u_MVP;\n" +
@@ -83,6 +95,7 @@ public class ArRenderer implements Renderer, PreviewCallback {
 		"}";
  
 	private final String fssCamera =
+		"#version 100\n" +
 		"#extension GL_OES_EGL_image_external : require\n" +
 		"precision mediump float;\n" +
 		"uniform samplerExternalOES sTexture;\n" +
@@ -201,11 +214,62 @@ public class ArRenderer implements Renderer, PreviewCallback {
      	GLES20.glBindRenderbuffer(GLES20.GL_RENDERBUFFER, depthRb[0]);
      	GLES20.glClear( GLES20.GL_DEPTH_BUFFER_BIT | GLES20.GL_COLOR_BUFFER_BIT);
 		GLES20.glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+//		GLES30.glDrawBuffers(n, bufs);
 		
 		renderCamera();
 	    renderVirtualLayer();
+
 	    
-	    GLES20.glBindFramebuffer(GLES20.GL_FRAMEBUFFER, 0);
+		
+		
+//		GLES20.glViewport(0, 0, 1920, 1600);
+		
+		GLES30.glReadBuffer(GLES30.GL_COLOR_ATTACHMENT0);
+//		
+//		RenderingUtils.checkGLError("Problem on line "+new Throwable().getStackTrace()[0].getLineNumber());
+//		GLES30.glViewport(0, 0, this.texW, this.texH);
+		GLES30.glBindBuffer(GLES30.GL_PIXEL_PACK_BUFFER, pbo[0]);
+//		
+		RenderingUtils.checkGLError("Problem on line "+new Throwable().getStackTrace()[0].getLineNumber());
+//		
+////		GLES30.glReadPixels(0, 0, texW, texH, GLES30.GL_RGB, GLES30.GL_UNSIGNED_BYTE, null);
+//		Mat result = new Mat(1600, 1920, CvType.CV_8UC3);
+		
+//		
+		synchronized (renderedFrame) {
+			readPixels(0, 0, texW, texH, GLES30.GL_RGBA, GLES30.GL_UNSIGNED_BYTE, renderedFrame.getNativeObjAddr());
+		}
+//		
+//		Log.d(TAG, "PixelRead size: "+result.size()+", channels: "+result.channels()+", type: "+result.type());
+//		
+		GLES30.glBindBuffer(GLES30.GL_PIXEL_PACK_BUFFER, 0);
+//		
+		RenderingUtils.checkGLError("Problem on line "+new Throwable().getStackTrace()[0].getLineNumber());
+//		
+////		ByteBuffer pixelBuffer = (ByteBuffer)GLES30.glMapBufferRange(GLES30.GL_PIXEL_PACK_BUFFER, 0, texH * texW * 3, GLES30.GL_MAP_READ_BIT);
+////		
+////		RenderingUtils.checkGLError("Problem on line "+new Throwable().getStackTrace()[0].getLineNumber());
+////		
+//		GLES30.glUnmapBuffer(GLES30.GL_PIXEL_PACK_BUFFER);
+//		
+//		RenderingUtils.checkGLError("Problem on line "+new Throwable().getStackTrace()[0].getLineNumber());
+//		
+//		GLES30.glBindBuffer(GLES30.GL_PIXEL_PACK_BUFFER, 0);
+//		
+//		RenderingUtils.checkGLError("Problem on line "+new Throwable().getStackTrace()[0].getLineNumber());
+
+//		
+//		
+////		GLES20.glPixelStorei(GLES20.GL_PACK_ALIGNMENT, renderedFrame.step1() == 3 ? 1 : 4);
+////		ByteBuffer pixelBuffer = ByteBuffer.allocateDirect(texW * texH * 3).order(ByteOrder.nativeOrder());
+////		GLES20.glReadPixels(0, 0, texW, texH, GLES20.GL_RGB, GLES20.GL_UNSIGNED_BYTE, pixelBuffer);
+//		byte[] bytes = pixelBuffer.array();
+//		synchronized (renderedFrame) {
+//			renderedFrame.put(0,0, result.get(0, 0));
+////			Imgproc.cvtColor(renderedFrame, renderedFrame, Imgproc.COLOR_BGR2RGB);
+//		}
+		
+		GLES20.glBindFramebuffer(GLES20.GL_FRAMEBUFFER, 0);
 		GLES20.glBindRenderbuffer(GLES20.GL_RENDERBUFFER, 0);
 	}
 
@@ -537,11 +601,18 @@ public class ArRenderer implements Renderer, PreviewCallback {
         fb = new int[1];
         depthRb = new int[1];
         renderTex = new int[1];
+        pbo = new int[1];
+        
+        GLES30.glGenBuffers(1, pbo, 0);
+        GLES30.glBindBuffer(GLES30.GL_PIXEL_PACK_BUFFER, pbo[0]);
+        GLES30.glBufferData(GLES30.GL_PIXEL_PACK_BUFFER, texH * texW * 4, null, GLES30.GL_DYNAMIC_READ);
+        GLES30.glBindBuffer(GLES30.GL_PIXEL_PACK_BUFFER, 0);
          
         // generate
         GLES20.glGenFramebuffers(1, fb, 0);
         GLES20.glGenRenderbuffers(1, depthRb, 0); // the depth buffer
         GLES20.glGenTextures(1, renderTex, 0);
+       
          
         // generate texture
         GLES20.glActiveTexture(GLES20.GL_TEXTURE1);
@@ -587,4 +658,12 @@ public class ArRenderer implements Renderer, PreviewCallback {
 		
 		if(AppConfig.DEBUG_LOGGING) Log.d(TAG, "FrameBuffer init successful...");
 	}
+	
+	public Mat getRenderedFrame() {
+		synchronized (renderedFrame) {
+			return renderedFrame;
+		}
+	}
+	
+	private native void readPixels(int x, int y, int width, int height, int format, int type, long resultPtr);
 }

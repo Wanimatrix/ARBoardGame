@@ -34,6 +34,8 @@ Mat currentFrameThreshold;
 vector<float> currentFrameAreas;
 int currentFrameNonZero;
 
+int currentFrame = 0;
+
 /// Function Headers
 #define NORMALIZE(point) Point2f((point).x/sqrt(pow((point).x,2)+pow((point).y,2)),(point).y/sqrt(pow((point).x,2)+pow((point).y,2)))
 #define NORM(point) sqrt(pow((point).x,2)+pow((point).y,2))
@@ -125,7 +127,7 @@ int currentFrameNonZero;
 //   LOGD("Thresholding done...");
 // }
 
-void BrickDetectorLines::TrackBricks(Mat& frame, float upAngle, Mat& colorCalibration, Mat& result, Mat& origContoursMat)
+void BrickDetectorLines::TrackBricks(Mat& frame, float upAngle, double apdp, Mat& colorCalibration, Mat& result, Mat& origContoursMat)
 {
   Mat hsv;
   originalContourThresholds.clear();
@@ -313,6 +315,14 @@ void BrickDetectorLines::TrackBricks(Mat& frame, float upAngle, Mat& colorCalibr
   int fromTo[] = {0,0,0,1,0,2};
   mixChannels(&finalMask, 1, &fullMask, 1, fromTo, 3);
   bricksCutFromImg = fullMask;
+
+  // DEBUGGING!!
+  // o.str("");
+  // o << currentFrame++;
+  // imwrite("/sdcard/arbg/dbg/m"+o.str()+".png",bricksCutFromImg);
+  // imwrite("/sdcard/arbg/dbg/f"+o.str()+".png",frame);
+
+
   // bitwise_and(fullMask, frame, bricksCutFromImg);
 
   // vector<Mat> bricksCutFromImgChannels;
@@ -430,7 +440,8 @@ void BrickDetectorLines::TrackBricks(Mat& frame, float upAngle, Mat& colorCalibr
     // for(float i = 1; newArea/origArea >= 0.98; i+=0.01) {
       // previous = tmpContour;
       //0.01*arcLength(contours[c], true)
-      approxPolyDP(Mat(contours[c]), tmpContour, 0.003*arcLength(contours[c], true), true);
+      LOGD("APDP param: %lf",apdp);
+      approxPolyDP(Mat(contours[c]), tmpContour, apdp*arcLength(contours[c], true), true);
     //   if(tmpContour.size() >= 2){
     //     newArea = contourArea(tmpContour);
     //   }
@@ -479,7 +490,7 @@ void BrickDetectorLines::TrackBricks(Mat& frame, float upAngle, Mat& colorCalibr
 
         Point2f vec = NORMALIZE(next-p);
         float angleDeg = acos(vec.x)*(180.0f/PI); 
-        angleDeg = (next.y > p.y) ? (angleDeg*-1) : angleDeg;
+        angleDeg = (next.y < p.y) ? (angleDeg*-1) : angleDeg;
         curAngle.push_back(angleDeg);
 
         LOGD("Direction angle: %f",angleDeg);
@@ -698,7 +709,13 @@ void BrickDetectorLines::TrackBricks(Mat& frame, float upAngle, Mat& colorCalibr
   // LOGD("LOG BINARY DONE...");
   // LOGIMG( "bricksCut",  bricksCutFromImg);
   // LOGIMG( "external",  out);
+  o.str("");
+  o << currentFrame;
+  imwrite("/sdcard/arbg/algo/contours"+o.str()+".png", out);
   // LOGIMG( "frameThreshold",  currentFrameThreshold);
+
+
+  currentFrame++;
   return;
 }
 

@@ -22,6 +22,8 @@ public class CameraView extends CardboardView implements Callback{
 	private CameraViewRenderer renderer;
 	private GamePhaseManager gpManager;
 	
+	private boolean distortionCorrectionEnabled = false;
+	
 	public CameraView(Context context) {
 		this(context,null);
 	}
@@ -31,7 +33,8 @@ public class CameraView extends CardboardView implements Callback{
 		CameraPoseTracker cpTracker = new CameraPoseTracker(getContext());
 		gpManager = new GamePhaseManager(cpTracker, this);
 		renderer = new CameraViewRenderer(this, cpTracker, gpManager);
-		setEGLContextClientVersion(2);
+		gpManager.setAr(renderer.getArRenderer());
+		setEGLContextClientVersion(3);
 		setRenderer(renderer);
 		
 		
@@ -80,9 +83,13 @@ public class CameraView extends CardboardView implements Callback{
 	@Override
 	public void setVRModeEnabled(boolean enabled) {
 		super.setVRModeEnabled(enabled);
-		setDistortionCorrectionEnabled(enabled);
+		distortionCorrectionEnabled = enabled;
 		renderer.getFinalRenderer().setVRModeEnabled(enabled);
 	};
+	
+	public void onFinishFrame() {
+		setDistortionCorrectionEnabled(distortionCorrectionEnabled);
+	}
 	
 	public GamePhaseManager getGamePhaseManager() {
 		return gpManager;

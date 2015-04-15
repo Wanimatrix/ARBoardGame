@@ -1,6 +1,7 @@
 package be.wouterfranken.arboardgame.app;
 
 import java.io.File;
+import java.text.ParseException;
 
 import org.opencv.android.OpenCVLoader;
 
@@ -21,8 +22,14 @@ import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.EditText;
+import android.widget.Switch;
+import android.widget.TextView.BufferType;
 import android.widget.Toast;
 import be.wouterfranken.arboardgame.R;
+import be.wouterfranken.arboardgame.rendering.tracking.BrickTrackerConfig;
+import be.wouterfranken.arboardgame.utilities.BrickTrackerConfigFactory;
+import be.wouterfranken.arboardgame.utilities.CustomExceptionHandler;
+import be.wouterfranken.experiments.TimerManager;
 
 import com.google.vrtoolkit.cardboard.CardboardActivity;
 
@@ -58,6 +65,10 @@ public class MainActivity extends CardboardActivity implements OnSharedPreferenc
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_main);
 		registerForContextMenu(findViewById(R.id.arView));
+		
+		if(!(Thread.getDefaultUncaughtExceptionHandler() instanceof CustomExceptionHandler)) {
+		    Thread.setDefaultUncaughtExceptionHandler(new CustomExceptionHandler("/sdcard/arbg/log.txt"));
+		}
 	}
 	
 	@Override
@@ -117,6 +128,11 @@ public class MainActivity extends CardboardActivity implements OnSharedPreferenc
 		} else {
 			menu.findItem(R.id.saveCalib).setVisible(true);
 		}
+	    
+	    if(!((CameraView)findViewById(R.id.arView)).getGamePhaseManager().canEditBrickDetectionParams()) {
+	    	menu.setGroupVisible(R.id.brickDetectParams, true);
+	    } else
+	    	menu.setGroupVisible(R.id.brickDetectParams, false);
 	}
 	
 	@Override
@@ -124,6 +140,7 @@ public class MainActivity extends CardboardActivity implements OnSharedPreferenc
 //	    AdapterContextMenuInfo info = (AdapterContextMenuInfo) item.getMenuInfo();
 		AlertDialog.Builder builder = new Builder(MainActivity.this);
 		final EditText input = new EditText(this);
+		final Switch boolSwitch = new Switch(this);
 		
 	    switch (item.getItemId()) {
 	        case R.id.saveCalib:
@@ -162,6 +179,75 @@ public class MainActivity extends CardboardActivity implements OnSharedPreferenc
 				});
 	        	builder.create().show();
 	            return true;
+	        case R.id.editParams:
+	        	builder.setTitle("Edit brick detection params");
+	        	final String[] parameterList = BrickTrackerConfigFactory.getConfiguration().getDescriptions();
+	        	Log.d(TAG, "The first parameter: "+parameterList[0]);
+	        	builder.setItems(parameterList, 
+	        			new OnClickListener() {
+					
+					@Override
+					public void onClick(DialogInterface dialog, final int which) {
+						String value = BrickTrackerConfigFactory.getConfiguration().getValues()[which].toString();
+						Builder b = new AlertDialog.Builder(MainActivity.this);
+						b.setTitle("Edit "+parameterList[which]);
+						input.setText(value, BufferType.EDITABLE);
+						if(BrickTrackerConfigFactory.getConfiguration().getValues()[which].getClass() == Boolean.class) {
+							boolSwitch.setChecked((Boolean)BrickTrackerConfigFactory.getConfiguration().getValues()[which]);
+							b.setView(boolSwitch);
+						} else {
+							input.setText(value, BufferType.EDITABLE);
+							b.setView(input);
+						}
+						
+						b.setPositiveButton("Save", new OnClickListener() {
+							
+							@Override
+							public void onClick(DialogInterface dialog, int unused) {
+								try {
+									String result = "";
+									if(BrickTrackerConfigFactory.getConfiguration().getValues()[which].getClass() == Boolean.class)
+										result += boolSwitch.isChecked();
+									else
+										result += input.getText();
+									
+									BrickTrackerConfigFactory.getConfiguration()
+										.set(BrickTrackerConfigFactory.getConfiguration().getShortNames()[which], result);
+									Log.d(TAG, "New value for "+BrickTrackerConfigFactory.getConfiguration().getLongNames()[which]+": "
+										+BrickTrackerConfigFactory.getConfiguration().getValues()[which]+", type: "
+										+BrickTrackerConfigFactory.getConfiguration().getValues()[which].getClass());
+								} catch (ParseException e) {
+									e.printStackTrace();
+								}
+							}
+						});
+						
+						b.create().show();
+					}
+				});
+	        	
+	        	builder.create().show();
+	        	return true;
+	        case R.id.resetParams:
+	        	builder.setTitle("Reset brick detection params");
+	        	builder.setMessage("Are you sure you want to reset all brick detection params?");
+	        	builder.setPositiveButton("Yes", new OnClickListener() {
+					
+					@Override
+					public void onClick(DialogInterface dialog, int which) {
+						BrickTrackerConfigFactory.getConfiguration().reset();
+					}
+				});
+	        	
+	        	builder.setNegativeButton("No", new OnClickListener() {
+					
+					@Override
+					public void onClick(DialogInterface dialog, int which) {
+					}
+				});
+	        	builder.create().show();
+	        	builder = new AlertDialog.Builder(this);
+	        	return true;
 	        default:
 	            return super.onContextItemSelected(item);
 	    }

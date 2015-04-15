@@ -1,7 +1,11 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     tools:context="com.example.arboardgame.MainActivity" >
-    <item android:id="@+id/saveCalib" android:title="Save calibration data"></item>
-    <item android:id="@+id/loadCalib" android:title="Load calibration data"></item>
+    
+    
+    
+    <group android:id="@+id/brickDetectParams"><item android:id="@+id/editParams" android:title="Edit brick detection params"></item><item android:id="@+id/resetParams" android:title="Reset brick detection params"></item></group><group android:id="@+id/calibration"><item android:id="@+id/saveCalib" android:title="Save calibration data"></item><item android:id="@+id/loadCalib" android:title="Load calibration data"></item></group>
+    
+    
 
 </menu>

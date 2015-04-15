@@ -9,8 +9,18 @@ public class MathUtilities {
 	public static float angle(float[] point0, float[] point1, float[] point2) {
 		float[] vec1 = MathUtilities.vector(point1, point0);
 		float[] vec2 = MathUtilities.vector(point1, point2);
+		return angle(vec1,vec2);
+	}
+	
+	public static float angle(float[] vec1, float[] vec2) {
 		float angle = (float) Math.acos(dot(vec1, vec2)/(norm(vec1)*norm(vec2)));
-		return (float) (angle * (180/Math.PI));
+		return (float) (angle * (180.0f/Math.PI));
+	}
+	
+	public static float angleUnityCircle(float[] vec1) {
+		float[] normalized = MathUtilities.resize(vec1, 1);
+		float angle = (float) (Math.acos(normalized[0])* (180.0f/Math.PI));
+		return normalized[1] < 0 ? (angle*-1) : angle;
 	}
 	
 	/**

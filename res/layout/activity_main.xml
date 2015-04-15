@@ -2,7 +2,8 @@
     android:id="@+id/ui_layout"
     android:layout_width="fill_parent"
     android:layout_height="fill_parent"
-    android:background="@color/black" >
+    android:background="@color/black"
+    android:layout_centerInParent="true" >
     
     <be.wouterfranken.arboardgame.app.CameraView 
 	    android:id="@+id/arView"

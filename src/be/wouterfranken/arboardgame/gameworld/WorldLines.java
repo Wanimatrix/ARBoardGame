@@ -1,9 +1,13 @@
 package be.wouterfranken.arboardgame.gameworld;
 
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.ListIterator;
 import java.util.Map;
 
 import android.util.Log;
@@ -58,6 +62,38 @@ public class WorldLines {
 	}
 	
 	public void activateAllBricks() {
+		
+		Log.d("FINMERGE", "Final mergeCheck!");
+		ArrayList<LegoBrick> oldBrickList = new ArrayList<LegoBrick>(bricks);
+		ArrayList<LegoBrick> newBrickList = new ArrayList<LegoBrick>();
+		while (oldBrickList.size() > 0) {
+			Log.d("FINMERGE", "OldBrickList size: "+oldBrickList.size());
+			if(oldBrickList.size() == 1) {
+				newBrickList.add(oldBrickList.remove(0));
+				break;
+			}
+			LegoBrick b = oldBrickList.remove(0); 
+			
+			List<Integer> merges = b.mergeCheckAll(oldBrickList.toArray(new LegoBrick[oldBrickList.size()]), -1);
+			Integer[] mergesArray = merges.toArray(new Integer[merges.size()]);
+			Arrays.sort(mergesArray, Collections.reverseOrder());
+			Log.d("FINMERGE", "MergeAmount: "+merges.size());
+			for (int i = 0; i < mergesArray.length; i++) {
+				Integer idx = mergesArray[i];
+				oldBrickList.remove(idx.intValue());
+				Log.d("FINMERGE", "Index "+idx+" removed from list.");
+			}
+			
+			Log.d("FINMERGE", "OldBrickList size: "+oldBrickList.size());
+					
+//					new ArrayList<LegoBrick>(
+//					Arrays.asList(b.mergeCheck(oldBrickList.toArray(new LegoBrickContainer[oldBrickList.size()]))));
+			newBrickList.add(b);
+			Log.d("FINMERGE", "NewBrickList size: "+newBrickList.size());
+		}
+		
+		bricks = new ArrayList<LegoBrick>(newBrickList);
+		
 		for (LegoBrick brick : bricks) {
 			float[][] brickCorners = brick.getCuboid();
 			float[] xBounds = brick.getXBounds();
@@ -97,7 +133,9 @@ public class WorldLines {
 		}
 	}
 	
-	public void addBricks(LegoBrickContainer[] bricksToAdd) {
+	int frameCounter = 0;
+	
+	public void addBricks(LegoBrickContainer[] bricksToAdd, int frameCount) {
 		Log.d(TAG, "Amount of bricks-Size: "+brickCandidates.size());
 		
 		long startAddingBricks = System.nanoTime();
@@ -106,7 +144,7 @@ public class WorldLines {
 			Iterator<LegoBrickContainer> candidatesIt = brickCandidates.iterator();
 			while (candidatesIt.hasNext()) {
 				LegoBrickContainer candidate = candidatesIt.next();
-				bricksToAdd = candidate.mergeCheck(bricksToAdd);
+				bricksToAdd = candidate.mergeCheck(bricksToAdd, frameCount);
 				if(candidate.size() == 0)
 					candidatesIt.remove();
 				else if(candidate.readyToBecomeRealBrick()) {
@@ -118,6 +156,7 @@ public class WorldLines {
 						Math.round(MathUtilities.norm(candidate.get(0).getHalfSideVectors()[0])*2/1.6f)+","+"))");
 					
 					candidate.get(0).resetRemoval();
+					candidate.get(0).setAcceptedFrame(frameCounter);
 					bricks.add(candidate.get(0));
 					candidatesIt.remove();
 				}
@@ -128,8 +167,26 @@ public class WorldLines {
 			}
 			
 			for (LegoBrick legoBrick : bricks) {
-				bricksToAdd = legoBrick.mergeCheck(bricksToAdd);
+				bricksToAdd = legoBrick.mergeCheck(bricksToAdd, frameCount);
 			}
+			
+			// TODO: Newly added bricks also need to be merged with each other!
+			ArrayList<LegoBrickContainer> bricksToAddList = new ArrayList<LegoBrickContainer>(Arrays.asList(bricksToAdd));
+			ArrayList<LegoBrickContainer> newBricksToAddList = new ArrayList<LegoBrickContainer>();
+			Log.d(TAG, "Length tracker begin: "+bricksToAdd.length);
+			while (bricksToAddList.size() > 0) {
+				if(bricksToAddList.size() == 1) {
+					newBricksToAddList.add(bricksToAddList.remove(0));
+					break;
+				}
+				LegoBrickContainer bc = bricksToAddList.remove(0); 
+				bricksToAddList = new ArrayList<LegoBrickContainer>(
+						Arrays.asList(bc.mergeCheck(bricksToAddList.toArray(new LegoBrickContainer[bricksToAddList.size()]),frameCount)));
+				newBricksToAddList.add(bc);
+				Log.d(TAG, "Length tracker: "+bricksToAdd.length);
+			}
+			
+			bricksToAdd = newBricksToAddList.toArray(new LegoBrickContainer[newBricksToAddList.size()]);
 			
 			for (LegoBrickContainer bc : bricksToAdd) {
 				float[][] cub3D = bc.get(0).getCuboid();
@@ -139,6 +196,7 @@ public class WorldLines {
 				
 				if(bc.readyToBecomeRealBrick()) { 
 					bc.get(0).resetRemoval();
+					bc.get(0).setAcceptedFrame(frameCounter);
 					bricks.add(bc.get(0));
 					Log.d(TAG, "This brick just became real: (removal = "+bc.get(0).getRemovalVotes()+"), (mergeCnt = "+bc.get(0).getMergeCount()+")");
 				}
@@ -146,7 +204,7 @@ public class WorldLines {
 			}
 		}
 		Log.d(TAG, "BricksSize: "+bricks.size());
-		
+		frameCounter++;
 		Log.d(TAG, "Add bricks-time: "+((System.nanoTime() - startAddingBricks)/1000000.0f)+"ms");
 //		synchronized (brickLock) {
 //			Iterator<LegoBrickContainer> i = brickCandidates.iterator();
@@ -288,6 +346,25 @@ public class WorldLines {
 				result += co+", ";
 		}
 		return result;
+	}
+	
+	public void clean() {
+		brickCandidates.clear();
+		ListIterator<LegoBrick> brickIt = bricks.listIterator();
+		Log.d("CLEAN", "Cleaning starts ...");
+		while(brickIt.hasNext()) {
+			LegoBrick b1 = brickIt.next();
+			Log.d("CLEAN", "First brick");
+			ListIterator<LegoBrick> brickIt2 = bricks.listIterator(brickIt.nextIndex());
+			while(brickIt2.hasNext()) {
+				LegoBrick b2 = brickIt2.next();
+				Log.d("CLEAN", "Second brick & overlap check!");
+				double maxOverlapDistance = b1.overlaps3D(b2);
+//				if(maxOverlapDistance)
+				Log.d("CLEAN", "Result!");
+				if(maxOverlapDistance > 0) Log.d("CLEAN", "Overlap3DDistance: "+maxOverlapDistance);
+			}
+		}
 	}
 	
 //	public WorldNode getNode(WorldCoordinate co) {

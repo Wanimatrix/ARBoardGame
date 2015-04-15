@@ -1,5 +1,9 @@
 package be.wouterfranken.arboardgame.gameworld;
 
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
@@ -9,7 +13,9 @@ import java.util.Map;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 import org.opencv.core.MatOfPoint;
+import org.opencv.core.MatOfPoint2f;
 import org.opencv.core.Point;
+import org.opencv.imgproc.Imgproc;
 
 import android.util.ArrayMap;
 import android.util.Log;
@@ -19,6 +25,7 @@ import be.wouterfranken.arboardgame.rendering.meshes.MeshObject;
 import be.wouterfranken.arboardgame.rendering.meshes.RenderOptions;
 import be.wouterfranken.arboardgame.rendering.tracking.BrickTrackerConfig;
 import be.wouterfranken.arboardgame.rendering.tracking.CameraPoseTracker;
+import be.wouterfranken.arboardgame.utilities.BrickTrackerConfigFactory;
 import be.wouterfranken.arboardgame.utilities.Color;
 import be.wouterfranken.arboardgame.utilities.MathUtilities;
 
@@ -42,13 +49,20 @@ public class LegoBrick {
 	private boolean active;
 	private List<WorldCoordinate> coord = new ArrayList<WorldCoordinate>();
 	
+	private int addedFrame;
+	private int acceptedFrame = -1;
+	
+	private List<LegoBrick> mergedBricksThisFrame = new ArrayList<LegoBrick>();
+	private int frameCounter = -1;
+	
 	public LegoBrick(float[][] cuboid, Color.ColorName color, float orientation) {
 		
 	}
 	
-	public LegoBrick(float[] centerPoint, float[][] halfSideVectors, float orientation) {
+	public LegoBrick(float[] centerPoint, float[][] halfSideVectors, float orientation, int addedFrame) {
 		this.centerPoint = centerPoint;
 		this.halfSideVectors = halfSideVectors;
+		this.addedFrame = addedFrame;
 		
 		calculateCuboid();
 		
@@ -97,6 +111,14 @@ public class LegoBrick {
 		setSize(size);
 	}
 	
+	public int getAddedFrame() {
+		return addedFrame;
+	}
+	
+	public int getAcceptedFrame() {
+		return acceptedFrame;
+	}
+	
 //	private Map<Integer, Integer> isCloseTo(LegoBrick other) {
 //		Map<Integer, Integer> cornerMap = new ArrayMap<Integer, Integer>();
 //		for (int i = 0; i < corners3D.length; i++) {
@@ -119,24 +141,67 @@ public class LegoBrick {
 		poseMap.put(0, 0);
 		
 		if(MathUtilities.norm(MathUtilities.vector(centerPoint, other.centerPoint)) < AppConfig.LEGO_CORNERS_CLOSENESS_BOUND) {
-			float angleDeg1t = (float) (Math.acos((float)halfSideVectors[1][0])*(180.0f/Math.PI)); 
-			angleDeg1t = (halfSideVectors[1][1] > 0) ? (angleDeg1t*-1) : angleDeg1t;
-			angleDeg1t = (angleDeg1t < 0) ? angleDeg1t+180 : angleDeg1t;
-			float angleDeg1o = (float) (Math.acos((float)other.halfSideVectors[1][0])*(180.0f/Math.PI)); 
-			angleDeg1o = (other.halfSideVectors[1][1] > 0) ? (angleDeg1o*-1) : angleDeg1o;
-			angleDeg1o = (angleDeg1o < 0) ? angleDeg1o+180 : angleDeg1o;
-			float angleDeg2o = (float) (Math.acos((float)other.halfSideVectors[2][0])*(180.0f/Math.PI));
-			angleDeg2o = (other.halfSideVectors[2][1] > 0) ? (angleDeg2o*-1) : angleDeg2o;
-			angleDeg2o = (angleDeg2o < 0) ? angleDeg2o+180 : angleDeg2o;
+//			float[] thisNormalizedHalfVector = MathUtilities.resize(halfSideVectors[1], 1);
+//			float[] otherNormalizedHalfVector1 = MathUtilities.resize(other.halfSideVectors[1], 1);
+//			float[] otherNormalizedHalfVector2 = MathUtilities.resize(other.halfSideVectors[2], 1);
+//			
+//			float angleDeg1t = (float) (Math.acos(thisNormalizedHalfVector[0])*(180.0f/Math.PI)); 
+//			angleDeg1t = (thisNormalizedHalfVector[1] < 0) ? (angleDeg1t*-1) : angleDeg1t;
+//			angleDeg1t = (angleDeg1t < 0) ? angleDeg1t+180 : angleDeg1t;
+//			float angleDeg1o = (float) (Math.acos(otherNormalizedHalfVector1[0])*(180.0f/Math.PI)); 
+//			angleDeg1o = (otherNormalizedHalfVector1[1] < 0) ? (angleDeg1o*-1) : angleDeg1o;
+//			angleDeg1o = (angleDeg1o < 0) ? angleDeg1o+180 : angleDeg1o;
+//			float angleDeg2o = (float) (Math.acos(otherNormalizedHalfVector2[0])*(180.0f/Math.PI));
+//			angleDeg2o = (otherNormalizedHalfVector2[1] < 0) ? (angleDeg2o*-1) : angleDeg2o;
+//			angleDeg2o = (angleDeg2o < 0) ? angleDeg2o+180 : angleDeg2o;
+			
+			float angleDeg1t = MathUtilities.angleToDirectionalAngle(MathUtilities.angleUnityCircle(halfSideVectors[1]));
+			float angleDeg1o = MathUtilities.angleToDirectionalAngle(MathUtilities.angleUnityCircle(other.halfSideVectors[1]));
+			float angleDeg2o = MathUtilities.angleToDirectionalAngle(MathUtilities.angleUnityCircle(other.halfSideVectors[2]));
+			
 			
 			if(angleDeg1o > angleDeg1t-25 && angleDeg1o < angleDeg1t+25) {
+				Log.d(TAG, "Halfside check: "+(angleDeg1t-25)+" < "+angleDeg1o+" < "+(angleDeg1t+25));
 				poseMap.put(1, 1);
 				poseMap.put(2, 2);
 			} else if(angleDeg2o > angleDeg1t-25 && angleDeg2o < angleDeg1t+25) {
+				Log.d(TAG, "Halfside check: "+(angleDeg1t-25)+" < "+angleDeg2o+" < "+(angleDeg1t+25));
 				poseMap.put(1, 2);
 				poseMap.put(2, 1);
 			} else {
-				Log.d("MERGEACCEPT", "Not merged, reason angles: "+(angleDeg1t+25)+" > "+angleDeg1o+" AND "+angleDeg2o+" > "+(angleDeg1t-25));
+				
+				// DEBUG
+//				File f = new File("/sdcard/arbg/nm.txt");
+//				if(!f.exists()){
+//	    			try {
+//						f.createNewFile();
+//					} catch (IOException e) {
+//						e.printStackTrace();
+//					}
+//	    		}
+//				
+//				try {
+//					BufferedWriter writer = new BufferedWriter(new FileWriter(f,true));
+//					writer.append("Brick 1 = {"+centerPoint[0]+", "+centerPoint[1]+", "+centerPoint[2]+"} = "+toString());
+//					writer.newLine();
+//					writer.append("Brick 2 = {"+other.centerPoint[0]+", "+other.centerPoint[1]+", "+other.centerPoint[2]+"} = "+other.toString());
+//					writer.newLine();
+//					writer.append("Not merged, reason angles. "
+//							+"HalfVector this: {"+halfSideVectors[1][0]+", "+halfSideVectors[1][1]+","+halfSideVectors[1][2]+"}; "
+//							+ "HalfVector other1 {"+other.halfSideVectors[1][0]+", "+other.halfSideVectors[1][1]+","+other.halfSideVectors[1][2]+"}; "
+//							+ "HalfVector other2 {"+other.halfSideVectors[2][0]+", "+other.halfSideVectors[2][1]+","+other.halfSideVectors[2][2]+"}; "
+//							+ (angleDeg1t+25)+" < "+angleDeg1o+" AND "+angleDeg2o+" < "+(angleDeg1t-25));
+//					writer.newLine();
+//					writer.append("=============================================================================");
+//					writer.close();
+//				} catch (IOException e) {
+//					e.printStackTrace();
+//				}
+				Log.d("MERGEACCEPT", "Not merged, reason angles. "
+						+"HalfVector this: {"+halfSideVectors[1][0]+", "+halfSideVectors[1][1]+","+halfSideVectors[1][2]+"}; "
+								+ "HalfVector other1 {"+other.halfSideVectors[1][0]+", "+other.halfSideVectors[1][1]+","+other.halfSideVectors[1][2]+"}; "
+								+ "HalfVector other2 {"+other.halfSideVectors[2][0]+", "+other.halfSideVectors[2][1]+","+other.halfSideVectors[2][2]+"}; "
+								+ (angleDeg1t+25)+" < "+angleDeg1o+" AND "+angleDeg2o+" < "+(angleDeg1t-25));
 				
 				
 //				Core.line(closeTest, new Point(50, 50), new Point(50+halfSideVectors[1][0]*100,50+halfSideVectors[1][1]*100), new Scalar(255,0,0));
@@ -154,6 +219,33 @@ public class LegoBrick {
 			}
 		} else {
 			Log.d("MERGEACCEPT", "Not merged, reason centerPt distance: "+MathUtilities.norm(MathUtilities.vector(centerPoint, other.centerPoint))+" > 0.8");
+			
+			
+			// DEBUG
+//			File f = new File("/sdcard/arbg/nm.txt");
+//			if(!f.exists()){
+//    			try {
+//					f.createNewFile();
+//				} catch (IOException e) {
+//					e.printStackTrace();
+//				}
+//    		}
+//			
+//			try {
+//				BufferedWriter writer = new BufferedWriter(new FileWriter(f,true));
+//				writer.append("Brick 1 = {"+centerPoint[0]+", "+centerPoint[1]+", "+centerPoint[2]+"} = "+toString());
+//				writer.newLine();
+//				writer.append("Brick 2 = {"+other.centerPoint[0]+", "+other.centerPoint[1]+", "+other.centerPoint[2]+"} = "+other.toString());
+//				writer.newLine();
+//				writer.append("Not merged, reason centerPt distance: "+MathUtilities.norm(MathUtilities.vector(centerPoint, other.centerPoint))+" > 0.8");
+//				writer.newLine();
+//				writer.append("=============================================================================");
+//				writer.close();
+//			} catch (IOException e) {
+//				e.printStackTrace();
+//			}
+			
+			
 			return null;
 		}
 		Log.d("MERGEACCEPT", "Merge accepted");
@@ -161,12 +253,12 @@ public class LegoBrick {
 		return poseMap;
 	}
 	
-	public LegoBrickContainer[] mergeCheck(LegoBrickContainer[] others) {
+	public LegoBrickContainer[] mergeCheck(LegoBrickContainer[] others, int frameCount) {
 		List<LegoBrickContainer> result = new ArrayList<LegoBrickContainer>(Arrays.asList(others));
 		Iterator<LegoBrickContainer> it = result.iterator();
 		while(it.hasNext()) {
 			LegoBrickContainer lc = it.next();
-			List<Integer> mergeIdxes = this.mergeCheckAll(lc.toArray(new LegoBrick[lc.size()]));
+			List<Integer> mergeIdxes = this.mergeCheckAll(lc.toArray(new LegoBrick[lc.size()]), frameCount);
 			int i = 0;
 			Log.d("INDEX_TEST", "New indexes");
 			for (Integer idx : mergeIdxes) {
@@ -179,10 +271,10 @@ public class LegoBrick {
 		return result.toArray(new LegoBrickContainer[result.size()]);
 	}
 	
-	public List<Integer> mergeCheckAll(LegoBrick[] others) {
+	public List<Integer> mergeCheckAll(LegoBrick[] others, int frameCount) {
 		List<Integer> result = new ArrayList<Integer>();
 		for (int i = 0; i < others.length; ) {
-			int mergeRes = mergeCheck(i, others);
+			int mergeRes = mergeCheck(i, others, frameCount);
 			if(mergeRes == -1) return result;
 			else  {
 				result.add(mergeRes);
@@ -195,16 +287,22 @@ public class LegoBrick {
 		return result;
 	}
 	
-	public int mergeCheck(LegoBrick[] others) {
-		return mergeCheck(0, others);
+	public int mergeCheck(LegoBrick[] others, int frameCount) {
+		return mergeCheck(0, others, frameCount);
 	}
 	
-	public int mergeCheck(int startIdx, LegoBrick[] others) {
+	public int mergeCheck(int startIdx, LegoBrick[] others, int frameCount) {
 		for (int o = startIdx; o < others.length; o++) {
 			LegoBrick other = others[o];
 //			if(other == null) continue;
 			Map<Integer,Integer> poseMap = isCloseTo(other);
 			if(poseMap == null) continue;
+			
+			if(frameCount != other.frameCounter) {
+				other.mergedBricksThisFrame.clear();
+				other.frameCounter = frameCount;
+				other.mergedBricksThisFrame.add(this);
+			}
 			
 			centerPoint[0] = (centerPoint[0]*mergeCount + other.centerPoint[0])/(mergeCount+1);
 			centerPoint[1] = (centerPoint[1]*mergeCount + other.centerPoint[1])/(mergeCount+1);
@@ -214,9 +312,13 @@ public class LegoBrick {
 			
 			for (int i = 0; i < halfSideVectors.length-1; i++) {
 				float norm = MathUtilities.norm(halfSideVectors[i]);
-				halfSideVectors[i][0] = (halfSideVectors[i][0]*mergeCount + other.halfSideVectors[poseMap.get(i)][0])/(mergeCount+1);
-				halfSideVectors[i][1] = (halfSideVectors[i][1]*mergeCount + other.halfSideVectors[poseMap.get(i)][1])/(mergeCount+1);
-				halfSideVectors[i][2] = (halfSideVectors[i][2]*mergeCount + other.halfSideVectors[poseMap.get(i)][2])/(mergeCount+1);
+				float[] tmpHalfSide = new float[other.halfSideVectors[poseMap.get(i)].length];
+				if(Math.abs(MathUtilities.angleUnityCircle(halfSideVectors[i])-MathUtilities.angleUnityCircle(other.halfSideVectors[poseMap.get(i)])) > 25)
+					tmpHalfSide = MathUtilities.multiply(other.halfSideVectors[poseMap.get(i)], -1);
+				else tmpHalfSide = other.halfSideVectors[poseMap.get(i)];
+				halfSideVectors[i][0] = (halfSideVectors[i][0]*mergeCount + tmpHalfSide[0])/(mergeCount+1);
+				halfSideVectors[i][1] = (halfSideVectors[i][1]*mergeCount + tmpHalfSide[1])/(mergeCount+1);
+				halfSideVectors[i][2] = (halfSideVectors[i][2]*mergeCount + tmpHalfSide[2])/(mergeCount+1);
 				
 				// Make sure the size of the vector does not change.
 				halfSideVectors[i] = MathUtilities.resize(halfSideVectors[i], norm);
@@ -281,6 +383,28 @@ public class LegoBrick {
 //		noMergeCount++;
 //		return -1;
 //	}
+	
+	public double overlaps3D(LegoBrick other) {
+		MatOfPoint2f bottomThis = new MatOfPoint2f(
+				new Point(cuboid[0][0],cuboid[0][1]), 
+				new Point(cuboid[1][0],cuboid[1][1]),
+				new Point(cuboid[2][0],cuboid[2][1]),
+				new Point(cuboid[3][0],cuboid[3][1]));
+		MatOfPoint2f bottomOther = new MatOfPoint2f(
+				new Point(other.cuboid[0][0],other.cuboid[0][1]), 
+				new Point(other.cuboid[1][0],other.cuboid[1][1]),
+				new Point(other.cuboid[2][0],other.cuboid[2][1]),
+				new Point(other.cuboid[3][0],other.cuboid[3][1]));
+		double maxDistance = 0;
+		Log.d("CLEAN", "Mats build ...");
+		for (Point p : bottomOther.toArray()) {
+			Log.d("CLEAN", "PolygonTest begins ...");
+			double d = Imgproc.pointPolygonTest(bottomThis, p, true);
+			Log.d("CLEAN", "PolygonTest ends ...");
+			if(d > maxDistance) maxDistance = d;
+		}
+		return maxDistance;
+	}
 	
 	public Point[] get2DPoints(Mat modelView) {
 		long start = System.nanoTime();
@@ -405,7 +529,7 @@ public class LegoBrick {
 	}
 	
 	public MeshObject getMesh(RenderOptions ro) {
-		return new CuboidMesh(getCuboid(), new RenderOptions(ro.useMVP, color, ro.lightPosition, ro.fragmentShader, ro.vertexShader));
+		return new CuboidMesh(getCuboid(), new RenderOptions(ro.useMVP, color, ro.castShadow, ro.fragmentShader, ro.vertexShader));
 	}
 	
 	float[][] cuboid;
@@ -542,10 +666,16 @@ public class LegoBrick {
 		return halfSideVectors;
 	}
 	
+	public void setAcceptedFrame(int acceptedFrame) {
+		this.acceptedFrame = acceptedFrame;
+	}
+	
 	public float getPercentCompleted() {
-		float max = BrickTrackerConfig.NECESS_MERGE_COUNTS + BrickTrackerConfig.NECESS_ORIENTATIONS - 2;
-		float mergeCompleted = Math.min((mergeCount - 1),(BrickTrackerConfig.NECESS_MERGE_COUNTS - 1));
-		float orientCompleted = Math.min((orientations.size() - 1),(BrickTrackerConfig.NECESS_ORIENTATIONS - 1));
+		int necessMergeCounts = ((Long)BrickTrackerConfigFactory.getConfiguration().getItem("MC")).intValue();
+		int necessOrientations = ((Long)BrickTrackerConfigFactory.getConfiguration().getItem("ORI")).intValue();
+		float max = necessMergeCounts + necessOrientations - 2;
+		float mergeCompleted = Math.min((mergeCount - 1),(necessMergeCounts - 1));
+		float orientCompleted = Math.min((orientations.size() - 1),(necessOrientations - 1));
 		Log.d(TAG, "BRICKCOMPLETED merges: "+mergeCompleted+", orientations: "+orientCompleted);
 		return (mergeCompleted+orientCompleted)/max;
 	}
@@ -556,6 +686,10 @@ public class LegoBrick {
 			this.color = new Color(1,1,0, 1);
 		else 
 			this.color = new Color(1-completed, completed,0, 1);
+	}
+	
+	public List<LegoBrick> getMergedBricksThisFrame() {
+		return mergedBricksThisFrame;
 	}
 	
 	private native float[] checkCurrentOverlap(long inputPoints);

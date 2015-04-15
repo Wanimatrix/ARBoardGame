@@ -23,6 +23,7 @@
 #include <algorithm>
 #include <vector>
 #include <omp.h>
+ #include <GLES3/gl3.h>
 
 // App includes
 #include "utilities.hpp"
@@ -81,7 +82,7 @@ extern "C"
 			(JNIEnv *env, jobject object, jstring renderImgsPath);
 
 	JNIEXPORT void JNICALL Java_be_wouterfranken_arboardgame_rendering_tracking_LegoBrickTracker2_findLegoBrickLines
-			(JNIEnv *env, jobject object, jlong bgrPointer, jfloat upAngle, jlong colorCalibrationPtr, jlong resultMatPtr, jlong origContMatPtr);
+			(JNIEnv *env, jobject object, jlong bgrPointer, jfloat upAngle, jdouble apdp, jlong colorCalibrationPtr, jlong resultMatPtr, jlong origContMatPtr);
 
 	JNIEXPORT jfloatArray JNICALL Java_be_wouterfranken_arboardgame_rendering_tracking_LegoBrickTracker2_checkOverlap
 			(JNIEnv *env, jobject object, jlong inputPoints, jint idx);
@@ -97,6 +98,9 @@ extern "C"
 
 	JNIEXPORT void JNICALL Java_be_wouterfranken_arboardgame_app_ColorCalibration_getConvexHull
 			(JNIEnv *env, jobject object, jlong pointsPointer, jlong convexHullPtr);
+
+	JNIEXPORT void JNICALL Java_be_wouterfranken_arboardgame_rendering_ArRenderer_readPixels
+			(JNIEnv *env, jobject object, jint x, jint y, jint width, jint height, jint format, jint type, jlong resultPtr);
 }
 
 JNIEXPORT void JNICALL Java_be_wouterfranken_arboardgame_rendering_tracking_CameraPoseTracker_loadCameraCalibration(
@@ -970,14 +974,14 @@ JNIEXPORT void JNICALL Java_be_wouterfranken_arboardgame_rendering_tracking_Lego
 /**
 * Find Lego Bricks Algorithm 4: Using LINE detection
 */
-JNIEXPORT void JNICALL Java_be_wouterfranken_arboardgame_rendering_tracking_LegoBrickTracker2_findLegoBrickLines(JNIEnv *env, jobject object, jlong bgrPointer, jfloat upAngle, jlong colorCalibrationPtr, jlong resultMatPtr, jlong origContMatPtr) {
+JNIEXPORT void JNICALL Java_be_wouterfranken_arboardgame_rendering_tracking_LegoBrickTracker2_findLegoBrickLines(JNIEnv *env, jobject object, jlong bgrPointer, jfloat upAngle, jdouble apdp, jlong colorCalibrationPtr, jlong resultMatPtr, jlong origContMatPtr) {
 	Mat frame = *(Mat *)bgrPointer;
 	Mat *result = (Mat *)resultMatPtr;
 	Mat *origContMat = (Mat *)origContMatPtr;
 	Mat colorCalibration = *(Mat *)colorCalibrationPtr;
 
 	long start = getRealTime();
-	BrickDetectorLines::TrackBricks(frame, upAngle, colorCalibration, *result, *origContMat);
+	BrickDetectorLines::TrackBricks(frame, upAngle, apdp, colorCalibration, *result, *origContMat);
 	LOGD("BrickDetection time (C++ part): %f\n",(float)((getRealTime()-start)*1000.0f));
 }
 
@@ -1071,5 +1075,57 @@ JNIEXPORT void JNICALL Java_be_wouterfranken_arboardgame_app_ColorCalibration_ge
 	convexHull(points,inputContours[0],true);
 
 	*convexH = Mat(inputContours[0]).clone();
+}
+
+
+JNIEXPORT void JNICALL Java_be_wouterfranken_arboardgame_rendering_ArRenderer_readPixels(JNIEnv *env, jobject object, jint x, jint y, jint width, jint height, jint format, jint type, jlong resultPtr) {
+	Mat *result = (Mat *)resultPtr;
+	
+	LOGD("Width: %d, height: %d",width,height);
+
+	unsigned char *pixels = new unsigned char[width * height * 4];
+	// DO NOT USE NORMAL ARRAY HERE: STACK OVERLOW!!!
+	Mat test(height, width, CV_8UC4, pixels);
+
+	//use fast 4-byte alignment (default anyway) if possible
+	glPixelStorei(GL_PACK_ALIGNMENT, (test.step & 3) ? 1 : 4);
+
+	//set length of one complete row in destination data (doesn't need to equal test.cols)
+	glPixelStorei(GL_PACK_ROW_LENGTH, test.step/test.elemSize());
+
+	for (int error = glGetError(); error != GL_NO_ERROR; error = glGetError()) {
+		LOGE("0 Got glError 0x%d",error);
+	}
+
+	glReadPixels(x, y, width, height, format, type, 0);
+
+	int testInt = 0;
+	glGetIntegerv(GL_READ_BUFFER,&testInt);
+	LOGD("GL_READ_BUFFER: %d",testInt);
+	for (int error = glGetError(); error != GL_NO_ERROR; error = glGetError()) {
+		LOGE("1 Got glError 0x%d",error);
+	}
+
+	GLubyte *ptr = (GLubyte *)glMapBufferRange(GL_PIXEL_PACK_BUFFER, 0, width * height * 4, GL_MAP_READ_BIT);
+
+	for (int error = glGetError(); error != GL_NO_ERROR; error = glGetError()) {
+		LOGE("2 Got glError 0x%d",error);
+	}
+
+	LOGD("Reading pixels ...");
+	memcpy(pixels, ptr, width * height * 4);
+	glUnmapBuffer(GL_PIXEL_PACK_BUFFER);
+
+	for (int error = glGetError(); error != GL_NO_ERROR; error = glGetError()) {
+		LOGE("3 Got glError 0x%d",error);
+	}
+
+	
+	cvtColor(test,test,COLOR_RGBA2BGR);
+	flip(test, test, 0);
+	// imwrite("/sdcard/arbg/pixRead.png",test);
+
+	*result = test.clone();
+	delete[] pixels;
 }
 

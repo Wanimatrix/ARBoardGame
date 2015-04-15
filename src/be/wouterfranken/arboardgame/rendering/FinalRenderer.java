@@ -9,6 +9,7 @@ import android.opengl.GLSurfaceView;
 import android.opengl.Matrix;
 import android.util.Log;
 import be.wouterfranken.arboardgame.app.AppConfig;
+import be.wouterfranken.arboardgame.app.CameraView;
 import be.wouterfranken.arboardgame.rendering.meshes.FullSquadMesh;
 import be.wouterfranken.arboardgame.utilities.RenderingUtils;
 
@@ -120,11 +121,10 @@ public class FinalRenderer implements StereoRenderer {
 	 * RENDERER CONTROL FUNCTIONS *
 	 ******************************
 	 */
-	
+
 	@Override
 	public void onNewFrame(HeadTransform arg0) {
-		
-	 	GLES20.glBindFramebuffer(GLES20.GL_FRAMEBUFFER, ((CardboardView)view).getDistortionCorrectionEnabled() ? 2 : 0);
+	 	GLES20.glBindFramebuffer(GLES20.GL_FRAMEBUFFER, ((CameraView)view).getDistortionCorrectionEnabled() ? 2 : 0);
 	 	GLES20.glBindRenderbuffer(GLES20.GL_RENDERBUFFER, 0);
 	 	
 	 	RenderingUtils.checkGLError("Problem on line "+new Throwable().getStackTrace()[0].getLineNumber());
@@ -163,6 +163,7 @@ public class FinalRenderer implements StereoRenderer {
 	@Override
 	public void onFinishFrame(Viewport arg0) {
 //		view.requestRender();
+		((CameraView)view).onFinishFrame();
 	}
 
 	@Override

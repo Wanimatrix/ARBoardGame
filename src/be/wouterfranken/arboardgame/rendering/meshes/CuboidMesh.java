@@ -14,14 +14,14 @@ public class CuboidMesh extends MeshObject {
     public CuboidMesh(float sizeX, float sizeY, float sizeZ, float locationX, float locationY, float height, RenderOptions ro)
     {
     	super(ro);
-        setVerts(sizeX, sizeY, sizeZ, locationX, locationY, height, ro.lightPosition);
+        setVerts(sizeX, sizeY, sizeZ, locationX, locationY, height, ro.castShadow);
         setDebugMesh(true);
     }
     
     public CuboidMesh(float[][] points, RenderOptions ro)
     {
     	super(ro);
-        setVerts(points, ro.lightPosition);
+        setVerts(points, ro.castShadow);
         setDebugMesh(true);
     }
     

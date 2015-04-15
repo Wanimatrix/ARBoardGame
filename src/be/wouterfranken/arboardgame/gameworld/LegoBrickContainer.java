@@ -6,6 +6,7 @@ import java.util.Iterator;
 import java.util.List;
 
 import be.wouterfranken.arboardgame.rendering.tracking.BrickTrackerConfig;
+import be.wouterfranken.arboardgame.utilities.BrickTrackerConfigFactory;
 import android.util.Log;
 
 @SuppressWarnings("serial")
@@ -15,13 +16,16 @@ public class LegoBrickContainer extends ArrayList<LegoBrick> {
 		this.add(brick);
 	}
 	
-	public LegoBrickContainer[] mergeCheck(LegoBrickContainer[] others) {
+	public LegoBrickContainer[] mergeCheck(LegoBrickContainer[] others, int frameCount) {
 		List<LegoBrickContainer> result = new ArrayList<LegoBrickContainer>(Arrays.asList(others));
 		for (int i = 0; i < this.size(); i++) {
+			Log.d("INDEX_TEST", "This size: "+this.size());
 			Iterator<LegoBrickContainer> it = result.iterator();
 			while(it.hasNext()) {
+				Log.d("INDEX_TEST", "This size: "+this.size());
 				LegoBrickContainer lc = it.next();
-				List<Integer> mergeIdxes = this.get(i).mergeCheckAll(lc.toArray(new LegoBrick[lc.size()]));
+				List<Integer> mergeIdxes = this.get(i).mergeCheckAll(lc.toArray(new LegoBrick[lc.size()]), frameCount);
+				Log.d("INDEX_TEST", "This size: "+this.size());
 				int k = 0;
 				Log.d("INDEX_TEST", "New indexes");
 				for (Integer idx : mergeIdxes) {
@@ -39,8 +43,8 @@ public class LegoBrickContainer extends ArrayList<LegoBrick> {
 	}
 	
 	public boolean readyToBecomeRealBrick() {
-		if(this.size() == 1 && this.get(0).getMergeCount() >= BrickTrackerConfig.NECESS_MERGE_COUNTS 
-				&& this.get(0).getOrientations().size() >= BrickTrackerConfig.NECESS_ORIENTATIONS)
+		if(this.size() == 1 && this.get(0).getMergeCount() >= ((Long)BrickTrackerConfigFactory.getConfiguration().getItem("MC")).intValue()
+				&& this.get(0).getOrientations().size() >= ((Long)BrickTrackerConfigFactory.getConfiguration().getItem("ORI")).intValue())
 		{
 			Log.d("REALBRICK", "Removal votes: "+this.get(0).getRemovalVotes());
 			return true;
