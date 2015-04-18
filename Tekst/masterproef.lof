@@ -14,6 +14,12 @@
 \addvspace {10pt}
 \contentsline {figure}{\numberline {3.1}{\ignorespaces Het KU~Leuven logo.}}{5}{figure.3.1}
 \addvspace {10pt}
+\contentsline {figure}{\numberline {4.1}{\ignorespaces Uitgebreide Haar-like featureset. Het verschil wordt bepaald door de som te nemen van pixels in de witte regio's en af te trekken van de som van pixels in de zwarte regio's.}}{12}{figure.4.1}
+\contentsline {figure}{\numberline {4.2}{\ignorespaces Een 9x9 MB-LBP operator: elk blok bestaat uit 9 pixels.}}{12}{figure.4.2}
+\contentsline {figure}{\numberline {4.3}{\ignorespaces Feature robuustheid.}}{15}{figure.4.3}
+\contentsline {figure}{\numberline {4.4}{\ignorespaces Robuustheid classifier methodes.}}{16}{figure.4.4}
+\contentsline {figure}{\numberline {4.5}{\ignorespaces Impact schaalfactor op performantie en robuustheid van HOG feature.}}{17}{figure.4.5}
+\contentsline {figure}{\numberline {4.6}{\ignorespaces Een voorbeeld van een legoblokconstructie waarin het groen omlijnde vlak het enige is wat we van die legoblok zien.}}{18}{figure.4.6}
 \addvspace {10pt}
 \addvspace {10pt}
 \addvspace {10pt}
