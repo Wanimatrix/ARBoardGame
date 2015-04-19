@@ -1,8 +1,5 @@
 \documentclass[master=cws,masteroption=mmc]{kulemt}
 
-\usepackage{cite}
-\usepackage{flafter}
-
 \setup{title={Augmented Reality Bordspellen},
   author={Wouter Franken},
   promotor={Prof.\,dr.\,ir.\ Philip Dutre},
@@ -27,6 +24,11 @@
 
 % Hier kun je dan nog andere pakketten laden of eigen definities voorzien
 
+\usepackage{cite}
+\usepackage{flafter}
+\usepackage{amsmath}
+\newcommand{\myparagraph}[1]{\paragraph{#1}\mbox{}\\}
+
 % Tenslotte wordt hyperref gebruikt voor pdf bestanden.
 % Dit mag verwijderd worden voor de af te drukken versie.
 \usepackage[pdfusetitle,colorlinks,plainpages=false]{hyperref}
@@ -39,7 +41,7 @@
  {\newcommand{\lipsum}[1][11-13]{\par Hier komt wat tekst: lipsum ##1.\par}}
 %%%%%%%
 
-\includeonly{hfdst-3}
+\includeonly{hfdst-2,hfdst-3}
 \begin{document}
 
 \begin{preface}

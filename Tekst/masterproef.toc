@@ -18,37 +18,32 @@
 \contentsline {section}{\numberline {2.2}Tweede onderwerp in dit hoofdstuk}{3}{section.2.2}
 \contentsline {subsection}{\numberline {2.2.1}Een item}{3}{subsection.2.2.1}
 \contentsline {section}{\numberline {2.3}Besluit van dit hoofdstuk}{4}{section.2.3}
-\contentsline {chapter}{\chapternumberline {3}Een volgend hoofdstuk}{5}{chapter.3}
-\contentsline {section}{\numberline {3.1}Eerste onderwerp in dit hoofdstuk}{5}{section.3.1}
-\contentsline {subsection}{\numberline {3.1.1}Een item}{5}{subsection.3.1.1}
-\contentsline {section}{\numberline {3.2}Figuren}{5}{section.3.2}
-\contentsline {section}{\numberline {3.3}Tabellen}{5}{section.3.3}
-\contentsline {section}{\numberline {3.4}Lorem ipsum}{6}{section.3.4}
-\contentsline {subsection}{\numberline {3.4.1}Lorem ipsum dolor sit amet, consectetur adipiscing elit}{6}{subsection.3.4.1}
-\contentsline {subsection}{\numberline {3.4.2}Praesent auctor venenatis posuere}{7}{subsection.3.4.2}
-\contentsline {subsection}{\numberline {3.4.3}Cras vulputate ultricies venenatis}{7}{subsection.3.4.3}
-\contentsline {subsection}{\numberline {3.4.4}Donec nibh ante, consectetur et posuere id, tempus nec arcu}{7}{subsection.3.4.4}
-\contentsline {subsection}{\numberline {3.4.5}Morbi et mauris tempus purus ornare vehicula}{8}{subsection.3.4.5}
-\contentsline {section}{\numberline {3.5}Besluit van dit hoofdstuk}{8}{section.3.5}
-\contentsline {chapter}{\chapternumberline {4}Legoblokdetectie op basis van CAD modellen}{9}{chapter.4}
-\contentsline {section}{\numberline {4.1}Inleiding}{9}{section.4.1}
-\contentsline {section}{\numberline {4.2}Evaluatiemethode}{10}{section.4.2}
-\contentsline {section}{\numberline {4.3}Features}{11}{section.4.3}
-\contentsline {subsection}{\numberline {4.3.1}Haar-like}{11}{subsection.4.3.1}
-\contentsline {subsection}{\numberline {4.3.2}MB-LBP}{12}{subsection.4.3.2}
-\contentsline {subsection}{\numberline {4.3.3}HOG}{13}{subsection.4.3.3}
-\contentsline {subsection}{\numberline {4.3.4}Deformed parts-based}{13}{subsection.4.3.4}
-\contentsline {subsection}{\numberline {4.3.5}Vergelijking}{13}{subsection.4.3.5}
-\contentsline {paragraph}{Performantie}{14}{section*.9}
-\contentsline {paragraph}{Robuustheid}{14}{section*.10}
-\contentsline {section}{\numberline {4.4}Classificatie methodes}{14}{section.4.4}
-\contentsline {subsection}{\numberline {4.4.1}CCLA}{15}{subsection.4.4.1}
-\contentsline {subsection}{\numberline {4.4.2}SVM}{15}{subsection.4.4.2}
-\contentsline {subsection}{\numberline {4.4.3}Vergelijking}{15}{subsection.4.4.3}
-\contentsline {paragraph}{Robuustheid}{15}{section*.11}
-\contentsline {paragraph}{Performantie}{16}{section*.12}
-\contentsline {paragraph}{Schaalfactor}{16}{section*.13}
-\contentsline {section}{\numberline {4.5}Discussie / Besluit}{17}{section.4.5}
+\contentsline {chapter}{\chapternumberline {3}Na\"ieve legoblokdetectie}{5}{chapter.3}
+\contentsline {section}{\numberline {3.1}Blokdetectie op basis van simpele geometrische informatie}{5}{section.3.1}
+\contentsline {subsection}{\numberline {3.1.1}Begrippen en veronderstellingen}{5}{subsection.3.1.1}
+\contentsline {subsection}{\numberline {3.1.2}Algoritme}{7}{subsection.3.1.2}
+\contentsline {subsection}{\numberline {3.1.3}Resultaten, performantie en robuustheid}{9}{subsection.3.1.3}
+\contentsline {subsection}{\numberline {3.1.4}Voor- en nadelen}{9}{subsection.3.1.4}
+\contentsline {section}{\numberline {3.2}Blokdetectie met behulp van een 2D grid}{9}{section.3.2}
+\contentsline {subsection}{\numberline {3.2.1}Begrippen}{10}{subsection.3.2.1}
+\contentsline {subsection}{\numberline {3.2.2}Algoritme}{10}{subsection.3.2.2}
+\contentsline {subsection}{\numberline {3.2.3}Gevolgen}{11}{subsection.3.2.3}
+\contentsline {section}{\numberline {3.3}}{11}{section.3.3}
+\contentsline {section}{\numberline {3.4}Besluit van dit hoofdstuk}{11}{section.3.4}
+\contentsline {chapter}{\chapternumberline {4}Legoblokdetectie op basis van CAD modellen}{13}{chapter.4}
+\contentsline {section}{\numberline {4.1}Begrippen en algoritme}{13}{section.4.1}
+\contentsline {section}{\numberline {4.2}Evaluatiemethode}{15}{section.4.2}
+\contentsline {section}{\numberline {4.3}Features}{16}{section.4.3}
+\contentsline {subsection}{\numberline {4.3.1}Haar-like}{16}{subsection.4.3.1}
+\contentsline {subsection}{\numberline {4.3.2}MB-LBP}{17}{subsection.4.3.2}
+\contentsline {subsection}{\numberline {4.3.3}HOG}{18}{subsection.4.3.3}
+\contentsline {subsection}{\numberline {4.3.4}Deformed parts-based}{18}{subsection.4.3.4}
+\contentsline {subsection}{\numberline {4.3.5}Vergelijking}{18}{subsection.4.3.5}
+\contentsline {section}{\numberline {4.4}Classificatie methodes}{19}{section.4.4}
+\contentsline {subsection}{\numberline {4.4.1}CCLA}{19}{subsection.4.4.1}
+\contentsline {subsection}{\numberline {4.4.2}SVM}{20}{subsection.4.4.2}
+\contentsline {subsection}{\numberline {4.4.3}Vergelijking}{20}{subsection.4.4.3}
+\contentsline {section}{\numberline {4.5}Discussie / Besluit}{22}{section.4.5}
 \contentsline {chapter}{\chapternumberline {5}Het laatste hoofdstuk}{11}{chapter.5}
 \contentsline {section}{\numberline {5.1}Eerste onderwerp in dit hoofdstuk}{11}{section.5.1}
 \contentsline {subsection}{\numberline {5.1.1}Een item}{11}{subsection.5.1.1}
@@ -63,7 +58,7 @@
 \contentsline {appendix}{\chapternumberline {B}De laatste bijlage}{17}{appendix.B}
 \contentsline {section}{\numberline {B.1}Lorem 20-24}{17}{section.B.1}
 \contentsline {section}{\numberline {B.2}Lorem 25-27}{18}{section.B.2}
-\contentsline {chapter}{Bibliografie}{19}{section*.15}
+\contentsline {chapter}{Bibliografie}{19}{section*.21}
 \select@language {dutch}
 \select@language {dutch}
 \select@language {dutch}

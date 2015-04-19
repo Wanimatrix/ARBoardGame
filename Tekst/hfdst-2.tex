@@ -1,8 +1,152 @@
 \chapter{Na\"ieve legoblokdetectie}
 \label{hoofdstuk:2}
-In dit hoofdstuk wordt een na\"ieve v
+In dit hoofdstuk bespreken we twee na\"ieve algoritmes om legoblokken te detecteren. Beide algoritmes zullen via een thresholding operatie de blokken lokaliseren. Vervolgens zal het eerste algoritme de geometrie van een legoblok gebruiken om te bepalen wat de pose is van deze eerste legoblok. Het tweede algoritme zal een 2 dimensionaal grid bepalen waar de blokken zich bevinden.
 
-\section{Eerste onderwerp in dit hoofdstuk}
+TODO: OVERZICHT VAN HET HOOFDSTUK
+
+%\section{Implementatie}
+%De volledige implementatie experimenten in dit hoofdstuk zijn uitgevoerd op een Sony Xperia Z C6602 met een Qualcomm Quad-core 1.5 GHz Krait processor, Adreno 320 GPU, 2GB RAM en Android 4.4.4 KitKat. Alles werd geprogrammeerd in Java 7 met gebruik van de Cardboard VR SDK van Google voor stereo rendering voor een Google Cardboard en de OpenCV library voor implementaties van computer vision algoritmes.
+\section{Blokdetectie op basis van simpele geometrische informatie}
+Dit eerste algoritme verloopt in twee delen om uiteindelijk de locatie en pose van een legoblok te bepalen: vinden van de contour van de legoblok en bepalen van de pose van de legoblok uit de contour. Eerst bespreken we deze twee onderdelen in een theoretische sectie, vervolgens wordt uitgelegd hoe het algoritme werd ge\"implementeerd en ten slotte bespreken we de performantie, robuustheid en voor-en nadelen van deze methode.
+
+\subsection{Begrippen en veronderstellingen}
+
+\subsubsection*{Begrippen}
+
+\textbf{Thresholding} is een operatie die vaak in beeldverwerking wordt gebruikt om twee delen in een afbeelding te scheiden van elkaar (vaak voorgrond en achtergrond). Het resultaat is een binaire afbeelding waarin de achtergrond meestal wordt aangeduid met zwart en de voorgrond met wit.
+
+\textbf{YUV}, \textbf{RGB} en \textbf{HSV} zijn drie verschillende kleurenruimtes die elk op een andere manier kleuren defini\"eren. Bij YUV gebeurt dit door de helderheid (Y) van de kleur te scheiden van twee kleurcomponenten (U en V). In RGB zijn er enkel drie kleurcomponenten waarbij de helderheid dus in deze componenten verwerkt zit. HSV scheidt tint (H), verzadiging (S) en helderheid (V) van elkaar. Omdat HSV drie componenten scheidt die een duidelijk verschillende invloed hebben op de uiteindelijke kleur wordt deze kleurenruimte vaak gebruikt voor kleurthresholding, het is immers eenvoudiger om kleuren van elkaar te scheiden zonder de verzadiging of de helderheid te be\"invloeden.
+
+\textbf{Pinhole model} is het model dat OpenCV gebruikt om 3D punten van een scene te transformeren naar de afbeelding via een perspectieftransformatie. In de algoritmes uit dit hoofdstuk wordt het gebruikt om 2D punten om te zetten naar 3D. Dit is de formule van het pinhole model:
+$$
+s
+\begin{bmatrix}
+	u \\ 
+	v \\
+	1
+\end{bmatrix} 
+=
+\begin{bmatrix}
+	f_x & 0 & c_x \\ 
+	0 & f_y & c_y \\
+	0 & 0 & 1
+\end{bmatrix} 
+\begin{bmatrix}
+	r_{11} & r_{12} & r_{13} & t_1 \\ 
+	r_{21} & r_{22} & r_{23} & t_2 \\
+	r_{31} & r_{32} & r_{33} & t_3 \\
+\end{bmatrix}
+\begin{bmatrix}
+	X \\ 
+	Y \\
+	Z \\
+	1
+\end{bmatrix}
+$$
+Hierbij is $(u,v)$ het 2D punt, $(X,Y,Z)$ het 3D punt, de eerste matrix in het rechterlid de camera intrinsics matrix (bekomen door camera calibratie), de tweede matrix in het rechterlid is de camera extrinsics matrix (afgeleid uit de ligging van de markers) en $s$, tenslotte, is een schaalfactor. Wanneer de twee cameramatrices bekend zijn kunnen we een 3D punt omzetten in 2D en vice versa. Een belangrijke opmerking hierbij is dat, bij omzetting van 2D naar 3D, wat informatie te kort is (het aantal dimensies verhoogt immers). Deze extra informatie kan worden gegeven in twee vormen: ofwel kennen we de uiteindelijke $Z$ co\"ordinaat, ofwel kennen we de uiteindelijke $X$ en $Y$ co\"ordinaten.
+
+\subsubsection*{Veronderstellingen}
+In dit algoritme worden enkele veronderstellingen gemaakt, indien hier niet aan wordt gehouden zijn de resultaten onbepaald. In deze sectie bespreken we kort welke veronderstellingen zijn gemaakt en waarom.
+
+\begin{itemize}
+\item De achtergrond bestaat uit wit en zwart, belangrijk is vooral dat ze geen rode tint bevat. Deze restrictie werd opgelegd omdat we in het algoritme kleurthresholding gebruiken om de rode blokken te scheiden van de achtergrond.
+\item Omdat het algoritme gebruik maakt van kleurthresholding is het ook aangeraden om zo weinig mogelijk schaduw te hebben. Anders kan deze schaduw potentieel als een erg donkere rode blok worden aanzien. 
+\item De blokken die worden gebruikt zijn steeds balkvormig, geen enkele blok of constructie van blokken mag een hoek bevatten. Dit is belangrijk omdat het algoritme ervan uit gaat dat de contour van een te detecteren legoblok bestaat uit maximaal zes hoekpunten. Dit impliceert ook dat legoblokken elkaar niet mogen aanraken vanuit het standpunt van de camera gezien (tenzij ze in elkaars verlengde liggen).
+\item Zoals hierboven reeds aangehaald gaat het algoritme ervan uit dat de contour van een blok maximaal zes hoekpunten bevat. Dit impliceert dat het algoritme beter werkt wanneer we legoblokken vanuit perspectief zien want dan bestaat de omtrek van een blok uit exact zes hoekpunten.
+\end{itemize}
+
+\subsection{Algoritme}
+
+\subsubsection*{Bepalen van de contour}
+
+Eerst wordt de nieuwe frame van het YUV formaat omgezet naar het HSV formaat. Dit is een erg belangrijke stap vanwege twee redenen: ten eerste kan OpenCV niet werken met het YUV formaat en ten tweede is het HSV formaat (zoals hierboven reeds aangehaald) veruit het eenvoudigste formaat om te gebruiken bij thresholding operaties.
+
+Op de HSV frame wordt vervolgens kleurthresholding toegepast om de legoblokken te scheiden van de wit-zwarte achtergrond. In dit eerste algoritme werd enkel gewerkt met de kleur rood. Experimenteel werd ondervonden dat om rood te scheiden van een wit-zwarte achtergrond de HSV waarden in het volgende interval moeten liggen:
+$$ 160 < H < 180; 153 < S < 255; 30 < V < 255$$
+
+TODO: IS CANNY EDGE DETECTIE WEL NODIG, AANGEZIEN WE AL EEN THRESHOLD HEBBEN? %TODO
+
+Contouren worden dan bepaald met behulp van de \texttt{findContours} methode van OpenCV. Deze methode gebruikt het algoritme dat wordt beschreven in~\cite{suzuki1985topological}, het wordt hier niet besproken omdat dit out of scope van deze thesis is.
+
+In de volgende stap wordt deze contour benadert met behulp van de \texttt{approxPolyDP} methode van OpenCV. Deze methode benadert deze contours met een polygon. Deze stap is nodig omdat een contour uit een enorme hoeveelheid punten bestaat, na deze benadering blijven de belangrijkste punten over: de hoekpunten van de legoblok. Deze methode bevat een parameter $\epsilon$ die aangeeft wat de maximale afwijking mag zijn van de benadering ten opzichte van de oorspronkelijke contour. Om ervoor te zorgen dat we een zo goed mogelijke benadering verkrijgen in alle gevallen, maken we $\epsilon$ steeds groter tot we net een maximum van zes hoekpunten hebben bereikt. Deze adaptieve techniek behoudt de kwaliteit van de contour maar in ruil daarvoor moeten we de veronderstelling maken dat de omtrek van de contour van de threshold bestaat uit maximaal zes hoeken.
+
+Nu kan het zijn dat er contours zijn met een te kleine oppervlakte door ruis in de kleurthreshold. Om deze te verwijderen bekijken we de oppervlakte van alle contours en worden contours verwijderd met een oppervlakte die 100x kleiner is dan de oppervlakte van de grootste contour.
+
+Het bepalen en verfijnen van de contour is afgelopen, nu moet bepaald worden wat de pose is van de legoblok. Dat gebeurt in het tweede deel van het algoritme.
+
+\subsubsection*{Bepalen van de pose}
+
+\begin{figure}
+  \centering
+  \includegraphics[width=0.5\linewidth]{img/brickPoseDetect}
+  \caption{Deze figuur toont hoe de pose vanuit een contour gevonden kan worden. Veronderstel dat de drie hoekpunten linksboven een rechte hoek vormen op het grondvlak (aangeduid met de lichtblauwe lijnen) en dat het bruin omcirkelde punt het dichtstbijzijnde punt bij de camera is. Dan zijn de drie punten deel van het bovenvlak omdat het omcirkelde punt zeker op het ondervlak ligt en niet tot deze drie punten behoort. Bovendien zijn alle andere punten zeker ook deel van het ondervlak van de legoblok.}
+  \label{fig:brickPoseDetect}
+\end{figure}
+
+Nu de contour is gevonden moet hieruit worden achterhaald wat de pose van de legoblok is, hiervoor bepalen we eerst in welk vlak van de legoblok elk hoekpunt van de contour ligt: onder- of bovenvlak. Dit geeft ons de $Z$ co\"ordinaat van al deze hoekpunten waardoor ze kunnen worden omgezet van 2D naar 3D via het pinhole model. Bij uitbreiding zijn dan alle hoekpunten van de legoblok in 3D gekend en dus kennen we ook de pose van de legoblok.
+
+Uit de geometrische informatie van een legoblok is geweten dat minstens drie opeenvolgende hoekpunten in hetzelfde Z-vlak liggen. Om te bepalen welke drie hoekpunten dit zijn zetten we alle 2D contourpunten om naar 3D (geprojecteerd op vlak $Z = 0$) en bepalen we welke drie opeenvolgende 3D hoekpunten ($a$, $b$ en $c$) een hoek vormen die het dichtst bij 90 graden ligt. Van deze hoeken zijn we dan zeker dat ze in hetzelfde vlak liggen.
+
+Vervolgens bepalen we het hoekpunt ($d$) dat in 3D (geprojecteerd op vlak $Z = 0$) zich het dichtst bij de camera bevindt, hiervan kan met zekerheid gezegd worden dat het werkelijk in het vlak $Z = 0$ ligt. Nu kan met zekerheid gezegd worden of $a$, $b$ en $c$ in het onder- of bovenvlak van de legoblok liggen: indien $d == a || d == b || d == c$ liggen $a$, $b$ en $c$ in het ondervlak, anders in het bovenvlak. De rest van de hoekpunten liggen in het andere vlak (zie figuur \ref{fig:brickPoseDetect}). Dit geeft ons (via het pinhole model) de 3D posities van alle hoekpunten van de contour en bij uitbreiding van de volledige legoblok.
+
+Ten slotte kunnen nog de afmetingen en precieze positie van de blok worden bepaald. In plaats deze informatie uit slechts \'e\'en frame te halen, wordt het achterhaald via een voting systeem over meerdere frames. Dit helpt om fouten in de vorige stappen van het algoritme te verkleinen. Het voting systeem werkt als volgt: 
+
+De blok wordt in verschillende frames gedetecteerd en wanneer alle hoekpunten dichter dan 0.8 cm bij elkaar liggen wordt dit gezien als dezelfde blok. In dat geval kan gestemd worden op de grootte en positie van de blok door het gemiddelde te nemen van de groottes en posities van alle blokken die zo dicht bij elkaar liggen. De waarde 0.8 cm is niet toevallig gekozen: het is exact de helft van de breedte van een 2x2 legoblok, zo dicht kunnen legoblokken dus nooit bij elkaar liggen.
+
+Bovendien kan een legoblok nog in een verschillende state verkeren om te bepalen wanneer de blok een deel van het spel wordt (\textit{actief}) en wanneer de blok er geen deel meer van uitmaakt (\textit{inactief}): Wanneer een blok minstens in drie frames werd gedetecteerd wordt hij actief, maar indien hij minstens drie frames achter elkaar niet werd gedetecteerd wordt hij inactief en wanneer hij na vijf frames achter elkaar niet is gedetecteerd wordt hij zelfs verwijderd. Dit mechanisme maakt het algoritme flexibeler om blokken te kunnen toevoegen of verwijderen uit het spel wanneer de speler dat wil.
+
+\subsection{Resultaten, performantie en robuustheid}
+
+
+
+TODO %TODO
+
+\subsection{Voor- en nadelen}
+
+Aan deze methode zijn echter heel wat nadelen verbonden:
+\begin{itemize}
+\item Legoblokken mogen niet in een hoek naast elkaar staan omdat dan de veronderstelling dat een contour maximaal zes hoeken bevat niet meer geldig is.
+\item Enkel rode legoblokken kunnen worden gedetecteerd. Dit nadeel is echter eenvoudig weg te werken zoals wordt besproken in sectie \ref{sec:algo_grid}.
+\item Legoblokken mogen niet in meerdere niveau's gebouwd worden. Muren zouden in principe wel kunnen (ze hebben immers maximaal zes hoekpunten) maar dan moet op \'e\'en of andere manier de grootte van deze muur bepaald worden, dit wordt uitgebreider behandeld in hoofdstuk \label{hoofdstuk:4}. Andere constructies in de hoogte kunnen echter niet vanwege dezelfde reden als het eerste nadeel.
+\item Het algoritme kan niet goed om met veranderingen qua belichting. Dit komt omdat we puur thresholden op basis van kleur maar deze waarden zijn sterk afhankelijk van welke belichting we gebruiken. In hoofdstuk \label{hoofdstuk:4} komt een calibratiemethode aan bod die dit probleem verhelpt.
+\end{itemize}
+ 
+\section{Blokdetectie met behulp van een 2D grid} \label{sec:algo_grid}
+Dit algoritme is een sterke vereenvoudiging van het vorige. In plaats van werkelijk de pose en positie van de legoblok te bepalen, gebruiken we enkel de threshold. Eerst behandelen we de aanpassingen ten opzichte van het vorige algoritme en vervolgens bespreken we de gevolgen die deze aanpassingen hebben.
+
+\subsection{Begrippen}
+Deze sectie behandelt enkele nieuwe begrippen die in het algoritme worden gebruikt.
+
+\textbf{Morphologische operaties} zijn operaties die de geometrie van vormen in een binaire afbeelding kunnen wijzigen. De twee basis operaties zijn \textit{dilate} en \textit{erode}. In deze operaties komt er op neer dat we de convolutie nemen van de afbeelding met een kernel, die eender welke vorm of grootte kan hebben. Hierbij wordt de kernel over de afbeelding geschoven en dan wordt de pixel in het ankerpunt van de kernel vervangen door een maximum of minimum van alle pixels die binnen de kernel vallen. Bij een \textit{dilate} operatie is dit het maximum en bij een \textit{erode} operatie is dit het minimum. Bij een \textit{dilate} en \textit{erode} operatie wordt een zwart vlak dus respectievelijk kleiner en groter. 
+
+Naast de basis morphologische operaties bestaan ook nog de veel gebruikte \textit{open} en \textit{close} operatie. \textit{Open} is in feite een \textit{dilate} operatie toepassen op een afbeelding die eerder een \textit{erode} operatie onderging. De \textit{close} operatie is het omgekeerde. De \textit{open} operatie wordt vaak gebruik om kleine witte vlekjes te verwijderen, terwijl de \textit{close} operatie wordt gebruikt om kleine zwarte vlakjes te verwijderen.
+
+\subsection{Algoritme}
+Het eerste deel van het vorige algoritme wordt sterk ingekort aangezien we enkel een threshold nodig hebben. Maar er zijn ook een tweetal toevoegingen om tegemoet te komen aan de nadelen van het vorige algoritme:
+
+Ten eerste berekenen we opnieuw een kleurenthreshold maar deze keer niet enkel voor de kleur rood, ook voor geel en blauw. Op die manier  willen we aantonen dat het algoritme zonder problemen met meerdere kleuren overweg kan. Dit zijn kleurengrenzen die werden gebruikt om in een HSV afbeelding te thresholden zodat het resultaat een afbeelding is waarin de legoblokken wit zijn en de achtergrond zwart:
+\begin{align*}
+Rood: 160 < H < 180; 153 < S < 255; 30 < V < 255 \\
+Geel: 135 < H < 160; 147 < S < 255; 30 < V < 255 \\
+Blauw: 0 < H < 112; 42 < S < 255; 13 < V < 255
+\end{align*}
+
+Ten tweede, omdat we nu thresholden op meerdere kleuren kan het gebeuren dat er wat ruis optreedt in onze threshold. Deze ruis vertoont zich in hoopjes witte of zwarte lijntjes op plaatsen waar het niet hoort (zie figuur TODO). Om dit te vermijden worden de morphologische operaties \textit{open} en \textit{close} toegepast op de threshold.
+
+Het tweede deel van het vorige algoritme ('het bepalen van de pose') valt volledig weg, logisch want we hebben geen contour bepaald. In plaats daarvan wordt het grid van onze virtuele wereld naar 2D omgezet (via het pinhole model). Dit 2 dimensionaal grid kunnen we vervolgens overlappen met de eerder berekende threshold en wanneer een gridnode zich in een witte regio van de threshold bevindt beschouwen we deze gridnode als 'bezet door een legoblok'.
+
+\subsection{Gevolgen}
+Dit algoritme is een grove versimpeling van het eerste algoritme aangezien de positie en grootte van een legoblok niet meer expliciet wordt bepaald. Nu vragen we ons af welke consequenties dat heeft.
+
+Ten eerste wordt een fout gemaakt in het aantal gridnodes die bezet worden door een legoblokje. Deze fout wordt gemaakt omdat een onbezet deel schuilt achter de legoblok en dus niet zichtbaar is in een 2D camera frame. Sterker nog: we kunnen precies defini\"eren dat die fout even groot is als de schaduw op het grond vlak wanneer een lichtbron vanuit de camera schijnt in dezelfde richting als de camera kijkt (zie afbeelding TODO voor een voorbeeld).
+
+Ten tweede heeft dit algoritme ook een aantal voordelen in die zin dat enkele nadelen uit het vorige algoritme werden weggewerkt:
+\begin{itemize}
+\item Legoblokken in meerdere kleuren kunnen worden gebruikt, het gevolg is wel dat morphologische operaties de threshold moeten oppoetsen om er kleine foutjes uit te halen. Dit werd hoogstwaarschijnlijk veroorzaakt door de belichting die niet altijd constant is, zodat de thresholdwaarden niet altijd even nauwkeurig zijn. Merk op dat dit even goed in het eerste algoritme had kunnen worden ge\"implementeerd.
+\item Legoblokken kunnen nu ook in een hoek tegen elkaar staan, wat bij het eerste algoritme volledig uit den boze was. Een nadeel is echter wel dat meerdere niveau's in dit algoritme helemaal uitgesloten zijn, terwijl dit in het vorige algoritme, althans in theorie en met restricties, wel mocht. Dit komt omdat, als we de constructie hoger maken, dan de fout die we in dit algoritme maken (zie puntje 1) steeds groter wordt. Er is immers een nog groter gedeelte van het grondvlak, waar geen legoblokken op staan, verborgen achter de legoblokconstructie.
+\end{itemize}
+
+\section{}
 
 \section{Besluit van dit hoofdstuk}
 %%% Local Variables: 

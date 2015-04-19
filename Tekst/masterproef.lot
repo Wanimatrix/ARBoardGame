@@ -12,13 +12,11 @@
 \addvspace {10pt}
 \addvspace {10pt}
 \addvspace {10pt}
-\contentsline {table}{\numberline {3.1}{\ignorespaces Een tabel zoals het niet moet.}}{6}{table.3.1}
-\contentsline {table}{\numberline {3.2}{\ignorespaces Een tabel zoals het beter is.}}{6}{table.3.2}
 \addvspace {10pt}
-\contentsline {table}{\numberline {4.1}{\ignorespaces Parameters gebruikt tijdens training en detectie van features met cascade classificatie.}}{10}{table.4.1}
-\contentsline {table}{\numberline {4.2}{\ignorespaces Parameters gebruikt tijdens training en detectie van features met SVM.}}{10}{table.4.2}
-\contentsline {table}{\numberline {4.3}{\ignorespaces Feature performantie.}}{14}{table.4.3}
-\contentsline {table}{\numberline {4.4}{\ignorespaces Performantie classifier methodes.}}{17}{table.4.4}
+\contentsline {table}{\numberline {4.1}{\ignorespaces Parameters gebruikt tijdens training en detectie van features met cascade classificatie als classificatie methode.}}{15}{table.4.1}
+\contentsline {table}{\numberline {4.2}{\ignorespaces Parameters gebruikt tijdens training en detectie van features met SVM als classificatie methode.}}{15}{table.4.2}
+\contentsline {table}{\numberline {4.3}{\ignorespaces Feature performantie.}}{19}{table.4.3}
+\contentsline {table}{\numberline {4.4}{\ignorespaces Performantie classifier methodes.}}{21}{table.4.4}
 \addvspace {10pt}
 \addvspace {10pt}
 \addvspace {10pt}
