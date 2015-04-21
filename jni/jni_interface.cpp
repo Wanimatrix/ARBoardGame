@@ -638,8 +638,8 @@ JNIEXPORT void JNICALL Java_be_wouterfranken_arboardgame_rendering_tracking_Lego
 	__android_log_print(ANDROID_LOG_DEBUG,TAG,"Closing time: %f\n",((float)(getRealTime() - start))*1000.0);
 	#endif
 
-	imwrite("/sdcard/arbg/thresholded.png", *thresholded);
-	imwrite("/sdcard/arbg/bgr.png", bgr);
+	// imwrite("/sdcard/arbg/thresholded.png", *thresholded);
+	// imwrite("/sdcard/arbg/bgr.png", bgr);
 }
 
 void morphology_operations(Mat src, Mat dst) {

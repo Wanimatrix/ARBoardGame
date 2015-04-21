@@ -11,7 +11,7 @@ public class AppConfig {
 	public static final int MAX_LEGO_NO_MERGES = 3;
 	public static final int MAX_LEGO_NO_MERGES_BEFORE_REMOVAL = 5;
 	
-	public static final boolean TREE_ADAPTIVE_ASTAR = false;
+	public static final boolean TREE_ADAPTIVE_ASTAR = true;
 	
 	public static final boolean CAMERA_POSE_ESTIMATION = true;
 	public static final boolean LEMMING_RENDERING = true;
@@ -54,4 +54,6 @@ public class AppConfig {
 	public final static float[] BOARD_SIZE = new float[]{21f,29f}; // A4: 21,29.7
 	
 	public static final float[] LIGHT_POSITION = new float[]{AppConfig.BOARD_SIZE[0]/2,AppConfig.BOARD_SIZE[1]/2,50};
+	
+	public static final boolean VRMODE = false;
 }

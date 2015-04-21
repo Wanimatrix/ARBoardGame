@@ -11,6 +11,7 @@ import be.wouterfranken.arboardgame.rendering.tracking.CameraPoseTracker;
 import be.wouterfranken.arboardgame.rendering.tracking.LegoBrickTracker;
 import be.wouterfranken.arboardgame.rendering.tracking.Tracker;
 import be.wouterfranken.arboardgame.utilities.MathUtilities;
+import be.wouterfranken.experiments.TimerManager;
 
 public class LemmingsGenerator extends Tracker{
 	private static final String TAG = LemmingsGenerator.class.getSimpleName();
@@ -51,6 +52,7 @@ public class LemmingsGenerator extends Tracker{
 		
 		// Generate Lemmings
 		synchronized (lock) {
+			TimerManager.start("","lemmingUpdate2","");
 			boolean noLemmings = lemmings.isEmpty();
 			if(noLemmings && amount != 0) {
 				generateNewLemming();
@@ -73,6 +75,7 @@ public class LemmingsGenerator extends Tracker{
 					}
 				}
 			}
+			TimerManager.stop();
 		}
 	}
 	

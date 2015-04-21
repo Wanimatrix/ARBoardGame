@@ -4,6 +4,7 @@ import java.util.ArrayList;
 
 import be.wouterfranken.arboardgame.app.AppConfig;
 import be.wouterfranken.arboardgame.gameworld.LemmingsGenerator;
+import be.wouterfranken.experiments.TimerManager;
 import android.hardware.Camera;
 import android.opengl.GLSurfaceView;
 import android.util.Log;
@@ -41,6 +42,7 @@ public class FrameTrackingCallback {
 		}
 		if(doneTrackers.isEmpty()) {
 			camera.addCallbackBuffer(frameData);
+			TimerManager.stop();
 			if(AppConfig.DEBUG_TIMING) Log.d(TAG, "Totaltime in "+(System.nanoTime()-timerStart)/1000000L+"ms");
 		}
 	}

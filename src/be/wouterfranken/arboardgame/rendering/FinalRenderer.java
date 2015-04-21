@@ -59,9 +59,15 @@ public class FinalRenderer implements StereoRenderer {
 	private GLSurfaceView view;
 	
 	public FinalRenderer(GLSurfaceView view) {
-	    Matrix.setIdentityM(mv, 0);
-	    Matrix.translateM(mv, 0, 0, 0, -3.4f);
-	    Matrix.scaleM(mv, 0, 1f, AppConfig.ASPECT_RATIO, 1f);
+		if(AppConfig.VRMODE) {
+		    Matrix.setIdentityM(mv, 0);
+		    Matrix.translateM(mv, 0, 0, 0, -3.4f);
+		    Matrix.scaleM(mv, 0, 1f, AppConfig.ASPECT_RATIO, 1f);
+		} else {
+			Matrix.setIdentityM(mv, 0);
+			Matrix.translateM(mv, 0, 0, 0, -2.0f);
+		    Matrix.scaleM(mv, 0, 1f, 1920/1600.0f, 1f);
+		}
 	    
 	    this.view = view;
 	}
