@@ -42,6 +42,7 @@ import be.wouterfranken.arboardgame.rendering.tracking.FrameTrackingCallback;
 import be.wouterfranken.arboardgame.rendering.tracking.LegoBrickTracker;
 import be.wouterfranken.arboardgame.utilities.Color;
 import be.wouterfranken.arboardgame.utilities.RenderingUtils;
+import be.wouterfranken.experiments.TimerManager;
 
 public class ArRenderer implements Renderer, PreviewCallback {
 	
@@ -252,17 +253,16 @@ public class ArRenderer implements Renderer, PreviewCallback {
 				for (int i = 0; i< lemmMeshesTmp.size();i++) {
 					renderMesh(lemmMeshesTmp.get(i), meshesToRender.size());
 				}
+				List<MeshObject> starMeshes = lemmingsGenerator.getStarMeshes();
+				for (int i = 0; i< starMeshes.size();i++) {
+					renderMesh(starMeshes.get(i), meshesToRender.size());
+				}
 			}
 			
-			List<MeshObject> starMeshes = lemmingsGenerator.getStarMeshes();
-			for (int i = 0; i< starMeshes.size();i++) {
-				renderMesh(starMeshes.get(i), meshesToRender.size());
+			List<MeshObject> brickMeshes = lemmingsGenerator.getActiveBrickMeshes(new RenderOptions(true, new Color(0, 0, 1, 1),false));
+			for (MeshObject mesh : brickMeshes) {
+				renderMesh(mesh, 1);
 			}
-			
-//			List<MeshObject> brickMeshes = lemmingsGenerator.getActiveBrickMeshes(new RenderOptions(true, new Color(0, 0, 1, 1),false));
-//			for (MeshObject mesh : brickMeshes) {
-//				renderMesh(mesh, 1);
-//			}
 		    
 	    }
 	    
@@ -393,6 +393,7 @@ public class ArRenderer implements Renderer, PreviewCallback {
 	public void onPreviewFrame(byte[] frameData, Camera camera) {
 		if(AppConfig.DEBUG_LOGGING) Log.d(TAG, "Updating camera pose ...");
 		long start = System.nanoTime();
+		TimerManager.start("BrickTracker", "Total", "/sdcard/arbg/oldTimeTotal.txt");
 		
 //		if(previousFrameTime != 0) {
 //			if(frameCount == 0) {
@@ -403,16 +404,20 @@ public class ArRenderer implements Renderer, PreviewCallback {
 		
 //		view.requestRender();
 		
+		TimerManager.start("", "frameTicks", "");
 		cameraPose.frameTick();
 		legoBrick.frameTick();
+		TimerManager.stop();
 		
 		
 		Size size = camera.getParameters().getPreviewSize();
 		long start2 = System.nanoTime();
+		TimerManager.start("Renderer", "yuv2bgr", "");
 		Mat colFrameImg = new Mat();
 		Mat yuv = new Mat( (int)(size.height*1.5), size.width, CvType.CV_8UC1 );
 		yuv.put( 0, 0, frameData );
 		Imgproc.cvtColor( yuv, colFrameImg, Imgproc.COLOR_YUV2BGR_NV21, 3);
+		TimerManager.stop();
 		if(AppConfig.DEBUG_TIMING) Log.d(TAG, "YUV2RGB (OpenCV) in "+(System.nanoTime()-start2)/1000000L+"ms");
 		
 		FrameTrackingCallback callback = new FrameTrackingCallback(frameData, camera,start);
@@ -424,15 +429,19 @@ public class ArRenderer implements Renderer, PreviewCallback {
 				if(AppConfig.DEBUG_TIMING) Log.d(TAG, "Totaltime in "+(System.nanoTime()-start)/1000000L+"ms");
 			}
 		}
-		if(AppConfig.LEGO_TRACKING) legoBrick.findLegoBrick(colFrameImg, callback);
+		if(AppConfig.LEGO_TRACKING && cameraPose.cameraPoseFound()) legoBrick.findLegoBrick(colFrameImg, callback);
 		
 		if(AppConfig.LEMMING_RENDERING && cameraPose.cameraPoseFound()) {
 			long lemmingStart = System.nanoTime();
+			
 //			LemmingGeneratorTask lgt = new LemmingGeneratorTask();
 //			lgt.setupFrameTrackingCallback(callback);
 //			lgt.start = lemmingStart;
 //			lgt.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
-			lemmingsGenerator.frameTick(legoBrick.getLegoBricks(cameraPose));
+			TimerManager.start("", "getLegobricks", "");
+			LegoBrick[] lbs = legoBrick.getLegoBricks(cameraPose);
+			TimerManager.stop();
+			lemmingsGenerator.frameTick(lbs);
 			if(AppConfig.DEBUG_TIMING) Log.d(TAG, "Lemming frameUpdate in "+(System.nanoTime()-lemmingStart)/1000000L+"ms");
 			callback.trackingDone(LemmingsGenerator.class);
 			long lemmingMeshUpd = System.nanoTime();

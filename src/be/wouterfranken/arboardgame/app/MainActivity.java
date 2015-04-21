@@ -8,6 +8,7 @@ import android.content.SharedPreferences.OnSharedPreferenceChangeListener;
 import android.content.res.Configuration;
 import android.os.Bundle;
 import android.view.Menu;
+import android.view.MotionEvent;
 import be.wouterfranken.arboardgame.R;
 
 import com.google.vrtoolkit.cardboard.CardboardActivity;

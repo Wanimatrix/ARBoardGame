@@ -14,6 +14,7 @@ import be.wouterfranken.arboardgame.gameworld.WorldConfig;
 import be.wouterfranken.arboardgame.utilities.Color;
 import be.wouterfranken.arboardgame.utilities.DebugUtilities;
 import be.wouterfranken.arboardgame.utilities.MathUtilities;
+import be.wouterfranken.experiments.TimerManager;
 
 public class LegoBrickTracker extends Tracker{
 	private static final String TAG = LegoBrickTracker.class.getSimpleName();
@@ -30,6 +31,7 @@ public class LegoBrickTracker extends Tracker{
 		if(AppConfig.DEBUG_LOGGING) Log.d(TAG,"Legobrick tracking ...");
 		
 		long start = System.nanoTime();
+		TimerManager.start("BrickDetection", "BrickTracking", "/sdcard/arbg/oldTimeBrickTrack.txt");
 		Mat threshold = new Mat();
 		Mat contour = new Mat();
 //		FindLegoBrick task = new FindLegoBrick();
@@ -47,6 +49,7 @@ public class LegoBrickTracker extends Tracker{
 		setContour(contour);
 		trackingCallback.trackingDone(LegoBrickTracker.class);
 		if(AppConfig.DEBUG_TIMING) Log.d(TAG, "LegoBrick found in "+(System.nanoTime()-start)/1000000L+"ms");
+		TimerManager.stop();
 		
 //		task.setupFrameTrackingCallback(trackingCallback);
 //		task.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, yuvFrameImage);

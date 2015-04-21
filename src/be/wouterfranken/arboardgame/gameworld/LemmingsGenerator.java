@@ -11,6 +11,7 @@ import be.wouterfranken.arboardgame.rendering.tracking.CameraPoseTracker;
 import be.wouterfranken.arboardgame.rendering.tracking.LegoBrickTracker;
 import be.wouterfranken.arboardgame.rendering.tracking.Tracker;
 import be.wouterfranken.arboardgame.utilities.MathUtilities;
+import be.wouterfranken.experiments.TimerManager;
 
 public class LemmingsGenerator extends Tracker{
 	private static final String TAG = LemmingsGenerator.class.getSimpleName();
@@ -54,33 +55,38 @@ public class LemmingsGenerator extends Tracker{
 		// Brick control
 //		synchronized (brickLock) {
 		if(AppConfig.DEBUG_LOGGING) Log.d(TAG, "BrickAmount: "+bricks.length);
-			w.addBricks(bricks);
-		
-			// Generate Lemmings
-			synchronized (lock) {
-				boolean noLemmings = lemmings.isEmpty();
-				if(noLemmings && amount != 0) {
-					generateNewLemming();
-				} else if (!noLemmings){
-					for(int i = 0; i< lemmings.size();i++) {
-						Lemming lemming = lemmings.get(i);
-						if(lemming.getLocationX() == end.x && lemming.getLocationY() == end.y) {
-							lemmings.remove(i--);
-							if(WorldConfig.ONE_PER_ONE)
-								generateNewLemming();
-						} else {
-							lemming.updateLocation(end, w);
-						}
-					}
-					if(!WorldConfig.ONE_PER_ONE && !lemmings.isEmpty()){
-						Lemming lastNew;
-						lastNew = lemmings.get(lemmings.size()-1);
-						if(MathUtilities.distance(lastNew.getLocationX(), lastNew.getLocationY(), start.x, start.y) >= WorldConfig.LEMMING_DISTANCE) {
+		Log.d(TAG, "Start adding bricks");
+		TimerManager.start("BrickDetection", "Add bricks to world", "/sdcard/arbg/oldTimeAddBricks.txt");
+		w.addBricks(bricks);
+		TimerManager.stop();
+	
+		// Generate Lemmings
+		TimerManager.start("BrickDetection", "Lemming update", "/sdcard/arbg/oldTimeUpdateLemming.txt");
+		synchronized (lock) {
+			boolean noLemmings = lemmings.isEmpty();
+			if(noLemmings && amount != 0) {
+				generateNewLemming();
+			} else if (!noLemmings){
+				for(int i = 0; i< lemmings.size();i++) {
+					Lemming lemming = lemmings.get(i);
+					if(lemming.getLocationX() == end.x && lemming.getLocationY() == end.y) {
+						lemmings.remove(i--);
+						if(WorldConfig.ONE_PER_ONE)
 							generateNewLemming();
-						}
+					} else {
+						lemming.updateLocation(end, w);
+					}
+				}
+				if(!WorldConfig.ONE_PER_ONE && !lemmings.isEmpty()){
+					Lemming lastNew;
+					lastNew = lemmings.get(lemmings.size()-1);
+					if(MathUtilities.distance(lastNew.getLocationX(), lastNew.getLocationY(), start.x, start.y) >= WorldConfig.LEMMING_DISTANCE) {
+						generateNewLemming();
 					}
 				}
 			}
+		}
+		TimerManager.stop();
 //		}
 	}
 	

@@ -8,6 +8,7 @@ import android.view.MotionEvent;
 import android.view.SurfaceHolder;
 import android.view.SurfaceHolder.Callback;
 import be.wouterfranken.arboardgame.rendering.CameraViewRenderer;
+import be.wouterfranken.experiments.TimerManager;
 
 import com.google.vrtoolkit.cardboard.CardboardView;
 
@@ -26,9 +27,9 @@ public class CameraView extends CardboardView implements Callback{
 		setEGLContextClientVersion(2);
 		setRenderer(renderer);
 		
-		setVRModeEnabled(true);
+		setVRModeEnabled(AppConfig.VR_MODE);
 //		setRenderMode(GLSurfaceView.RENDERMODE_WHEN_DIRTY);
-		setDistortionCorrectionEnabled(true);
+		setDistortionCorrectionEnabled(AppConfig.VR_MODE);
 	}
 
 	@Override
@@ -60,6 +61,8 @@ public class CameraView extends CardboardView implements Callback{
 	@Override
 	public boolean onTouchEvent(MotionEvent event) {
 		if(AppConfig.DEBUG_LOGGING) Log.d(TAG, "Touch noticed");
+		Log.d(TAG, "Touch noticed");
+		TimerManager.saveAll();
 		AppConfig.TOUCH_EVENT = true;
 		return super.onTouchEvent(event);
 	}
