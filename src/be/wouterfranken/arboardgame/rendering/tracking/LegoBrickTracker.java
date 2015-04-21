@@ -14,6 +14,7 @@ import be.wouterfranken.arboardgame.gameworld.WorldConfig;
 import be.wouterfranken.arboardgame.utilities.Color;
 import be.wouterfranken.arboardgame.utilities.DebugUtilities;
 import be.wouterfranken.arboardgame.utilities.MathUtilities;
+import be.wouterfranken.experiments.TimerManager;
 
 public class LegoBrickTracker extends Tracker{
 	private static final String TAG = LegoBrickTracker.class.getSimpleName();
@@ -30,12 +31,14 @@ public class LegoBrickTracker extends Tracker{
 		if(AppConfig.DEBUG_LOGGING) Log.d(TAG,"Legobrick tracking ...");
 		
 		long start = System.nanoTime();
+		TimerManager.start("", "BrickTracking2", "");
 		
 		if(AppConfig.PARALLEL_LEGO_TRACKING) {
 			FindLegoBrick task = new FindLegoBrick();
 			task.start = start;
 			task.setupFrameTrackingCallback(trackingCallback);
 			task.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, yuvFrameImage);
+			TimerManager.stop();
 		} else {
 			Mat threshold = new Mat();
 			findLegoBrick2( 
@@ -44,6 +47,7 @@ public class LegoBrickTracker extends Tracker{
 					);
 			setThreshold(threshold);
 			trackingCallback.trackingDone(LegoBrickTracker.class);
+			TimerManager.stop();
 			if(AppConfig.DEBUG_TIMING) Log.d(TAG, "LegoBrick found in "+(System.nanoTime()-start)/1000000L+"ms");
 		}
 		

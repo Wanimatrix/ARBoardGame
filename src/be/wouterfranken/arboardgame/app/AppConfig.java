@@ -11,7 +11,7 @@ public class AppConfig {
 	public static final int MAX_LEGO_NO_MERGES = 3;
 	public static final int MAX_LEGO_NO_MERGES_BEFORE_REMOVAL = 5;
 	
-	public static final boolean TREE_ADAPTIVE_ASTAR = true;
+	public static final boolean TREE_ADAPTIVE_ASTAR = false;
 	
 	public static final boolean CAMERA_POSE_ESTIMATION = true;
 	public static final boolean LEMMING_RENDERING = true;
@@ -23,6 +23,8 @@ public class AppConfig {
 	
 	public final static boolean DEBUG_LOGGING = true;
 	public final static boolean DEBUG_TIMING = true;
+	
+	public final static boolean VRMODE = false;
 	
 	/**
 	 * Supported Resolutions:<p/>

@@ -30,6 +30,7 @@ import be.wouterfranken.arboardgame.gameworld.WorldCoordinate;
 import be.wouterfranken.arboardgame.utilities.AndroidUtils;
 import be.wouterfranken.arboardgame.utilities.DebugUtilities;
 import be.wouterfranken.arboardgame.utilities.MathUtilities;
+import be.wouterfranken.experiments.TimerManager;
 
 
 
@@ -73,7 +74,7 @@ public class CameraPoseTracker extends Tracker{
 	
 	public void updateCameraPose(Mat colFrameImg, FrameTrackingCallback trackingCallback) {
 		long start = System.nanoTime();
-		
+		TimerManager.start("", "camerapose2", "");
 		Mat grayImg = new Mat();
 		Imgproc.cvtColor(colFrameImg, grayImg, Imgproc.COLOR_BGR2GRAY);
 		
@@ -87,6 +88,7 @@ public class CameraPoseTracker extends Tracker{
 			setMv(mv);
 			setProj(proj);
 			trackingCallback.trackingDone(CameraPoseTracker.class);
+			TimerManager.stop();
 			if(AppConfig.DEBUG_TIMING) Log.d(TAG, "CameraPose found in "+(System.nanoTime()-start)/1000000L+"ms");
 		} else {
 			FindCameraPose task = new FindCameraPose();
@@ -95,6 +97,7 @@ public class CameraPoseTracker extends Tracker{
 			task.setupFrameTrackingCallback(trackingCallback);
 //			task.execute(grayImg);
 			task.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, grayImg);
+			TimerManager.stop();
 		}
 	}
 	
