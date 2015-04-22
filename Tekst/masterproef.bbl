@@ -1,74 +1,90 @@
-\begin{thebibliography}{10}
+\newcommand{\etalchar}[1]{$^{#1}$}
+\begin{thebibliography}{AME{\etalchar{+}}14}
 
-\bibitem{aubry2014seeing}
-M.~Aubry, D.~Maturana, A.~A. Efros, B.~C. Russell, and J.~Sivic.
+\bibitem[AME{\etalchar{+}}14]{aubry2014seeing}
+Mathieu Aubry, Daniel Maturana, Alexei~A Efros, Bryan~C Russell, and Josef
+  Sivic.
 \newblock Seeing 3d chairs: exemplar part-based 2d-3d alignment using a large
   dataset of cad models.
 \newblock In {\em Computer Vision and Pattern Recognition (CVPR), 2014 IEEE
   Conference on}, pages 3762--3769. IEEE, 2014.
 
-\bibitem{boser1992training}
-B.~E. Boser, I.~M. Guyon, and V.~N. Vapnik.
+\bibitem[BGV92]{boser1992training}
+Bernhard~E Boser, Isabelle~M Guyon, and Vladimir~N Vapnik.
 \newblock A training algorithm for optimal margin classifiers.
 \newblock In {\em Proceedings of the fifth annual workshop on Computational
   learning theory}, pages 144--152. ACM, 1992.
 
-\bibitem{dalal2005histograms}
-N.~Dalal and B.~Triggs.
+\bibitem[DT05]{dalal2005histograms}
+Navneet Dalal and Bill Triggs.
 \newblock Histograms of oriented gradients for human detection.
 \newblock In {\em Computer Vision and Pattern Recognition, 2005. CVPR 2005.
   IEEE Computer Society Conference on}, volume~1, pages 886--893. IEEE, 2005.
 
-\bibitem{felzenszwalb2010object}
-P.~F. Felzenszwalb, R.~B. Girshick, D.~McAllester, and D.~Ramanan.
+\bibitem[FGMR10]{felzenszwalb2010object}
+Pedro~F Felzenszwalb, Ross~B Girshick, David McAllester, and Deva Ramanan.
 \newblock Object detection with discriminatively trained part-based models.
 \newblock {\em Pattern Analysis and Machine Intelligence, IEEE Transactions
   on}, 32(9):1627--1645, 2010.
 
-\bibitem{freund1995desicion}
-Y.~Freund and R.~E. Schapire.
+\bibitem[FS95]{freund1995desicion}
+Yoav Freund and Robert~E Schapire.
 \newblock A desicion-theoretic generalization of on-line learning and an
   application to boosting.
 \newblock In {\em Computational learning theory}, pages 23--37. Springer, 1995.
 
-\bibitem{joachims1999svmlight}
-T.~Joachims.
+\bibitem[HSKM11]{hernandez2011tree}
+Carlos Hern{\'a}ndez, Xiaoxun Sun, Sven Koenig, and Pedro Meseguer.
+\newblock Tree adaptive a*.
+\newblock In {\em The 10th International Conference on Autonomous Agents and
+  Multiagent Systems-Volume 1}, pages 123--130. International Foundation for
+  Autonomous Agents and Multiagent Systems, 2011.
+
+\bibitem[Joa99]{joachims1999svmlight}
+Thorsten Joachims.
 \newblock Svmlight: Support vector machine.
 \newblock {\em SVM-Light Support Vector Machine http://svmlight. joachims.
   org/, University of Dortmund}, 19(4), 1999.
 
-\bibitem{liao2007learning}
-S.~Liao, X.~Zhu, Z.~Lei, L.~Zhang, and S.~Z. Li.
-\newblock Learning multi-scale block local binary patterns for face
-  recognition.
-\newblock In {\em Advances in Biometrics}, pages 828--837. Springer, 2007.
-
-\bibitem{lienhart2002extended}
-R.~Lienhart and J.~Maydt.
+\bibitem[LM02]{lienhart2002extended}
+Rainer Lienhart and Jochen Maydt.
 \newblock An extended set of haar-like features for rapid object detection.
 \newblock In {\em Image Processing. 2002. Proceedings. 2002 International
   Conference on}, volume~1, pages I--900. IEEE, 2002.
 
-\bibitem{ojala1996comparative}
-T.~Ojala, M.~Pietik{\"a}inen, and D.~Harwood.
+\bibitem[LZL{\etalchar{+}}07]{liao2007learning}
+Shengcai Liao, Xiangxin Zhu, Zhen Lei, Lun Zhang, and Stan~Z Li.
+\newblock Learning multi-scale block local binary patterns for face
+  recognition.
+\newblock In {\em Advances in Biometrics}, pages 828--837. Springer, 2007.
+
+\bibitem[OPH96]{ojala1996comparative}
+Timo Ojala, Matti Pietik{\"a}inen, and David Harwood.
 \newblock A comparative study of texture measures with classification based on
   featured distributions.
 \newblock {\em Pattern recognition}, 29(1):51--59, 1996.
 
-\bibitem{vapnik1963pattern}
-V.~Vapnik.
+\bibitem[S{\etalchar{+}}85]{suzuki1985topological}
+Satoshi Suzuki et~al.
+\newblock Topological structural analysis of digitized binary images by border
+  following.
+\newblock {\em Computer Vision, Graphics, and Image Processing}, 30(1):32--46,
+  1985.
+
+\bibitem[Vap63]{vapnik1963pattern}
+Vladimir Vapnik.
 \newblock Pattern recognition using generalized portrait method.
 \newblock {\em Automation and remote control}, 24:774--780, 1963.
 
-\bibitem{viola2001rapid}
-P.~Viola and M.~Jones.
+\bibitem[VJ01]{viola2001rapid}
+Paul Viola and Michael Jones.
 \newblock Rapid object detection using a boosted cascade of simple features.
 \newblock In {\em Computer Vision and Pattern Recognition, 2001. CVPR 2001.
   Proceedings of the 2001 IEEE Computer Society Conference on}, volume~1, pages
   I--511. IEEE, 2001.
 
-\bibitem{yan2014fastest}
-J.~Yan, Z.~Lei, L.~Wen, and S.~Z. Li.
+\bibitem[YLWL14]{yan2014fastest}
+Junjie Yan, Zhen Lei, Longyin Wen, and Stan~Z Li.
 \newblock The fastest deformable part model for object detection.
 \newblock In {\em Computer Vision and Pattern Recognition (CVPR), 2014 IEEE
   Conference on}, pages 2497--2504. IEEE, 2014.

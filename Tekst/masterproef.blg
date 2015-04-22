@@ -9,50 +9,48 @@ A level-1 auxiliary file: hfdst-4.aux
 A level-1 auxiliary file: besluit.aux
 A level-1 auxiliary file: app-A.aux
 A level-1 auxiliary file: app-n.aux
-The style file: abbrv.bst
+The style file: alpha.bst
 Database file #1: referenties.bib
-Warning--I didn't find a database entry for "wiki"
-Warning--I didn't find a database entry for "pratchett06:_good_omens"
 Warning--I didn't find a database entry for "h2g2"
-You've used 12 entries,
-            2118 wiz_defined-function locations,
-            586 strings with 6247 characters,
-and the built_in function-call counts, 5251 in all, are:
-= -- 555
-> -- 204
-< -- 11
-+ -- 85
-- -- 68
-* -- 346
-:= -- 793
-add.period$ -- 44
-call.type$ -- 12
-change.case$ -- 70
-chr.to.int$ -- 0
-cite$ -- 12
-duplicate$ -- 222
-empty$ -- 422
-format.name$ -- 68
-if$ -- 1172
-int.to.chr$ -- 0
-int.to.str$ -- 12
-missing$ -- 12
-newline$ -- 63
-num.names$ -- 24
-pop$ -- 83
+You've used 14 entries,
+            2543 wiz_defined-function locations,
+            659 strings with 7409 characters,
+and the built_in function-call counts, 7275 in all, are:
+= -- 772
+> -- 324
+< -- 14
++ -- 119
+- -- 114
+* -- 509
+:= -- 1120
+add.period$ -- 51
+call.type$ -- 14
+change.case$ -- 95
+chr.to.int$ -- 14
+cite$ -- 14
+duplicate$ -- 300
+empty$ -- 530
+format.name$ -- 127
+if$ -- 1568
+int.to.chr$ -- 1
+int.to.str$ -- 0
+missing$ -- 14
+newline$ -- 74
+num.names$ -- 42
+pop$ -- 97
 preamble$ -- 1
-purify$ -- 58
+purify$ -- 109
 quote$ -- 0
-skip$ -- 170
+skip$ -- 262
 stack$ -- 0
-substring$ -- 384
-swap$ -- 88
-text.length$ -- 11
-text.prefix$ -- 0
+substring$ -- 473
+swap$ -- 100
+text.length$ -- 14
+text.prefix$ -- 2
 top$ -- 0
-type$ -- 48
+type$ -- 112
 warning$ -- 0
-while$ -- 54
-width$ -- 14
-write$ -- 145
-(There were 3 warnings)
+while$ -- 75
+width$ -- 17
+write$ -- 197
+(There was 1 warning)
