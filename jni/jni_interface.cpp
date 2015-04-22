@@ -450,7 +450,7 @@ JNIEXPORT void JNICALL Java_be_wouterfranken_arboardgame_rendering_tracking_Lego
 	start=getRealTime();
 #endif
 	/// Detect edges using canny
-	for (int col = 0; col < thresholded.size(); ++col) Canny( thresholded[col], response[col], 100, 100*2, 3);
+	for (int col = 0; col < thresholded.size(); ++col) response[col] = thresholded[col];//Canny( thresholded[col], response[col], 100, 100*2, 3);
 	// imwrite("/sdcard/arbg/canny.png",response[0]);
 	// Canny( yellowThresh, responseYellow, 100, 100*2, 3);
 	// Canny( blueThresh, responseBlue, 100, 100*2, 3);
