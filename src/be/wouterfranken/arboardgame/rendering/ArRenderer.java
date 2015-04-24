@@ -407,21 +407,7 @@ public class ArRenderer implements Renderer, PreviewCallback {
 		
 //		view.requestRender();
 		
-		TimerManager.start("", "frameTicks2", "");
-		cameraPose.frameTick();
-		legoBrick.frameTick();
-		TimerManager.stop();
 		
-		
-		Size size = camera.getParameters().getPreviewSize();
-		long start2 = System.nanoTime();
-		TimerManager.start("", "yuv2bgr2", "");
-		Mat colFrameImg = new Mat();
-		Mat yuv = new Mat( (int)(size.height*1.5), size.width, CvType.CV_8UC1 );
-		yuv.put( 0, 0, frameData );
-		Imgproc.cvtColor( yuv, colFrameImg, Imgproc.COLOR_YUV2BGR_NV21, 3);
-		TimerManager.stop();
-		if(AppConfig.DEBUG_TIMING) Log.d(TAG, "YUV2RGB (OpenCV) in "+(System.nanoTime()-start2)/1000000L+"ms");
 		
 		FrameTrackingCallback callback = new FrameTrackingCallback(frameData, camera,start);
 
@@ -437,8 +423,7 @@ public class ArRenderer implements Renderer, PreviewCallback {
 				&& (plt == null || plt.getStatus() == AsyncTask.Status.PENDING || plt.getStatus() == AsyncTask.Status.FINISHED)) {
 			
 			plt = new ParallelTask();
-			plt.frameData = frameData;
-			plt.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, colFrameImg);
+			plt.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, frameData);
 			callback.trackingDone(CameraPoseTracker.class);
 			callback.trackingDone(LegoBrickTracker.class);
 			callback.trackingDone(LemmingsGenerator.class);
@@ -473,19 +458,35 @@ public class ArRenderer implements Renderer, PreviewCallback {
 //		}
 	}
 	
-	private class ParallelTask extends AsyncTask<Mat, Void, Void> {
-		byte[] frameData = null;
+	private class ParallelTask extends AsyncTask<byte[], Void, Void> {
 		
 		@Override
-		protected Void doInBackground(Mat... params) {
-			cameraPose.updateCameraPose(params[0], null);
+		protected Void doInBackground(byte[]... params) {
+			
+			TimerManager.start("", "frameTicks2", "");
+			cameraPose.frameTick();
+			legoBrick.frameTick();
+			TimerManager.stop();
+			
+			
+			Size size = camera.getParameters().getPreviewSize();
+			long start2 = System.nanoTime();
+			TimerManager.start("", "yuv2bgr2", "");
+			Mat colFrameImg = new Mat();
+			Mat yuv = new Mat( (int)(size.height*1.5), size.width, CvType.CV_8UC1 );
+			yuv.put( 0, 0, params[0] );
+			Imgproc.cvtColor( yuv, colFrameImg, Imgproc.COLOR_YUV2BGR_NV21, 3);
+			TimerManager.stop();
+			if(AppConfig.DEBUG_TIMING) Log.d(TAG, "YUV2RGB (OpenCV) in "+(System.nanoTime()-start2)/1000000L+"ms");
+			
+			cameraPose.updateCameraPose(colFrameImg, null);
 			if(!cameraPose.cameraPoseFound()) {
-				camera.addCallbackBuffer(frameData);
+				camera.addCallbackBuffer(params[0]);
 //				if(AppConfig.DEBUG_TIMING) Log.d(TAG, "Totaltime in "+(System.nanoTime()-start)/1000000L+"ms");
 				return null;
 			}
 			
-			if(AppConfig.LEGO_TRACKING) legoBrick.findLegoBrick(params[0], null);
+			if(AppConfig.LEGO_TRACKING) legoBrick.findLegoBrick(colFrameImg, null);
 			
 			if(AppConfig.LEMMING_RENDERING && cameraPose.cameraPoseFound()) {
 				long lemmingStart = System.nanoTime();
