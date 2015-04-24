@@ -42,7 +42,7 @@ public class FrameTrackingCallback {
 		}
 		if(doneTrackers.isEmpty()) {
 			camera.addCallbackBuffer(frameData);
-			TimerManager.stop();
+//			TimerManager.stop();
 			if(AppConfig.DEBUG_TIMING) Log.d(TAG, "Totaltime in "+(System.nanoTime()-timerStart)/1000000L+"ms");
 		}
 	}

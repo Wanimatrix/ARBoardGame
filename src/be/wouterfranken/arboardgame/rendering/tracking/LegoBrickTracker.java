@@ -27,7 +27,7 @@ public class LegoBrickTracker extends Tracker{
 	private Object lock = new Object();
 	private Object lockExtern = new Object();
 	
-	public void findLegoBrick(Mat yuvFrameImage, FrameTrackingCallback trackingCallback) {
+	public void findLegoBrick(Mat yuvFrameImage) {
 		if(AppConfig.DEBUG_LOGGING) Log.d(TAG,"Legobrick tracking ...");
 		
 		long start = System.nanoTime();
@@ -47,7 +47,7 @@ public class LegoBrickTracker extends Tracker{
 //				);
 //		setThreshold(threshold);
 		setContour(contour);
-		trackingCallback.trackingDone(LegoBrickTracker.class);
+//		trackingCallback.trackingDone(LegoBrickTracker.class);
 		if(AppConfig.DEBUG_TIMING) Log.d(TAG, "LegoBrick found in "+(System.nanoTime()-start)/1000000L+"ms");
 		TimerManager.stop();
 		

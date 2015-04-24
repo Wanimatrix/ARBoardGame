@@ -75,7 +75,7 @@ public class CameraPoseTracker extends Tracker{
 		}
 	}
 	
-	public void updateCameraPose(Mat colFrameImg, FrameTrackingCallback trackingCallback) {
+	public void updateCameraPose(Mat colFrameImg) {
 		long start = System.nanoTime();
 		TimerManager.start("BrickDetection", "CameraPose", "/sdcard/arbg/oldTimeCamPose.txt");
 		
@@ -91,14 +91,14 @@ public class CameraPoseTracker extends Tracker{
 			
 			setMv(mv);
 			setProj(proj);
-			trackingCallback.trackingDone(CameraPoseTracker.class);
+//			trackingCallback.trackingDone(CameraPoseTracker.class);
 			if(AppConfig.DEBUG_TIMING) Log.d(TAG, "CameraPose found in "+(System.nanoTime()-start)/1000000L+"ms");
 			TimerManager.stop();
 		} else {
 			FindCameraPose task = new FindCameraPose();
 			task.start = start;
 			
-			task.setupFrameTrackingCallback(trackingCallback);
+//			task.setupFrameTrackingCallback(trackingCallback);
 //			task.execute(grayImg);
 			task.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, grayImg);
 		}

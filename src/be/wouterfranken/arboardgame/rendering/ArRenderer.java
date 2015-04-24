@@ -388,12 +388,13 @@ public class ArRenderer implements Renderer, PreviewCallback {
 //	int frameCount = 0;
 //	long previousFrameTime = 0;
 //	int frameWaitAmount = 0;
+	private ParallelTask plt = null;
 	
 	@Override
 	public void onPreviewFrame(byte[] frameData, Camera camera) {
 		if(AppConfig.DEBUG_LOGGING) Log.d(TAG, "Updating camera pose ...");
 		long start = System.nanoTime();
-		TimerManager.start("BrickTracker", "Total", "/sdcard/arbg/oldTimeTotal.txt");
+		
 		
 //		if(previousFrameTime != 0) {
 //			if(frameCount == 0) {
@@ -404,56 +405,117 @@ public class ArRenderer implements Renderer, PreviewCallback {
 		
 //		view.requestRender();
 		
-		TimerManager.start("", "frameTicks", "");
-		cameraPose.frameTick();
-		legoBrick.frameTick();
-		TimerManager.stop();
 		
-		
-		Size size = camera.getParameters().getPreviewSize();
-		long start2 = System.nanoTime();
-		TimerManager.start("Renderer", "yuv2bgr", "");
-		Mat colFrameImg = new Mat();
-		Mat yuv = new Mat( (int)(size.height*1.5), size.width, CvType.CV_8UC1 );
-		yuv.put( 0, 0, frameData );
-		Imgproc.cvtColor( yuv, colFrameImg, Imgproc.COLOR_YUV2BGR_NV21, 3);
-		TimerManager.stop();
-		if(AppConfig.DEBUG_TIMING) Log.d(TAG, "YUV2RGB (OpenCV) in "+(System.nanoTime()-start2)/1000000L+"ms");
 		
 		FrameTrackingCallback callback = new FrameTrackingCallback(frameData, camera,start);
-
-		if(AppConfig.CAMERA_POSE_ESTIMATION) { 
-			cameraPose.updateCameraPose(colFrameImg, callback);
-			if(!cameraPose.cameraPoseFound()) {
-				camera.addCallbackBuffer(frameData);
-				if(AppConfig.DEBUG_TIMING) Log.d(TAG, "Totaltime in "+(System.nanoTime()-start)/1000000L+"ms");
-			}
-		}
-		if(AppConfig.LEGO_TRACKING && cameraPose.cameraPoseFound()) legoBrick.findLegoBrick(colFrameImg, callback);
 		
-		if(AppConfig.LEMMING_RENDERING && cameraPose.cameraPoseFound()) {
-			long lemmingStart = System.nanoTime();
-			
-//			LemmingGeneratorTask lgt = new LemmingGeneratorTask();
-//			lgt.setupFrameTrackingCallback(callback);
-//			lgt.start = lemmingStart;
-//			lgt.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
-			TimerManager.start("", "getLegobricks", "");
-			LegoBrick[] lbs = legoBrick.getLegoBricks(cameraPose);
-			TimerManager.stop();
-			lemmingsGenerator.frameTick(lbs);
-			if(AppConfig.DEBUG_TIMING) Log.d(TAG, "Lemming frameUpdate in "+(System.nanoTime()-lemmingStart)/1000000L+"ms");
+		if(AppConfig.CAMERA_POSE_ESTIMATION && AppConfig.LEGO_TRACKING && AppConfig.LEMMING_RENDERING
+				&& (plt == null || plt.getStatus() == AsyncTask.Status.FINISHED || plt.getStatus() == AsyncTask.Status.PENDING)) {
+			plt = new ParallelTask();
+			plt.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, frameData);
+			callback.trackingDone(CameraPoseTracker.class);
+			callback.trackingDone(LegoBrickTracker.class);
 			callback.trackingDone(LemmingsGenerator.class);
-			long lemmingMeshUpd = System.nanoTime();
-			synchronized (lock) {
-				lemmingMeshesToRender.clear();
-				lemmingMeshesToRender.addAll(lemmingsGenerator.getLemmingMeshes());
-			}
-//			if(AppConfig.DEBUG_TIMING) Log.d(TAG, "Lemming meshes updated in "+(System.nanoTime()-lemmingMeshUpd)/1000000L+"ms");
-		} else if(AppConfig.LEMMING_RENDERING) {
+		} else if(AppConfig.CAMERA_POSE_ESTIMATION && AppConfig.LEGO_TRACKING && AppConfig.LEMMING_RENDERING) {
+			callback.trackingDone(CameraPoseTracker.class);
+			callback.trackingDone(LegoBrickTracker.class);
 			callback.trackingDone(LemmingsGenerator.class);
 		}
+
+//		if(AppConfig.CAMERA_POSE_ESTIMATION) { 
+//			cameraPose.updateCameraPose(colFrameImg, callback);
+//			if(!cameraPose.cameraPoseFound()) {
+//				camera.addCallbackBuffer(frameData);
+//				if(AppConfig.DEBUG_TIMING) Log.d(TAG, "Totaltime in "+(System.nanoTime()-start)/1000000L+"ms");
+//			}
+//		}
+//		if(AppConfig.LEGO_TRACKING && cameraPose.cameraPoseFound()) legoBrick.findLegoBrick(colFrameImg, callback);
+//		
+//		if(AppConfig.LEMMING_RENDERING && cameraPose.cameraPoseFound()) {
+//			long lemmingStart = System.nanoTime();
+//			
+////			LemmingGeneratorTask lgt = new LemmingGeneratorTask();
+////			lgt.setupFrameTrackingCallback(callback);
+////			lgt.start = lemmingStart;
+////			lgt.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
+//			TimerManager.start("", "getLegobricks", "");
+//			LegoBrick[] lbs = legoBrick.getLegoBricks(cameraPose);
+//			TimerManager.stop();
+//			lemmingsGenerator.frameTick(lbs);
+//			if(AppConfig.DEBUG_TIMING) Log.d(TAG, "Lemming frameUpdate in "+(System.nanoTime()-lemmingStart)/1000000L+"ms");
+//			callback.trackingDone(LemmingsGenerator.class);
+//			long lemmingMeshUpd = System.nanoTime();
+//			synchronized (lock) {
+//				lemmingMeshesToRender.clear();
+//				lemmingMeshesToRender.addAll(lemmingsGenerator.getLemmingMeshes());
+//			}
+////			if(AppConfig.DEBUG_TIMING) Log.d(TAG, "Lemming meshes updated in "+(System.nanoTime()-lemmingMeshUpd)/1000000L+"ms");
+//		} else if(AppConfig.LEMMING_RENDERING) {
+//			callback.trackingDone(LemmingsGenerator.class);
+//		}
 //		previousFrameTime = (System.nanoTime()-start)/1000000L;
+	}
+	
+	private class ParallelTask extends AsyncTask<byte[], Void, Void> {
+
+//		private byte[] frameData = null;
+		
+		@Override
+		protected Void doInBackground(byte[]... params) {
+			TimerManager.start("BrickTracker", "Total", "/sdcard/arbg/oldTimeTotal.txt");
+			TimerManager.start("", "frameTicks", "");
+			cameraPose.frameTick();
+			legoBrick.frameTick();
+			TimerManager.stop();
+			
+			
+			Size size = camera.getParameters().getPreviewSize();
+			long start2 = System.nanoTime();
+			TimerManager.start("Renderer", "yuv2bgr", "");
+			Mat colFrameImg = new Mat();
+			Mat yuv = new Mat( (int)(size.height*1.5), size.width, CvType.CV_8UC1 );
+			yuv.put( 0, 0, params[0] );
+			Imgproc.cvtColor( yuv, colFrameImg, Imgproc.COLOR_YUV2BGR_NV21, 3);
+			TimerManager.stop();
+			if(AppConfig.DEBUG_TIMING) Log.d(TAG, "YUV2RGB (OpenCV) in "+(System.nanoTime()-start2)/1000000L+"ms");
+			
+			if(AppConfig.CAMERA_POSE_ESTIMATION) { 
+				cameraPose.updateCameraPose(colFrameImg);
+				if(!cameraPose.cameraPoseFound()) {
+					camera.addCallbackBuffer(params[0]);
+					TimerManager.stop();
+					return null;
+//					if(AppConfig.DEBUG_TIMING) Log.d(TAG, "Totaltime in "+(System.nanoTime()-start)/1000000L+"ms");
+				}
+			}
+			if(AppConfig.LEGO_TRACKING && cameraPose.cameraPoseFound()) legoBrick.findLegoBrick(colFrameImg);
+			
+			if(AppConfig.LEMMING_RENDERING && cameraPose.cameraPoseFound()) {
+				long lemmingStart = System.nanoTime();
+				
+//				LemmingGeneratorTask lgt = new LemmingGeneratorTask();
+//				lgt.setupFrameTrackingCallback(callback);
+//				lgt.start = lemmingStart;
+//				lgt.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
+				TimerManager.start("", "getLegobricks", "");
+				LegoBrick[] lbs = legoBrick.getLegoBricks(cameraPose);
+				TimerManager.stop();
+				lemmingsGenerator.frameTick(lbs);
+				if(AppConfig.DEBUG_TIMING) Log.d(TAG, "Lemming frameUpdate in "+(System.nanoTime()-lemmingStart)/1000000L+"ms");
+//				callback.trackingDone(LemmingsGenerator.class);
+				long lemmingMeshUpd = System.nanoTime();
+				synchronized (lock) {
+					lemmingMeshesToRender.clear();
+					lemmingMeshesToRender.addAll(lemmingsGenerator.getLemmingMeshes());
+				}
+//				if(AppConfig.DEBUG_TIMING) Log.d(TAG, "Lemming meshes updated in "+(System.nanoTime()-lemmingMeshUpd)/1000000L+"ms");
+//			} else if(AppConfig.LEMMING_RENDERING) {
+//				callback.trackingDone(LemmingsGenerator.class);
+			}
+			TimerManager.stop();
+			return null;
+		}
+		
 	}
 	
 	private class LemmingGeneratorTask extends AsyncTask<Void, Void, Void> {
