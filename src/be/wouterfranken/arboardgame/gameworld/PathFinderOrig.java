@@ -205,7 +205,7 @@ private static final String TAG = PathFinderOrig.class.getSimpleName();
 		Mat brickThreshold = w.getBrickThreshold();
 		CameraPoseTracker cameraPose = w.getCameraPoseTracker();
 		Mat mv = cameraPose.getMvMat();
-		if(mv == null || mv.empty()) return null;
+		if(mv == null || mv.empty() || brickThreshold == null || brickThreshold.empty()) return null;
 //		Highgui.imwrite("/sdcard/arbg/threshold.png",brickThreshold);
 		
 		PathNode current = null;

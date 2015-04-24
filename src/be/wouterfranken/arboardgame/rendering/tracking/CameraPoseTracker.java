@@ -87,7 +87,7 @@ public class CameraPoseTracker extends Tracker{
 			
 			setMv(mv);
 			setProj(proj);
-			trackingCallback.trackingDone(CameraPoseTracker.class);
+//			trackingCallback.trackingDone(CameraPoseTracker.class);
 			TimerManager.stop();
 			if(AppConfig.DEBUG_TIMING) Log.d(TAG, "CameraPose found in "+(System.nanoTime()-start)/1000000L+"ms");
 		} else {

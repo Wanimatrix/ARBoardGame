@@ -46,7 +46,7 @@ public class LegoBrickTracker extends Tracker{
 					threshold.getNativeObjAddr()
 					);
 			setThreshold(threshold);
-			trackingCallback.trackingDone(LegoBrickTracker.class);
+//			trackingCallback.trackingDone(LegoBrickTracker.class);
 			TimerManager.stop();
 			if(AppConfig.DEBUG_TIMING) Log.d(TAG, "LegoBrick found in "+(System.nanoTime()-start)/1000000L+"ms");
 		}

@@ -389,6 +389,7 @@ public class ArRenderer implements Renderer, PreviewCallback {
 //	int frameCount = 0;
 //	long previousFrameTime = 0;
 //	int frameWaitAmount = 0;
+	ParallelTask plt = null;
 	
 	@Override
 	public void onPreviewFrame(byte[] frameData, Camera camera) {
@@ -424,33 +425,88 @@ public class ArRenderer implements Renderer, PreviewCallback {
 		
 		FrameTrackingCallback callback = new FrameTrackingCallback(frameData, camera,start);
 
-		if(AppConfig.CAMERA_POSE_ESTIMATION) { 
-			cameraPose.updateCameraPose(colFrameImg, callback);
+//		if(AppConfig.CAMERA_POSE_ESTIMATION) { 
+//			cameraPose.updateCameraPose(colFrameImg, callback);
+//			if(!cameraPose.cameraPoseFound()) {
+//				camera.addCallbackBuffer(frameData);
+//				if(AppConfig.DEBUG_TIMING) Log.d(TAG, "Totaltime in "+(System.nanoTime()-start)/1000000L+"ms");
+//			}
+//		}
+		
+		if(AppConfig.CAMERA_POSE_ESTIMATION && AppConfig.LEGO_TRACKING && AppConfig.LEMMING_RENDERING 
+				&& (plt == null || plt.getStatus() == AsyncTask.Status.PENDING || plt.getStatus() == AsyncTask.Status.FINISHED)) {
+			
+			plt = new ParallelTask();
+			plt.frameData = frameData;
+			plt.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, colFrameImg);
+			callback.trackingDone(CameraPoseTracker.class);
+			callback.trackingDone(LegoBrickTracker.class);
+			callback.trackingDone(LemmingsGenerator.class);
+		} else if(AppConfig.CAMERA_POSE_ESTIMATION && AppConfig.LEGO_TRACKING && AppConfig.LEMMING_RENDERING) {
+			callback.trackingDone(CameraPoseTracker.class);
+			callback.trackingDone(LegoBrickTracker.class);
+			callback.trackingDone(LemmingsGenerator.class);
+		}
+		
+		
+		
+//		if(AppConfig.LEGO_TRACKING) legoBrick.findLegoBrick(colFrameImg, callback);
+//		
+//		if(AppConfig.LEMMING_RENDERING && cameraPose.cameraPoseFound()) {
+//			long lemmingStart = System.nanoTime();
+//			if(AppConfig.PARALLEL_LEMMING_UPDATES) {
+//				LemmingGeneratorTask lgt = new LemmingGeneratorTask();
+//				lgt.setupFrameTrackingCallback(callback);
+//				lgt.start = lemmingStart;
+//				lgt.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
+//			} else {
+//				lemmingsGenerator.frameTick();
+//				if(AppConfig.DEBUG_TIMING) Log.d(TAG, "Lemming frameUpdate in "+(System.nanoTime()-lemmingStart)/1000000L+"ms");
+//				callback.trackingDone(LemmingsGenerator.class);
+//			}
+//			synchronized (lock) {
+//				lemmingMeshesToRender.clear();
+//				lemmingMeshesToRender.addAll(lemmingsGenerator.getLemmingMeshes());
+//			}
+//		} else if(AppConfig.LEMMING_RENDERING) {
+//			callback.trackingDone(LemmingsGenerator.class);
+//		}
+	}
+	
+	private class ParallelTask extends AsyncTask<Mat, Void, Void> {
+		byte[] frameData = null;
+		
+		@Override
+		protected Void doInBackground(Mat... params) {
+			cameraPose.updateCameraPose(params[0], null);
 			if(!cameraPose.cameraPoseFound()) {
 				camera.addCallbackBuffer(frameData);
-				if(AppConfig.DEBUG_TIMING) Log.d(TAG, "Totaltime in "+(System.nanoTime()-start)/1000000L+"ms");
+//				if(AppConfig.DEBUG_TIMING) Log.d(TAG, "Totaltime in "+(System.nanoTime()-start)/1000000L+"ms");
+				return null;
 			}
-		}
-		if(AppConfig.LEGO_TRACKING) legoBrick.findLegoBrick(colFrameImg, callback);
-		
-		if(AppConfig.LEMMING_RENDERING && cameraPose.cameraPoseFound()) {
-			long lemmingStart = System.nanoTime();
-			if(AppConfig.PARALLEL_LEMMING_UPDATES) {
-				LemmingGeneratorTask lgt = new LemmingGeneratorTask();
-				lgt.setupFrameTrackingCallback(callback);
-				lgt.start = lemmingStart;
-				lgt.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
-			} else {
-				lemmingsGenerator.frameTick();
-				if(AppConfig.DEBUG_TIMING) Log.d(TAG, "Lemming frameUpdate in "+(System.nanoTime()-lemmingStart)/1000000L+"ms");
-				callback.trackingDone(LemmingsGenerator.class);
+			
+			if(AppConfig.LEGO_TRACKING) legoBrick.findLegoBrick(params[0], null);
+			
+			if(AppConfig.LEMMING_RENDERING && cameraPose.cameraPoseFound()) {
+				long lemmingStart = System.nanoTime();
+				if(AppConfig.PARALLEL_LEMMING_UPDATES) {
+					LemmingGeneratorTask lgt = new LemmingGeneratorTask();
+//					lgt.setupFrameTrackingCallback(callback);
+					lgt.start = lemmingStart;
+					lgt.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
+				} else {
+					lemmingsGenerator.frameTick();
+					if(AppConfig.DEBUG_TIMING) Log.d(TAG, "Lemming frameUpdate in "+(System.nanoTime()-lemmingStart)/1000000L+"ms");
+//					callback.trackingDone(LemmingsGenerator.class);
+				}
+				synchronized (lock) {
+					lemmingMeshesToRender.clear();
+					lemmingMeshesToRender.addAll(lemmingsGenerator.getLemmingMeshes());
+				}
+//			} else if(AppConfig.LEMMING_RENDERING) {
+//				callback.trackingDone(LemmingsGenerator.class);
 			}
-			synchronized (lock) {
-				lemmingMeshesToRender.clear();
-				lemmingMeshesToRender.addAll(lemmingsGenerator.getLemmingMeshes());
-			}
-		} else if(AppConfig.LEMMING_RENDERING) {
-			callback.trackingDone(LemmingsGenerator.class);
+			return null;
 		}
 	}
 	
