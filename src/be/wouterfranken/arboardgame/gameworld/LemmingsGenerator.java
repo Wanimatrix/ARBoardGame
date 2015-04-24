@@ -39,7 +39,7 @@ public class LemmingsGenerator extends Tracker{
 	
 	@SuppressWarnings("unused")
 	public void frameTick() {
-		if(!w.isWorldGenerated()) return;
+		if(!w.isWorldGenerated() || w.getBrickThreshold() == null || w.getBrickThreshold().empty()) return;
 		
 		synchronized (lock) {
 			synchronized (lockExtern) {
