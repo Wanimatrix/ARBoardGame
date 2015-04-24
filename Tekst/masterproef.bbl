@@ -15,6 +15,13 @@ Bernhard~E Boser, Isabelle~M Guyon, and Vladimir~N Vapnik.
 \newblock In {\em Proceedings of the fifth annual workshop on Computational
   learning theory}, pages 144--152. ACM, 1992.
 
+\bibitem[DP73]{douglas1973algorithms}
+David~H Douglas and Thomas~K Peucker.
+\newblock Algorithms for the reduction of the number of points required to
+  represent a digitized line or its caricature.
+\newblock {\em Cartographica: The International Journal for Geographic
+  Information and Geovisualization}, 10(2):112--122, 1973.
+
 \bibitem[DT05]{dalal2005histograms}
 Navneet Dalal and Bill Triggs.
 \newblock Histograms of oriented gradients for human detection.

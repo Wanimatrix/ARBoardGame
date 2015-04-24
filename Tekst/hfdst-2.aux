@@ -3,52 +3,64 @@
 \@writefile{lot}{\addvspace {10pt}}
 \@writefile{toc}{\contentsline {chapter}{\chapternumberline {3}Na\"ieve legoblokdetectie}{5}{chapter.3}}
 \newlabel{hoofdstuk:2}{{\M@TitleReference {3}{Na\"ieve legoblokdetectie}}{5}{Na\"ieve legoblokdetectie\relax }{chapter.3}{}}
-\@writefile{toc}{\contentsline {section}{\numberline {3.1}Evaluatiemethode en implementatie}{5}{section.3.1}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {3.1.1}Evaluatiemethode}{5}{subsection.3.1.1}}
-\@writefile{lof}{\contentsline {figure}{\numberline {3.1}{\ignorespaces Simpele (links) en complexe scene (rechts) voor performantie evaluatie van na\"ieve blokdetectie.}}{5}{figure.3.1}}
-\newlabel{fig:simple_complex}{{\M@TitleReference {3.1}{Simpele (links) en complexe scene (rechts) voor performantie evaluatie van na\"ieve blokdetectie.}}{5}{Simpele (links) en complexe scene (rechts) voor performantie evaluatie van na\"ieve blokdetectie}{figure.3.1}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {3.1.2}Implementatie}{6}{subsection.3.1.2}}
+\@writefile{toc}{\contentsline {section}{\numberline {3.1}Begrippen}{5}{section.3.1}}
+\newlabel{sec:naive_begr}{{\M@TitleReference {3.1}{Begrippen}}{5}{Begrippen\relax }{section.3.1}{}}
 \@writefile{toc}{\contentsline {section}{\numberline {3.2}Blokdetectie op basis van simpele geometrische informatie}{6}{section.3.2}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {3.2.1}Begrippen en veronderstellingen}{6}{subsection.3.2.1}}
-\newlabel{sec:alg1_begrip}{{\M@TitleReference {3.2.1}{Begrippen en veronderstellingen}}{6}{Begrippen en veronderstellingen\relax }{subsection.3.2.1}{}}
+\newlabel{sec:naive_algo}{{\M@TitleReference {3.2}{Blokdetectie op basis van simpele geometrische informatie}}{6}{Blokdetectie op basis van simpele geometrische informatie\relax }{section.3.2}{}}
 \citation{suzuki1985topological}
-\@writefile{toc}{\contentsline {subsection}{\numberline {3.2.2}Algoritme}{8}{subsection.3.2.2}}
-\@writefile{lof}{\contentsline {figure}{\numberline {3.2}{\ignorespaces Twee voorbeelden die aangeven hoe de pose vanuit een contour gevonden kan worden. }}{9}{figure.3.2}}
-\newlabel{fig:brickPoseDetect}{{\M@TitleReference {3.2}{Twee voorbeelden die aangeven hoe de pose vanuit een contour gevonden kan worden. }}{9}{Twee voorbeelden die aangeven hoe de pose vanuit een contour gevonden kan worden. \relax }{figure.3.2}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {3.2.3}Resultaten en performantie}{10}{subsection.3.2.3}}
-\newlabel{sec:algo1_res}{{\M@TitleReference {3.2.3}{Resultaten en performantie}}{10}{Resultaten en performantie\relax }{subsection.3.2.3}{}}
-\@writefile{lof}{\contentsline {figure}{\numberline {3.3}{\ignorespaces Resultaat van het eerste na\"ieve algoritme.}}{10}{figure.3.3}}
-\newlabel{fig:result_algo1}{{\M@TitleReference {3.3}{Resultaat van het eerste na\"ieve algoritme.}}{10}{Resultaat van het eerste na\"ieve algoritme}{figure.3.3}{}}
-\@writefile{lof}{\contentsline {figure}{\numberline {3.4}{\ignorespaces Resultaat van het eerste na\"ieve algoritme bij veel schaduw.}}{11}{figure.3.4}}
-\newlabel{fig:algo1_shadow}{{\M@TitleReference {3.4}{Resultaat van het eerste na\"ieve algoritme bij veel schaduw.}}{11}{Resultaat van het eerste na\"ieve algoritme bij veel schaduw}{figure.3.4}{}}
-\@writefile{lof}{\contentsline {figure}{\numberline {3.5}{\ignorespaces Resultaat van het eerste na\"ieve algoritme bij rode tint in het beeld.}}{11}{figure.3.5}}
-\newlabel{fig:algo1_nonwhitebg}{{\M@TitleReference {3.5}{Resultaat van het eerste na\"ieve algoritme bij rode tint in het beeld.}}{11}{Resultaat van het eerste na\"ieve algoritme bij rode tint in het beeld}{figure.3.5}{}}
+\citation{douglas1973algorithms}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.2.1}Locatie van legoblok bepalen}{7}{subsection.3.2.1}}
+\newlabel{sec:naive_algo_1}{{\M@TitleReference {3.2.1}{Locatie van legoblok bepalen}}{7}{Locatie van legoblok bepalen\relax }{subsection.3.2.1}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {3.1}{\ignorespaces Twee voorbeelden die aangeven hoe de pose vanuit een contour gevonden kan worden. }}{8}{figure.3.1}}
+\newlabel{fig:brickPoseDetect}{{\M@TitleReference {3.1}{Twee voorbeelden die aangeven hoe de pose vanuit een contour gevonden kan worden. }}{8}{Twee voorbeelden die aangeven hoe de pose vanuit een contour gevonden kan worden. \relax }{figure.3.1}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.2.2}Bepalen van de pose}{8}{subsection.3.2.2}}
+\newlabel{sec:naive_algo_2}{{\M@TitleReference {3.2.2}{Bepalen van de pose}}{8}{Bepalen van de pose\relax }{subsection.3.2.2}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.2.3}Legoblok toevoegen aan de virtuele wereld}{9}{subsection.3.2.3}}
+\newlabel{sec:naive_algo_3}{{\M@TitleReference {3.2.3}{Legoblok toevoegen aan de virtuele wereld}}{9}{Legoblok toevoegen aan de virtuele wereld\relax }{subsection.3.2.3}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {3.3}Implementatie, resultaten en evaluatie}{9}{section.3.3}}
+\newlabel{sec:algo_implreseval}{{\M@TitleReference {3.3}{Implementatie, resultaten en evaluatie}}{9}{Implementatie, resultaten en evaluatie\relax }{section.3.3}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.3.1}Implementatie}{9}{subsection.3.3.1}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.3.2}Resultaten}{10}{subsection.3.3.2}}
+\@writefile{lof}{\contentsline {figure}{\numberline {3.2}{\ignorespaces Resultaat van het na\"ieve algoritme.}}{10}{figure.3.2}}
+\newlabel{fig:result_algo1}{{\M@TitleReference {3.2}{Resultaat van het na\"ieve algoritme.}}{10}{Resultaat van het na\"ieve algoritme}{figure.3.2}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {3.3}{\ignorespaces Resultaat van het na\"ieve algoritme bij veel schaduw.}}{11}{figure.3.3}}
+\newlabel{fig:algo1_shadow}{{\M@TitleReference {3.3}{Resultaat van het na\"ieve algoritme bij veel schaduw.}}{11}{Resultaat van het na\"ieve algoritme bij veel schaduw}{figure.3.3}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {3.4}{\ignorespaces Resultaat van het na\"ieve algoritme bij rode tint in het beeld.}}{11}{figure.3.4}}
+\newlabel{fig:algo1_nonwhitebg}{{\M@TitleReference {3.4}{Resultaat van het na\"ieve algoritme bij rode tint in het beeld.}}{11}{Resultaat van het na\"ieve algoritme bij rode tint in het beeld}{figure.3.4}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.3.3}Performantie}{11}{subsection.3.3.3}}
+\@writefile{lof}{\contentsline {figure}{\numberline {3.5}{\ignorespaces Simpele (links) en complexe scene (rechts) voor performantie evaluatie van na\"ieve blokdetectie.}}{11}{figure.3.5}}
+\newlabel{fig:simple_complex}{{\M@TitleReference {3.5}{Simpele (links) en complexe scene (rechts) voor performantie evaluatie van na\"ieve blokdetectie.}}{11}{Simpele (links) en complexe scene (rechts) voor performantie evaluatie van na\"ieve blokdetectie}{figure.3.5}{}}
 \@writefile{lof}{\contentsline {figure}{\numberline {3.6}{\ignorespaces Gemiddelde performantie van het eerste na\"ieve algoritme.}}{12}{figure.3.6}}
 \newlabel{fig:perf_algo1}{{\M@TitleReference {3.6}{Gemiddelde performantie van het eerste na\"ieve algoritme.}}{12}{Gemiddelde performantie van het eerste na\"ieve algoritme}{figure.3.6}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {3.2.4}Voor- en nadelen}{13}{subsection.3.2.4}}
-\@writefile{toc}{\contentsline {section}{\numberline {3.3}Blokdetectie met behulp van een 2D grid}{14}{section.3.3}}
-\newlabel{sec:algo_grid}{{\M@TitleReference {3.3}{Blokdetectie met behulp van een 2D grid}}{14}{Blokdetectie met behulp van een 2D grid\relax }{section.3.3}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {3.3.1}Begrippen}{14}{subsection.3.3.1}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {3.3.2}Algoritme}{14}{subsection.3.3.2}}
-\@writefile{lof}{\contentsline {figure}{\numberline {3.7}{\ignorespaces Ruis in threshold boor morphologische operaties.}}{15}{figure.3.7}}
-\newlabel{fig:algo2_noise}{{\M@TitleReference {3.7}{Ruis in threshold boor morphologische operaties.}}{15}{Ruis in threshold boor morphologische operaties}{figure.3.7}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {3.3.3}Gevolgen}{15}{subsection.3.3.3}}
-\@writefile{lof}{\contentsline {figure}{\numberline {3.8}{\ignorespaces Fout van dit algoritme in de vorm van schaduw.}}{15}{figure.3.8}}
-\newlabel{fig:algo2_shadow}{{\M@TitleReference {3.8}{Fout van dit algoritme in de vorm van schaduw.}}{15}{Fout van dit algoritme in de vorm van schaduw}{figure.3.8}{}}
-\citation{hernandez2011tree}
-\@writefile{toc}{\contentsline {subsection}{\numberline {3.3.4}Resultaten en performantie}{16}{subsection.3.3.4}}
-\citation{hernandez2011tree}
-\citation{hernandez2011tree}
-\@writefile{lof}{\contentsline {figure}{\numberline {3.9}{\ignorespaces Resultaat van het tweede na\"ieve algoritme.}}{17}{figure.3.9}}
-\newlabel{fig:algo2_res}{{\M@TitleReference {3.9}{Resultaat van het tweede na\"ieve algoritme.}}{17}{Resultaat van het tweede na\"ieve algoritme}{figure.3.9}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {3.3.5}Uitbreiding: Tree Adaptive A*}{17}{subsection.3.3.5}}
-\@writefile{lof}{\contentsline {figure}{\numberline {3.10}{\ignorespaces Voorbeeld van het Tree Adaptive A* algoritme (uit~\cite  {hernandez2011tree}).}}{17}{figure.3.10}}
-\newlabel{fig:taastar}{{\M@TitleReference {3.10}{Voorbeeld van het Tree Adaptive A* algoritme (uit~\cite  {hernandez2011tree}).}}{17}{Voorbeeld van het Tree Adaptive A* algoritme (uit~\cite {hernandez2011tree})}{figure.3.10}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.3.4}Besluit}{13}{subsection.3.3.4}}
+\@writefile{toc}{\contentsline {section}{\numberline {3.4}Vereenvoudiging: blokdetectie met behulp van een 2D grid}{14}{section.3.4}}
+\newlabel{sec:naive_vereenv}{{\M@TitleReference {3.4}{Vereenvoudiging: blokdetectie met behulp van een 2D grid}}{14}{Vereenvoudiging: blokdetectie met behulp van een 2D grid\relax }{section.3.4}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.4.1}Algoritme}{14}{subsection.3.4.1}}
+\@writefile{lof}{\contentsline {figure}{\numberline {3.7}{\ignorespaces Ruis in threshold v\'o\'or morfologische operaties werden toegepast.}}{15}{figure.3.7}}
+\newlabel{fig:algo2_noise}{{\M@TitleReference {3.7}{Ruis in threshold v\'o\'or morfologische operaties werden toegepast.}}{15}{Ruis in threshold v\'o\'or morfologische operaties werden toegepast}{figure.3.7}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.4.2}Gevolgen}{15}{subsection.3.4.2}}
+\@writefile{lof}{\contentsline {figure}{\numberline {3.8}{\ignorespaces Fout van het vereenvoudigde na\"ieve algoritme in de vorm van schaduw.}}{15}{figure.3.8}}
+\newlabel{fig:algo2_shadow}{{\M@TitleReference {3.8}{Fout van het vereenvoudigde na\"ieve algoritme in de vorm van schaduw.}}{15}{Fout van het vereenvoudigde na\"ieve algoritme in de vorm van schaduw}{figure.3.8}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.4.3}Resultaten en performantie}{16}{subsection.3.4.3}}
+\@writefile{lof}{\contentsline {figure}{\numberline {3.9}{\ignorespaces Resultaat van het tweede na\"ieve algoritme.}}{16}{figure.3.9}}
+\newlabel{fig:algo2_res}{{\M@TitleReference {3.9}{Resultaat van het tweede na\"ieve algoritme.}}{16}{Resultaat van het tweede na\"ieve algoritme}{figure.3.9}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {3.10}{\ignorespaces Gemiddelde performantie van de vereenvoudiging van het na\"ieve algoritme.}}{17}{figure.3.10}}
+\newlabel{fig:naive_vereenv_perf}{{\M@TitleReference {3.10}{Gemiddelde performantie van de vereenvoudiging van het na\"ieve algoritme.}}{17}{Gemiddelde performantie van de vereenvoudiging van het na\"ieve algoritme}{figure.3.10}{}}
 \citation{hernandez2011tree}
 \citation{hernandez2011tree}
-\@writefile{toc}{\contentsline {section}{\numberline {3.4}Besluit van dit hoofdstuk}{18}{section.3.4}}
+\citation{hernandez2011tree}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.4.4}Besluit}{18}{subsection.3.4.4}}
+\@writefile{toc}{\contentsline {section}{\numberline {3.5}Uitbreiding: Tree Adaptive A*}{18}{section.3.5}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.5.1}Algoritme}{18}{subsection.3.5.1}}
+\@writefile{lof}{\contentsline {figure}{\numberline {3.11}{\ignorespaces Voorbeeld van het Tree Adaptive A* algoritme (uit~\cite  {hernandez2011tree}).}}{18}{figure.3.11}}
+\newlabel{fig:taastar}{{\M@TitleReference {3.11}{Voorbeeld van het Tree Adaptive A* algoritme (uit~\cite  {hernandez2011tree}).}}{18}{Voorbeeld van het Tree Adaptive A* algoritme (uit~\cite {hernandez2011tree})}{figure.3.11}{}}
+\citation{hernandez2011tree}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.5.2}Performantie}{19}{subsection.3.5.2}}
+\@writefile{toc}{\contentsline {section}{\numberline {3.6}Besluit}{19}{section.3.6}}
+\@writefile{lof}{\contentsline {figure}{\numberline {3.12}{\ignorespaces Gemiddelde performantie van de uitbreiding op de vereenvoudiging van het na\"ieve algoritme.}}{20}{figure.3.12}}
+\newlabel{fig:perf_algo1}{{\M@TitleReference {3.12}{Gemiddelde performantie van de uitbreiding op de vereenvoudiging van het na\"ieve algoritme.}}{20}{Gemiddelde performantie van de uitbreiding op de vereenvoudiging van het na\"ieve algoritme}{figure.3.12}{}}
 \@setckpt{hfdst-2}{
-\setcounter{page}{19}
+\setcounter{page}{21}
 \setcounter{equation}{0}
 \setcounter{enumi}{0}
 \setcounter{enumii}{0}
@@ -61,7 +73,7 @@
 \setcounter{book}{0}
 \setcounter{part}{0}
 \setcounter{chapter}{3}
-\setcounter{section}{4}
+\setcounter{section}{6}
 \setcounter{subsection}{0}
 \setcounter{subsubsection}{0}
 \setcounter{paragraph}{0}
@@ -95,10 +107,10 @@
 \setcounter{cmsm@mctr}{0}
 \setcounter{bsm@mctr}{0}
 \setcounter{workm@mctr}{0}
-\setcounter{sheetsequence}{27}
+\setcounter{sheetsequence}{29}
 \setcounter{lastsheet}{28}
 \setcounter{lastpage}{20}
-\setcounter{figure}{10}
+\setcounter{figure}{12}
 \setcounter{lofdepth}{1}
 \setcounter{table}{0}
 \setcounter{lotdepth}{1}
@@ -106,7 +118,7 @@
 \setcounter{Item}{0}
 \setcounter{Hfootnote}{0}
 \setcounter{memhycontfloat}{0}
-\setcounter{bookmark@seq@number}{16}
+\setcounter{bookmark@seq@number}{18}
 \setcounter{lips@count}{0}
 \setcounter{section@level}{1}
 }

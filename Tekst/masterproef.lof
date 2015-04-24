@@ -12,16 +12,18 @@
 \addvspace {10pt}
 \addvspace {10pt}
 \addvspace {10pt}
-\contentsline {figure}{\numberline {3.1}{\ignorespaces Simpele (links) en complexe scene (rechts) voor performantie evaluatie van na\"ieve blokdetectie.}}{5}{figure.3.1}
-\contentsline {figure}{\numberline {3.2}{\ignorespaces Twee voorbeelden die aangeven hoe de pose vanuit een contour gevonden kan worden. }}{9}{figure.3.2}
-\contentsline {figure}{\numberline {3.3}{\ignorespaces Resultaat van het eerste na\"ieve algoritme.}}{10}{figure.3.3}
-\contentsline {figure}{\numberline {3.4}{\ignorespaces Resultaat van het eerste na\"ieve algoritme bij veel schaduw.}}{11}{figure.3.4}
-\contentsline {figure}{\numberline {3.5}{\ignorespaces Resultaat van het eerste na\"ieve algoritme bij rode tint in het beeld.}}{11}{figure.3.5}
+\contentsline {figure}{\numberline {3.1}{\ignorespaces Twee voorbeelden die aangeven hoe de pose vanuit een contour gevonden kan worden. }}{8}{figure.3.1}
+\contentsline {figure}{\numberline {3.2}{\ignorespaces Resultaat van het na\"ieve algoritme.}}{10}{figure.3.2}
+\contentsline {figure}{\numberline {3.3}{\ignorespaces Resultaat van het na\"ieve algoritme bij veel schaduw.}}{11}{figure.3.3}
+\contentsline {figure}{\numberline {3.4}{\ignorespaces Resultaat van het na\"ieve algoritme bij rode tint in het beeld.}}{11}{figure.3.4}
+\contentsline {figure}{\numberline {3.5}{\ignorespaces Simpele (links) en complexe scene (rechts) voor performantie evaluatie van na\"ieve blokdetectie.}}{11}{figure.3.5}
 \contentsline {figure}{\numberline {3.6}{\ignorespaces Gemiddelde performantie van het eerste na\"ieve algoritme.}}{12}{figure.3.6}
-\contentsline {figure}{\numberline {3.7}{\ignorespaces Ruis in threshold boor morphologische operaties.}}{15}{figure.3.7}
-\contentsline {figure}{\numberline {3.8}{\ignorespaces Fout van dit algoritme in de vorm van schaduw.}}{15}{figure.3.8}
-\contentsline {figure}{\numberline {3.9}{\ignorespaces Resultaat van het tweede na\"ieve algoritme.}}{17}{figure.3.9}
-\contentsline {figure}{\numberline {3.10}{\ignorespaces Voorbeeld van het Tree Adaptive A* algoritme (uit~\cite {hernandez2011tree}).}}{17}{figure.3.10}
+\contentsline {figure}{\numberline {3.7}{\ignorespaces Ruis in threshold v\'o\'or morfologische operaties werden toegepast.}}{15}{figure.3.7}
+\contentsline {figure}{\numberline {3.8}{\ignorespaces Fout van het vereenvoudigde na\"ieve algoritme in de vorm van schaduw.}}{15}{figure.3.8}
+\contentsline {figure}{\numberline {3.9}{\ignorespaces Resultaat van het tweede na\"ieve algoritme.}}{16}{figure.3.9}
+\contentsline {figure}{\numberline {3.10}{\ignorespaces Gemiddelde performantie van de vereenvoudiging van het na\"ieve algoritme.}}{17}{figure.3.10}
+\contentsline {figure}{\numberline {3.11}{\ignorespaces Voorbeeld van het Tree Adaptive A* algoritme (uit~\cite {hernandez2011tree}).}}{18}{figure.3.11}
+\contentsline {figure}{\numberline {3.12}{\ignorespaces Gemiddelde performantie van de uitbreiding op de vereenvoudiging van het na\"ieve algoritme.}}{20}{figure.3.12}
 \addvspace {10pt}
 \contentsline {figure}{\numberline {4.1}{\ignorespaces Pose van het CAD model van een 2x2 legoblokje.}}{20}{figure.4.1}
 \contentsline {figure}{\numberline {4.2}{\ignorespaces Uitgebreide Haar-like featureset~\cite {lienhart2002extended}.}}{22}{figure.4.2}

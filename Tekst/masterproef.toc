@@ -19,21 +19,25 @@
 \contentsline {subsection}{\numberline {2.2.1}Een item}{3}{subsection.2.2.1}
 \contentsline {section}{\numberline {2.3}Besluit van dit hoofdstuk}{4}{section.2.3}
 \contentsline {chapter}{\chapternumberline {3}Na\"ieve legoblokdetectie}{5}{chapter.3}
-\contentsline {section}{\numberline {3.1}Evaluatiemethode en implementatie}{5}{section.3.1}
-\contentsline {subsection}{\numberline {3.1.1}Evaluatiemethode}{5}{subsection.3.1.1}
-\contentsline {subsection}{\numberline {3.1.2}Implementatie}{6}{subsection.3.1.2}
+\contentsline {section}{\numberline {3.1}Begrippen}{5}{section.3.1}
 \contentsline {section}{\numberline {3.2}Blokdetectie op basis van simpele geometrische informatie}{6}{section.3.2}
-\contentsline {subsection}{\numberline {3.2.1}Begrippen en veronderstellingen}{6}{subsection.3.2.1}
-\contentsline {subsection}{\numberline {3.2.2}Algoritme}{8}{subsection.3.2.2}
-\contentsline {subsection}{\numberline {3.2.3}Resultaten en performantie}{10}{subsection.3.2.3}
-\contentsline {subsection}{\numberline {3.2.4}Voor- en nadelen}{13}{subsection.3.2.4}
-\contentsline {section}{\numberline {3.3}Blokdetectie met behulp van een 2D grid}{14}{section.3.3}
-\contentsline {subsection}{\numberline {3.3.1}Begrippen}{14}{subsection.3.3.1}
-\contentsline {subsection}{\numberline {3.3.2}Algoritme}{14}{subsection.3.3.2}
-\contentsline {subsection}{\numberline {3.3.3}Gevolgen}{15}{subsection.3.3.3}
-\contentsline {subsection}{\numberline {3.3.4}Resultaten en performantie}{16}{subsection.3.3.4}
-\contentsline {subsection}{\numberline {3.3.5}Uitbreiding: Tree Adaptive A*}{17}{subsection.3.3.5}
-\contentsline {section}{\numberline {3.4}Besluit van dit hoofdstuk}{18}{section.3.4}
+\contentsline {subsection}{\numberline {3.2.1}Locatie van legoblok bepalen}{7}{subsection.3.2.1}
+\contentsline {subsection}{\numberline {3.2.2}Bepalen van de pose}{8}{subsection.3.2.2}
+\contentsline {subsection}{\numberline {3.2.3}Legoblok toevoegen aan de virtuele wereld}{9}{subsection.3.2.3}
+\contentsline {section}{\numberline {3.3}Implementatie, resultaten en evaluatie}{9}{section.3.3}
+\contentsline {subsection}{\numberline {3.3.1}Implementatie}{9}{subsection.3.3.1}
+\contentsline {subsection}{\numberline {3.3.2}Resultaten}{10}{subsection.3.3.2}
+\contentsline {subsection}{\numberline {3.3.3}Performantie}{11}{subsection.3.3.3}
+\contentsline {subsection}{\numberline {3.3.4}Besluit}{13}{subsection.3.3.4}
+\contentsline {section}{\numberline {3.4}Vereenvoudiging: blokdetectie met behulp van een 2D grid}{14}{section.3.4}
+\contentsline {subsection}{\numberline {3.4.1}Algoritme}{14}{subsection.3.4.1}
+\contentsline {subsection}{\numberline {3.4.2}Gevolgen}{15}{subsection.3.4.2}
+\contentsline {subsection}{\numberline {3.4.3}Resultaten en performantie}{16}{subsection.3.4.3}
+\contentsline {subsection}{\numberline {3.4.4}Besluit}{18}{subsection.3.4.4}
+\contentsline {section}{\numberline {3.5}Uitbreiding: Tree Adaptive A*}{18}{section.3.5}
+\contentsline {subsection}{\numberline {3.5.1}Algoritme}{18}{subsection.3.5.1}
+\contentsline {subsection}{\numberline {3.5.2}Performantie}{19}{subsection.3.5.2}
+\contentsline {section}{\numberline {3.6}Besluit}{19}{section.3.6}
 \contentsline {chapter}{\chapternumberline {4}Legoblokdetectie op basis van CAD modellen}{19}{chapter.4}
 \contentsline {section}{\numberline {4.1}Begrippen en algoritme}{19}{section.4.1}
 \contentsline {subsection}{\numberline {4.1.1}Begrippen}{19}{subsection.4.1.1}
@@ -69,7 +73,7 @@
 \contentsline {appendix}{\chapternumberline {B}De laatste bijlage}{17}{appendix.B}
 \contentsline {section}{\numberline {B.1}Lorem 20-24}{17}{section.B.1}
 \contentsline {section}{\numberline {B.2}Lorem 25-27}{18}{section.B.2}
-\contentsline {chapter}{Bibliografie}{19}{section*.31}
+\contentsline {chapter}{Bibliografie}{19}{section*.14}
 \select@language {dutch}
 \select@language {dutch}
 \select@language {dutch}
