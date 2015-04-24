@@ -56,12 +56,12 @@ public class LemmingsGenerator extends Tracker{
 //		synchronized (brickLock) {
 		if(AppConfig.DEBUG_LOGGING) Log.d(TAG, "BrickAmount: "+bricks.length);
 		Log.d(TAG, "Start adding bricks");
-		TimerManager.start("BrickDetection", "Add bricks to world", "/sdcard/arbg/oldTimeAddBricks.txt");
+		TimerManager.start("BrickDetection", "addBricks", "/sdcard/arbg/oldTimeAddBricks.txt");
 		w.addBricks(bricks);
 		TimerManager.stop();
 	
 		// Generate Lemmings
-		TimerManager.start("BrickDetection", "Lemming update", "/sdcard/arbg/oldTimeUpdateLemming.txt");
+		TimerManager.start("BrickDetection", "lemmingUpdate", "/sdcard/arbg/oldTimeUpdateLemming.txt");
 		synchronized (lock) {
 			boolean noLemmings = lemmings.isEmpty();
 			if(noLemmings && amount != 0) {

@@ -77,7 +77,7 @@ public class CameraPoseTracker extends Tracker{
 	
 	public void updateCameraPose(Mat colFrameImg) {
 		long start = System.nanoTime();
-		TimerManager.start("BrickDetection", "CameraPose", "/sdcard/arbg/oldTimeCamPose.txt");
+		TimerManager.start("BrickDetection", "camerapose", "/sdcard/arbg/oldTimeCamPose.txt");
 		
 		Mat grayImg = new Mat();
 		Imgproc.cvtColor(colFrameImg, grayImg, Imgproc.COLOR_BGR2GRAY);
