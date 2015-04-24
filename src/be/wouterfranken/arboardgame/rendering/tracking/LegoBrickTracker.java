@@ -31,7 +31,7 @@ public class LegoBrickTracker extends Tracker{
 		if(AppConfig.DEBUG_LOGGING) Log.d(TAG,"Legobrick tracking ...");
 		
 		long start = System.nanoTime();
-		TimerManager.start("", "BrickTracking2", "");
+		TimerManager.start("", "BrickTracking", "");
 		
 		if(AppConfig.PARALLEL_LEGO_TRACKING) {
 			FindLegoBrick task = new FindLegoBrick();

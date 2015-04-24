@@ -396,7 +396,7 @@ public class ArRenderer implements Renderer, PreviewCallback {
 		if(AppConfig.DEBUG_LOGGING) Log.d(TAG, "Updating camera pose ...");
 		long start = System.nanoTime();
 		
-		TimerManager.start("", "Total2", "");
+//		TimerManager.start("", "Total", "");
 		
 //		if(previousFrameTime != 0) {
 //			if(frameCount == 0) {
@@ -462,8 +462,8 @@ public class ArRenderer implements Renderer, PreviewCallback {
 		
 		@Override
 		protected Void doInBackground(byte[]... params) {
-			
-			TimerManager.start("", "frameTicks2", "");
+			TimerManager.start("", "Total", "");
+			TimerManager.start("", "frameTicks", "");
 			cameraPose.frameTick();
 			legoBrick.frameTick();
 			TimerManager.stop();
@@ -471,7 +471,7 @@ public class ArRenderer implements Renderer, PreviewCallback {
 			
 			Size size = camera.getParameters().getPreviewSize();
 			long start2 = System.nanoTime();
-			TimerManager.start("", "yuv2bgr2", "");
+			TimerManager.start("", "yuv2bgr", "");
 			Mat colFrameImg = new Mat();
 			Mat yuv = new Mat( (int)(size.height*1.5), size.width, CvType.CV_8UC1 );
 			yuv.put( 0, 0, params[0] );
@@ -483,6 +483,7 @@ public class ArRenderer implements Renderer, PreviewCallback {
 			if(!cameraPose.cameraPoseFound()) {
 				camera.addCallbackBuffer(params[0]);
 //				if(AppConfig.DEBUG_TIMING) Log.d(TAG, "Totaltime in "+(System.nanoTime()-start)/1000000L+"ms");
+				TimerManager.stop();
 				return null;
 			}
 			
@@ -507,6 +508,7 @@ public class ArRenderer implements Renderer, PreviewCallback {
 //			} else if(AppConfig.LEMMING_RENDERING) {
 //				callback.trackingDone(LemmingsGenerator.class);
 			}
+			TimerManager.stop();
 			return null;
 		}
 	}

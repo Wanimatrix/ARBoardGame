@@ -52,7 +52,7 @@ public class LemmingsGenerator extends Tracker{
 		
 		// Generate Lemmings
 		synchronized (lock) {
-			TimerManager.start("", "lemmingUpdate2", "");
+			TimerManager.start("", "lemmingUpdate", "");
 			boolean noLemmings = lemmings.isEmpty();
 			if(noLemmings && amount != 0) {
 				generateNewLemming();

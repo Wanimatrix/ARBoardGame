@@ -74,7 +74,7 @@ public class CameraPoseTracker extends Tracker{
 	
 	public void updateCameraPose(Mat colFrameImg, FrameTrackingCallback trackingCallback) {
 		long start = System.nanoTime();
-		TimerManager.start("", "camerapose2", "");
+		TimerManager.start("", "camerapose", "");
 		Mat grayImg = new Mat();
 		Imgproc.cvtColor(colFrameImg, grayImg, Imgproc.COLOR_BGR2GRAY);
 		
