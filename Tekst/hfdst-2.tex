@@ -2,15 +2,15 @@
 \label{hoofdstuk:2}
 In dit hoofdstuk bespreken we een na\"ief algoritme om legoblokken te detecteren. Dit algoritme zal op basis van kleurthresholding de legoblokken in de afbeelding lokaliseren en vervolgens op basis van de geometrie van een legoblok de pose bepalen. Hierna vereenvoudigen we dit algoritme door in plaats van expliciet de pose van een legoblok te bepalen gebruik te maken van het grid van de virtuele wereld in ons AR spel. Ten slotte breiden we deze vereenvoudiging uit met een effici\"enter algoritme voor het zoeken van een pad in de virtuele wereld, wat de performantie ten goede komt.
 
-In sectie \ref{sec:naive_begr} worden eerst enkele begrippen uitgelegd. Vervolgens wordt het na\"ieve blokdetectie algoritme in sectie \ref{sec:naive_algo}. Sectie \ref{sec:naive_algo_result} bespreekt dan de implementatie, resultaten en evaluatie van dit algoritme. Verder wordt in sectie \ref{sec:naive_vereenv} de vereenvoudiging van het algoritme behandeld. De uitbreiding op de vereenvoudiging wordt uitgelegd in sectie \ref{sec:naive_uitbr} en we sluiten af met de redenen waarom in de volgende hoofdstukken op zoek wordt gegaan naar andere algoritmes in sectie \ref{sec:naive_besl}
+In sectie \ref{sec:naive_begr} worden eerst enkele begrippen uitgelegd. Vervolgens wordt het na\"ieve blokdetectie algoritme uitgelegd in sectie \ref{sec:naive_algo}. Sectie \ref{sec:naive_algo_result} bespreekt dan de implementatie, resultaten en evaluatie van dit algoritme. Verder wordt in sectie \ref{sec:naive_vereenv} de vereenvoudiging van het algoritme behandeld. De uitbreiding op de vereenvoudiging wordt uitgelegd in sectie \ref{sec:naive_uitbr} en we sluiten af met een besluit in sectie \ref{sec:naive_besl}.
 
 \section{Begrippen} \label{sec:naive_begr}
 
-\textbf{Thresholding} is een operatie die vaak in beeldverwerking wordt gebruikt om twee delen in een afbeelding te scheiden van elkaar (vaak voorgrond en achtergrond). Het resultaat is een binaire afbeelding waarin de achtergrond meestal wordt aangeduid met zwart en de voorgrond met wit.
+\textbf{Thresholding} is een operatie die vaak in beeldverwerking wordt gebruikt om twee delen in een afbeelding te scheiden van elkaar (vaak voorgrond en achtergrond). Dit kan door bijvoorbeeld alle pixels binnen een bepaald interval te scheiden van de pixels die buiten dit interval vallen. Het resultaat is een binaire afbeelding waarin de achtergrond meestal wordt aangeduid met zwart en de voorgrond met wit.
 
 \textbf{YUV}, \textbf{RGB} en \textbf{HSV} zijn drie verschillende kleurenruimtes die elk op een andere manier kleuren defini\"eren. Bij YUV gebeurt dit door de helderheid (Y) van de kleur te scheiden van twee kleurcomponenten (U en V). In RGB zijn er enkel drie kleurcomponenten waarbij de helderheid dus in deze componenten verwerkt zit. HSV scheidt tint (H), verzadiging (S) en helderheid (V) van elkaar. Omdat HSV drie componenten scheidt die een duidelijk verschillende invloed hebben op de uiteindelijke kleur wordt deze kleurenruimte vaak gebruikt voor kleurthresholding. In deze kleurenruimte is het immers eenvoudiger om kleuren van elkaar te scheiden zonder de verzadiging of de helderheid te be\"invloeden. In dit hoofdstuk en verdere hoofdstukken gaan we er steeds van uit dat de waarden van $H$,$S$ en $V$ liggen tussen 0 en 255.
 
-\textbf{Pinhole model} is het model dat OpenCV gebruikt om 3D punten van een scene te transformeren naar de afbeelding via een perspectieftransformatie. In ddit hoofdstuk wordt het gebruikt om 2D punten om te zetten naar 3D (en omgekeerd). Dit is de formule van het pinhole model:
+\textbf{Pinhole model} is het model dat OpenCV~\cite{opencv} gebruikt om 3D punten van een scene te transformeren naar de afbeelding via een perspectieftransformatie. In dit hoofdstuk wordt het gebruikt om 2D punten om te zetten naar 3D (en omgekeerd). Dit is de formule van het pinhole model:
 $$
 s
 \begin{bmatrix}
@@ -38,12 +38,12 @@ s
 $$
 Hierbij is $(u,v)$ het 2D punt, $(X,Y,Z)$ het 3D punt, de eerste matrix in het rechterlid de camera intrinsics matrix (bekomen door camera calibratie), de tweede matrix in het rechterlid is de camera extrinsics matrix (afgeleid uit de ligging van de markers) en $s$, tenslotte, is een schaalfactor. Wanneer de twee cameramatrices bekend zijn kunnen we een 3D punt omzetten in 2D en vice versa. Een belangrijke opmerking hierbij is dat, bij omzetting van 2D naar 3D, wat informatie te kort is (het aantal dimensies verhoogt immers). Deze extra informatie kan worden gegeven in twee vormen: ofwel kennen we de uiteindelijke $Z$ co\"ordinaat, ofwel kennen we de uiteindelijke $X$ en $Y$ co\"ordinaten. Daarna is het slechts een kwestie van een stelsel van vergelijkingen uit te werken.
 
-\textbf{morfologische operaties} zijn operaties die de geometrie van vormen in een binaire afbeelding kunnen wijzigen. De twee basis operaties zijn \textit{dilate} en \textit{erode}. In deze operaties komt het erop neer dat we de convolutie nemen van de afbeelding met een kernel, die eender welke vorm of grootte kan hebben. Hierbij wordt de kernel over de afbeelding geschoven en dan wordt de pixel in het ankerpunt van de kernel vervangen door een maximum of minimum van alle pixels die binnen de kernel vallen. Bij een \textit{dilate} operatie is dit het maximum en bij een \textit{erode} operatie is dit het minimum. Bij een \textit{dilate} en \textit{erode} operatie wordt een zwart vlak omgeven door wit dus respectievelijk kleiner en groter. 
+\textbf{Morfologische operaties} zijn operaties die de geometrie van vormen in een binaire afbeelding kunnen wijzigen. De twee basis operaties zijn \textit{dilate} en \textit{erode}. In deze operaties komt het erop neer dat we de convolutie nemen van de afbeelding met een kernel, die eender welke vorm of grootte kan hebben. Hierbij wordt de kernel over de afbeelding geschoven en dan wordt de pixel in het ankerpunt van de kernel vervangen door een maximum of minimum van alle pixels die binnen de kernel vallen. Bij een \textit{dilate} operatie is dit het maximum en bij een \textit{erode} operatie is dit het minimum. Bij een \textit{dilate} en \textit{erode} operatie wordt een zwart vlak omgeven door wit dus respectievelijk kleiner en groter. 
 
 Naast de basis morfologische operaties bestaan ook nog de veel gebruikte \textit{open} en \textit{close} operatie. \textit{Open} is in feite een \textit{dilate} operatie toepassen op een afbeelding die eerder een \textit{erode} operatie onderging. De \textit{close} operatie is het omgekeerde. De \textit{open} operatie wordt vaak gebruik om kleine witte vlekjes te verwijderen, terwijl de \textit{close} operatie wordt gebruikt om kleine zwarte vlakjes te verwijderen.
 
 \section{Blokdetectie op basis van simpele geometrische informatie} \label{sec:naive_algo}
-Dit na\"ieve blokdetectie algoritme steunt op de geometrie van een legoblok om te bepalen waar legoblokken zich bevinden en wat hun pose is. Het algoritme verloopt in drie fases die in deze sectie worden beschreven. Eerst wordt de locatie van de legoblok bepaald in de afbeelding door gebruik te maken van kleurthresholding. Vervolgens wordt de pose van de blok bepaald door te steunen op de geometrische informatie. Ten slotte wordt de blok toegevoegd aan de virtuele wereld.
+Dit na\"ieve blokdetectie algoritme steunt op de geometrie van een legoblok om te bepalen waar legoblokken zich bevinden en wat hun pose is. Het algoritme verloopt in drie fases die in deze sectie worden beschreven. Eerst wordt de locatie van de legoblok bepaald in de afbeelding door gebruik te maken van kleurthresholding. Vervolgens wordt de pose van de blok bepaald door te steunen op de geometrische informatie van een legoblok. Ten slotte wordt de blok toegevoegd aan de virtuele wereld.
 
 %\subsubsection*{Veronderstellingen}
 %In dit algoritme worden enkele veronderstellingen gemaakt. In deze sectie bespreken we kort welke veronderstellingen zijn gemaakt en waarom.
@@ -56,16 +56,16 @@ Dit na\"ieve blokdetectie algoritme steunt op de geometrie van een legoblok om t
 %\end{itemize}
 
 \subsection{Locatie van legoblok bepalen} \label{sec:naive_algo_1}
-Eerst wordt de nieuwe frame van het YUV formaat omgezet naar het HSV formaat. Dit is een erg belangrijke stap vanwege twee redenen: ten eerste kan OpenCV niet werken met het YUV formaat en ten tweede is het HSV formaat (zoals reeds aangehaald in sectie \ref{sec:naive_begr}) veruit het eenvoudigste formaat om te gebruiken bij thresholding operaties.
+Eerst wordt de nieuwe frame van het YUV formaat omgezet naar het HSV formaat (via RGB, vanwege de beperkingen van OpenCV). Dit is een erg belangrijke stap omdat het HSV formaat (zoals reeds aangehaald in sectie \ref{sec:naive_begr}) veruit het eenvoudigste formaat om te gebruiken bij thresholding operaties.
 
 Op de HSV frame wordt vervolgens kleurthresholding toegepast om de legoblokken te scheiden van de wit-zwarte achtergrond. In dit eerste algoritme werd enkel gewerkt met de kleur rood. Experimenteel werd ondervonden dat om rood te scheiden van een wit-zwarte achtergrond de HSV waarden in het volgende interval moeten liggen:
 $$ 160 < H < 180; 153 < S < 255; 30 < V < 255$$
 
-Contouren worden dan bepaald met behulp van het algoritme dat beschreven wordt in~\cite{suzuki1985topological}. Dit algoritme is gebaseerd op een simpel algoritme dat de afbeelding scant naar contouren. Wanneer men zulke contour tegenkomt wordt deze aangeduid, bewaard en op zoek gegaan naar de volgende. Bovendien wordt een hi\ erarchische boom opgebouwd die aangeeft hoe de verschillende contours met elkaar gerelateerd zijn maar dit is niet belangrijk voor ons.
+Contouren worden dan bepaald met behulp van het algoritme dat beschreven wordt in~\cite{suzuki1985topological}. Dit algoritme is gebaseerd op een simpel algoritme dat de afbeelding scant naar contouren. Wanneer men zulke contour tegenkomt wordt deze aangeduid, bewaard en op zoek gegaan naar de volgende. Bovendien wordt een hi\ erarchische boom opgebouwd die aangeeft hoe de verschillende contours met elkaar gerelateerd zijn maar dit is niet van belang voor dit algoritme.
 
-In de volgende stap wordt deze contour benadert met een polygon. Hiervoor wordt het Douglas-Peucker algoritme gebruikt~\cite{douglas1973algorithms}. Dit is een eenvoudig algoritme dat iteratief een lijnsegment gaat zoeken dat minder punten bevat dan het oorspronkelijke lijnsegment (in ons geval een contour). Deze stap is nodig omdat een contour uit een enorme hoeveelheid punten bestaat, na deze benadering blijven de belangrijkste punten over: de hoekpunten van de legoblok. Dit algoritme bevat een parameter $\epsilon$ die aangeeft wat de maximale afwijking mag zijn van de benadering ten opzichte van de oorspronkelijke contour. Om ervoor te zorgen dat we een zo goed mogelijke benadering verkrijgen in alle gevallen, maken we $\epsilon$ steeds groter tot we net een maximum van zes hoekpunten hebben bereikt. Het adaptief aanpassen van deze $\epsilon$ parameter zorgt ervoor dat we de kwaliteit van de contour maar in ruil daarvoor moeten we de veronderstelling maken dat de contour van een legoblok bestaat uit maximaal zes hoeken. Dit resulteert in enkele nadelen die later aan bod zullen komen.
+In de volgende stap wordt deze contour benadert met een polygon. Hiervoor wordt het Douglas-Peucker algoritme gebruikt~\cite{douglas1973algorithms}. Dit is een eenvoudig algoritme dat iteratief een lijnsegment gaat zoeken dat minder punten bevat dan het oorspronkelijke lijnsegment (in ons geval een contour). Deze stap is nodig omdat een contour uit een enorme hoeveelheid punten bestaat waarvan we enkel de belangrijkste, de hoekpunten van de legoblok, nodig hebben. Het Douglas-Peucker algoritme bevat een parameter $\epsilon$ die aangeeft wat de maximale afwijking mag zijn van de benadering ten opzichte van de oorspronkelijke contour. Om ervoor te zorgen dat we een zo goed mogelijke benadering verkrijgen in alle gevallen, maken we deze $\epsilon$ steeds groter tot we net een maximum van zes hoekpunten hebben bereikt. Het adaptief aanpassen van deze $\epsilon$ parameter zorgt ervoor dat we de kwaliteit van de contour behouden maar in ruil daarvoor moeten we de veronderstelling maken dat de contour van een legoblok bestaat uit maximaal zes hoeken (wat het geval is voor alle balkvormige legoblokken indien ze vanuit een perspectief standpunt worden bekeken). Dit resulteert in enkele nadelen die later aan bod zullen komen.
 
-Nu kan het zijn dat we contours hebben met een te kleine oppervlakte door ruis in de kleurthreshold. Om deze te verwijderen wordt de oppervlakte van alle contours bekeken en contours verwijderd met een oppervlakte die 100x kleiner is dan de oppervlakte van de grootste contour.
+Nu kan het zijn dat we contours overhouden met een te kleine oppervlakte door ruis in de kleurthreshold. Om deze te verwijderen wordt de oppervlakte van alle contours bekeken en contours verwijderd met een oppervlakte die 100x kleiner is dan de oppervlakte van de grootste contour.
 
 Het bepalen en verfijnen van de contour is afgelopen, nu moet bepaald worden wat de pose is van de legoblok. Dat gebeurt in het tweede deel van het algoritme.
 
@@ -80,12 +80,12 @@ Het bepalen en verfijnen van de contour is afgelopen, nu moet bepaald worden wat
     \draw[->] (0,0,0) -- (1,0,0) node[above]{X};
   \end{tikzpicture}
   \begin{tikzpicture}
-	\draw[black] (0,0 ,4) -- (2,0,4);
-    \draw[black] (0 ,0,4) -- (0 ,2,4);
-    \draw[black] (2,0 ,4) -- (2,0 ,0);
-    \draw[black] (0 ,2,4) node[red,left]{a} -- (0 ,2,0);
-    \draw[black] (2,0,0 ) -- (2,2,0 ) node[red,right]{c};
-    \draw[black] (0,2,0 ) node[red,left]{b} -- (2,2,0 );
+	\draw[black, very thick] (0,0 ,4) -- (2,0,4);
+    \draw[black, very thick] (0 ,0,4) -- (0 ,2,4);
+    \draw[black, very thick] (2,0 ,4) -- (2,0 ,0);
+    \draw[black, very thick] (0 ,2,4) node[red,left]{a} -- (0 ,2,0);
+    \draw[black, very thick] (2,0,0 ) -- (2,2,0 ) node[red,right]{c};
+    \draw[black, very thick] (0,2,0 ) node[red,left]{b} -- (2,2,0 );
     
     \draw[lightgray] (0,2 ,4) -- (2,2 ,4);
     \draw[lightgray] (2 ,0,4) -- (2 ,2,4);
@@ -100,12 +100,12 @@ Het bepalen en verfijnen van de contour is afgelopen, nu moet bepaald worden wat
 	\draw[blue] (2,0,4) node[blue,below]{d} circle (0.8);
   \end{tikzpicture}
   \begin{tikzpicture}
-	\draw[black] (0,0 ,4) node[red,left]{a} -- (2,0,4);
-    \draw[black] (0 ,0,4) -- (0 ,2,4);
-    \draw[black] (2,0 ,4) -- (2,0 ,0);
-    \draw[black] (0 ,2,4)  -- (0 ,2,0);
-    \draw[black] (2,0,0 ) node[red,right]{c} -- (2,2,0 ) ;
-    \draw[black] (0,2,0 ) -- (2,2,0 );
+	\draw[black, very thick] (0,0 ,4) node[red,left]{a} -- (2,0,4);
+    \draw[black, very thick] (0 ,0,4) -- (0 ,2,4);
+    \draw[black, very thick] (2,0 ,4) -- (2,0 ,0);
+    \draw[black, very thick] (0 ,2,4)  -- (0 ,2,0);
+    \draw[black, very thick] (2,0,0 ) node[red,right]{c} -- (2,2,0 ) ;
+    \draw[black,very thick] (0,2,0 ) -- (2,2,0 );
     
     \draw[lightgray] (0,2 ,4) -- (2,2 ,4);
     \draw[lightgray] (2 ,0,4) -- (2 ,2,4);
@@ -125,7 +125,7 @@ Het bepalen en verfijnen van de contour is afgelopen, nu moet bepaald worden wat
 
 Na het vinden van de contour moet hieruit worden achterhaald wat de pose van de legoblok is. Hiervoor bepalen we eerst in welk vlak van de legoblok elk hoekpunt van de contour ligt: onder- of bovenvlak. Dit geeft ons de $Z$ co\"ordinaat van al deze hoekpunten waardoor ze kunnen worden omgezet van 2D naar 3D via het pinhole model. Bij uitbreiding zijn dan alle hoekpunten van de legoblok in 3D gekend en dus kennen we ook de pose van de legoblok.
 
-Eerst wordt uitgelegd hoe we kunnen achterhalen in welk vlak (boven of onder) elk hoekpunt van de contour ligt. Deze redenering wordt verduidelijkt met twee voorbeelden in figuur \ref{fig:brickPoseDetect}, waarin legoblokjes worden getoond met hun contourlijnen aangeduid in zwart.
+Eerst wordt uitgelegd hoe we kunnen achterhalen in welk vlak (boven of onder) elk hoekpunt van de contour ligt. Deze redenering wordt verduidelijkt met twee voorbeelden in figuur \ref{fig:brickPoseDetect}, waarin twee legoblokken worden getoond met hun contourlijnen aangeduid met de vette zwarte lijnen.
 
 Uit de geometrische informatie van een legoblok weten we dat minstens drie opeenvolgende hoekpunten in hetzelfde Z-vlak liggen. Om te bepalen welke drie hoekpunten dit zijn zetten we alle 2D contourpunten om naar 3D (geprojecteerd op het grondvlak $Z = 0$) en bepalen we welke drie opeenvolgende 3D hoekpunten een hoek vormen die het dichtst bij 90 graden ligt (deze punten noemen we ($a$, $b$ en $c$). Van deze hoeken zijn we dan zeker dat ze in hetzelfde vlak liggen. In het eerste voorbeeld van figuur \ref{fig:brickPoseDetect} ligt de hoek tussen drie hoekpunten in het bovenvlak dichtst bij 0, in het tweede voorbeeld is dit de hoek op het grondvlak. Een ander geval is onmogelijk omdat, na projectie op het grondvlak, hoeken tussen punten in een verschillend $Z$-vlak sterker zullen afwijken van 90 graden.
 
@@ -144,7 +144,7 @@ Wanneer elk hoekpunt van het ene legoblok dichter dan 0.8 cm ligt bij een hoekpu
 
 Bovendien heeft een legoblok in de virtuele wereld nog een status waarin deze verkeert. De twee mogelijk statussen zijn om te bepalen wanneer de blok een deel van het spel wordt (\textit{actief}) en wanneer de blok er geen deel meer van uitmaakt (\textit{inactief}). Wanneer een blok minstens in drie frames werd gedetecteerd wordt hij actief, maar indien hij minstens drie frames achter elkaar niet werd gedetecteerd wordt hij inactief en wanneer hij na vijf frames achter elkaar niet is gedetecteerd wordt hij zelfs verwijderd. Dit mechanisme maakt het algoritme flexibeler om blokken te kunnen toevoegen of verwijderen uit het spel wanneer de speler dat wil.
 
-\section{Implementatie, resultaten en evaluatie} \label{sec:algo_implreseval}
+\section{Implementatie, resultaten en evaluatie} \label{sec:naive_algo_result}
 
 %\section{Evaluatiemethode en implementatie}
 %In deze sectie bespreken we eerst kort op welke manier de performantie van beide algoritmes worden ge\"evalueerd. Vervolgens wordt kort overlopen welke machine en welke bibliotheken er zijn gebruikt voor de implementaties van de algoritmes.
@@ -163,7 +163,7 @@ Bovendien heeft een legoblok in de virtuele wereld nog een status waarin deze ve
 %De opmeting gebeurde even lang als een lemming nodig heeft om van begin tot eindpunt te geraken. Aangezien de snelheid gedefinieerd is als 0.5 cm/s en de afstand minimum 23 cm is, duurt de opmeting dus minimum 11.5 seconden. Vervolgens wordt per opgemeten gedeelte het gemiddelde genomen om geen grote uitschieters te hebben.
 
 \subsection{Implementatie}
-De volledige implementatie en experimenten zijn uitgevoerd op een Sony Xperia Z C6602 met een Qualcomm Quad-core 1.5 GHz Krait processor, Adreno 320 GPU, 2GB RAM en Android 4.4.4 KitKat. Alles werd geprogrammeerd in Java 7 met gebruik van de Cardboard VR SDK van Google voor stereo rendering voor de Google Cardboard en de OpenCV 2.4.9 bibliotheek voor implementaties van computer vision algoritmes.
+De volledige implementatie en experimenten zijn uitgevoerd op een Sony Xperia Z C6602 met een Qualcomm Quad-core 1.5 GHz Krait processor, Adreno 320 GPU, 2GB RAM en Android 4.4.4 KitKat. Alles werd geprogrammeerd in Java 7 met gebruik van de Cardboard VR SDK van Google voor stereo rendering voor de Google Cardboard en de OpenCV 2.4.9 bibliotheek~\cite{opencv} voor implementaties van computer vision algoritmes.
 
 De omzetting van YUV naar HSV werd ge\"implementeerd met de \texttt{cvtColor} methode van OpenCV. Voor de detectie van de contouren gebruikten we de \texttt{findContours} methode. Ten slotte werd ook nog de \texttt{approxPolyDP} methode gebruikt om de contouren met minder hoekpunten te beschrijven. Verder werden voornamelijk mathematische operaties van OpenCV gebruikt om de rest van het algoritme te implementeren.
 
@@ -219,7 +219,7 @@ De performantie van werd ge\"evalueerd door de tijd op te meten van verschillend
 \begin{figure}
   \centering
   \includegraphics[width=.75\linewidth]{img/naivePerf}
-  \caption{Gemiddelde performantie van het eerste na\"ieve algoritme.}
+  \caption{Gemiddelde performantie van het na\"ieve algoritme.}
   \label{fig:perf_algo1}
 \end{figure}
 
@@ -234,15 +234,24 @@ Figuur \ref{fig:perf_algo1} toont de gemiddelde performantie van het na\"ieve al
 \end{itemize}
 Merk op dat de som van de gekleurde blokken niet exact gelijk is aan de grootte van de gele blok. Dit komt omdat enkel de belangrijkste onderdelen uit het algoritme zijn opgenomen in deze grafiek, enkele implementatie specifieke details zijn weggelaten omdat ze erg weinig tijd innemen en onbelangrijk zijn.
 
-Uit de figuur kunnen we vooral opmaken dat het gedeelte van het zoeken van de pose erg veel verschilt tussen de complexe en simpele scene. Dit is normaal aangezien het aantal legoblokken hoger ligt en dus moet dit na\"ieve algoritme meer iteraties doen in een complexe scene. Het zoeken van contours daarentegen duurt niet significant langer in een complexe sc\'ene. De verklaring hiervoor is dat het bepalen van de kleurthreshold, wat in beide gevallen slechts eenmaal moet gebeuren, het langst duurt en dat de rest van de berekeningen, die even vaak moeten gebeuren als het aantal gedetecteerde legoblokken, slechts een zeer kleine bijdrage zijn. 
+In de grafiek zien we dat het zoeken van de pose erg veel verschilt tussen de complexe en simpele scene. Dit is normaal aangezien het aantal legoblokken hoger ligt en dus moet dit na\"ieve algoritme meer iteraties doen in een complexe scene. Het zoeken van contours daarentegen duurt niet significant langer in een complexe sc\`ene. De verklaring hiervoor is dat het bepalen van de kleurthreshold, wat in beide gevallen slechts eenmaal moet gebeuren, het langst duurt en dat de rest van de berekeningen, die even vaak moeten gebeuren als het aantal gedetecteerde legoblokken, slechts een zeer kleine bijdrage zijn. 
 
-We merken ook op dat het updaten van de lemmingen een stuk langer duurt, dit is ook aannemelijk omdat bij de complexe scene het pad van een lemming van begin tot eindpunt een stukje langer is dan bij de simpele scene. Aangezien dit pad ook steeds opnieuw wordt berekend (om \textit{on-the-fly} toevoegen van blokken toe te kunnen staan) is dit verschil significant.
+We merken ook op dat het updaten van de lemmingen een stuk langer duurt, dit is ook aannemelijk omdat bij de complexe scene het pad van een lemming van begin tot eindpunt een stukje langer is dan bij de simpele scene. De lemming moet immers om elke muur heen lopen en niet slechts om \'e\'en legoblokje. Aangezien dit pad ook steeds opnieuw wordt berekend (om \textit{on-the-fly} toevoegen van blokken toe te kunnen staan) is dit verschil significant.
 
 Als we kijken naar de totale tijd de volledige berekening inneemt, dan wordt duidelijk dat dit algoritme erg traag is. Het komt neer op 8.9 fps voor de simpele scene en 3.2 fps voor de complexe scene, wat natuurlijk erg traag is voor een AR spel.
 
-TODO: GRAFIEK VAN LEMMINGUPDATE %TODO
+\begin{figure}
+  \centering
+  \includegraphics[width=.75\linewidth]{img/naiveLemmPerf}
+  \caption{Gemiddelde performantie van het "Lemming updaten" onderdeel van het na\"ieve algoritme.}
+  \label{fig:naive_lemm_perf}
+\end{figure}
 
-\subsection{Besluit}
+Figuur \ref{fig:naive_lemm_perf} geeft weer hoe de performantie van het updaten van de lemming veranderd gedurende het spel. Hiervoor hebben we de lemming drie maal laten lopen van start- tot eindpunt. We zien duidelijk een performantie van orde $O(1/x)$ die zichzelf telkens herhaalt. Wanneer de lemming namelijk dichter bij het eindpunt komt wordt het pad tot het eindpunt steeds korter en dus duurt het zoeken van het pad steeds minder lang tot het moment dat hij het eindpunt heeft bereikt. Hierna zal een nieuwe lemming starten vanaf het beginpunt waardoor het terug lang duurt om het pad te zoeken. We zien hier drie iteraties omdat drie lemmingen hebben gewandeld van begin- tot eindpunt.
+
+Merk ook op dat de tijdsduur regelmatig voor een korte tijd bijna nul is. Dit komt omdat we de lemming updaten aan een constante snelheid, dus ongeacht hoe lang het volledige algoritme erover doet de lemming zal steeds aan constante snelheid lopen. Dit kan ervoor zorgen dat de lemming tijdens de volgende lemming update de volgende node nog niet heeft bereikt waardoor voorlopig nog geen nieuw pad wordt berekent. Omdat dan geen pad wordt berekent valt de zwaarste berekening van het onderdeel "Lemming updaten" weg en dus is de tijdsduur van dit onderdeel dan zo goed als nul.
+
+\subsection{Besluit} \label{sec:naive_sub_besl}
 Deze na\"ieve implementatie heeft \'e\'en belangrijk voordeel:
 \begin{itemize}
 \item Ze laat toe dat legoblokken \textit{on-the-fly} worden toegevoegd aan de virtuele wereld.
@@ -252,7 +261,7 @@ Aan deze methode zijn echter meer nadelen verbonden:
 \begin{itemize}
 \item Legoblokken mogen niet in een hoek naast elkaar staan omdat dan de veronderstelling dat een contour maximaal zes hoeken bevat niet meer geldig is.
 \item Enkel rode legoblokken kunnen worden gedetecteerd. Dit nadeel is echter eenvoudig weg te werken zoals wordt besproken in sectie \ref{sec:naive_vereenv}.
-\item Legoblokken mogen niet in meerdere niveau's gebouwd worden. Muren zouden in principe wel kunnen (ze hebben immers maximaal zes hoekpunten) maar dan moet op \'e\'en of andere manier de grootte van deze muur bepaald worden, dit wordt uitgebreider behandeld in hoofdstuk \ref{hoofdstuk:4}. Andere constructies in de hoogte kunnen echter niet omdat we dan meer dan zes hoekpunten deel kunnen uitmaken van de contour.
+\item Legoblokken mogen niet in meerdere niveau's gebouwd worden. Muren (meerdere legoblokken op elkaar maar de breedte en de lengte van de constructie is op elk niveau gelijk) zouden in principe wel kunnen (ze hebben immers maximaal zes hoekpunten) maar dan moet op \'e\'en of andere manier de grootte van deze muur bepaald worden, dit wordt uitgebreider behandeld in hoofdstuk \ref{hoofdstuk:4}. Andere constructies in de hoogte kunnen echter niet omdat we dan meer dan zes hoekpunten deel kunnen uitmaken van de contour.
 \item Het algoritme kan niet goed om met veranderingen qua belichting. Dit komt omdat we puur thresholden op basis van kleur maar deze waarden zijn sterk afhankelijk van welke belichting we gebruiken. In hoofdstuk \ref{hoofdstuk:4} komt een calibratiemethode aan bod die dit probleem verhelpt.
 \item Zoals aangegeven in de resultaten geeft een rode tint in het beeld een erg slecht resultaat, vooral qua performantie.
 \item Performantie is erg laag.
@@ -299,12 +308,13 @@ Ten eerste wordt een fout gemaakt in het aantal nodes die bezet zijn door een le
 Ten tweede heeft deze vereenvoudiging ook een aantal voordelen in die zin dat het enkele nadelen uit het na\"ieve algoritme wegwerkt:
 \begin{itemize}
 \item Legoblokken in meerdere kleuren kunnen gebruikt worden, het gevolg is wel dat morfologische operaties de threshold moeten oppoetsen om er ruis uit te halen zie figuur \ref{fig:algo2_noise}. Dit werd hoogstwaarschijnlijk veroorzaakt door de belichting die niet altijd constant is, zodat de thresholdwaarden niet altijd even nauwkeurig zijn. Merk op dat dit even goed in het eerste algoritme had kunnen worden ge\"implementeerd.
-\item Legoblokken kunnen nu ook in een hoek tegen elkaar staan, wat bij het na\"ieve algoritme niet was toegestaan. Een nadeel is echter wel dat meerdere niveau's in dit algoritme helemaal uitgesloten zijn, terwijl dit in theorie in het vorige algoritmewel was toegestaan (met bepaalde restricties). Dit komt omdat wanneer we de constructie hoger maken, de fout van deze vereenvoudiging steeds groter wordt. Er is immers een nog groter gedeelte van het grondvlak, waar geen legoblokken op staan, verborgen achter de legoblokconstructie.
+\item Legoblokken kunnen nu ook in een hoek tegen elkaar staan, wat bij het na\"ieve algoritme niet was toegestaan. Een nadeel is echter wel dat meerdere niveau's in dit algoritme helemaal uitgesloten zijn, terwijl dit in theorie in het vorige algoritme wel was toegestaan (met bepaalde restricties). Dit komt omdat wanneer we de constructie hoger maken, de fout van deze vereenvoudiging steeds groter wordt. Er is immers een nog groter gedeelte van het grondvlak, waar geen legoblokken op staan, verborgen achter de legoblokconstructie.
 \end{itemize}
 
 \subsection{Implementatie} \label{naive_vereenv_impl}
+De morfologische operaties werden ge\"implementeerd met behulp van de \texttt{morphologyEx} functie van OpenCV. Deze operatie werd in dit algoritme gebruikt om eerst een \textit{close} operatie met een ellipsvormige kernel van 9x9 en vervolgens een \textit{open} operatie met een ellipsvormige kernel van 17x17 uit te voeren op de kleurthreshold. Experimenteel werd ondervonden dat deze parameters het beste werken.
 
-TODO %TODO 
+Verder werd er ook voor gekozen om niet elke keer het volledige grid van de virtuele wereld om te zetten van 3D naar 2D. In plaats hiervan worden enkel de nodes van het grid omgezet die ge\"exploreerd worden door het A* algoritme. Deze keuze is een kwestie van performantie: ten eerste omdat het grid elke keer opnieuw van 3D naar 2D moet worden omgezet (de pose van de camera is immers elke keer verschillend) en ten tweede omdat in het A* algoritme bijna nooit alle nodes worden ge\"exploreerd.
 
 \subsection{Resultaten en performantie} \label{naive_vereenv_res}
 
@@ -321,7 +331,6 @@ Voor deze vereenvoudiging is het niet mogelijk om een rendering te maken van de 
 Figuur \ref{fig:algo2_res} toont het resultaat door het zwarte deel van de threshold deels transparant te maken. We kunnen duidelijk zien dat de legoblokken goed werden gedetecteerd via kleurthresholding. Ook werd over het grondvlak het grid gelegd, hierdoor is het duidelijk welke nodes niet toegankelijk zijn voor lemmings.
 
 \subsubsection*{Performantie}
-TODO: BESPREKING PERFORMANTIE
 
 \begin{figure}
   \centering
@@ -338,18 +347,16 @@ Figuur \ref{fig:naive_vereenv_perf} toont de gemiddelde performantie van de vere
 \item Lemmings updaten (oa. pad van de lemming updaten en grid vergelijken met threshold).
 \end{itemize}
 
-Het belangrijkste dat we kunnen opmaken uit deze figuur is dat de totale tijd van deze vereenvoudiging dubbel zoveel is als de totale tijd van het oorspronkelijke algoritme. Deze vereenvoudiging kunnen we dus niet echt een verbetering noemen op vlak van performantie. Dit komt enerzijds omdat we elke keer opnieuw een volledig pad moeten berekenen en dus ook veel nodes moeten omzetten van 3D naar 2D. Anderzijds komt dit ook omdat de berekening van de threshold veel langer duurt dan de berekening van de contour bij het oorspronkelijke algoritme. De oorzaak hiervan vinden we bij het gebruik van meerdere kleuren waardoor ook enkele morfologische operaties nodig zijn die relatief traag zijn.
+Het belangrijkste dat we kunnen opmaken uit deze figuur is dat de totale tijd van deze vereenvoudiging meer dan dubbel zoveel is als de totale tijd van het oorspronkelijke algoritme. Deze vereenvoudiging kunnen we dus niet echt een verbetering noemen op vlak van performantie. Dit komt enerzijds omdat we elke keer opnieuw een volledig pad moeten berekenen en dus ook veel nodes moeten omzetten van 3D naar 2D. Anderzijds komt dit ook omdat de berekening van de threshold veel langer duurt dan de berekening van de contour bij het oorspronkelijke algoritme. De oorzaak hiervan vinden we bij het gebruik van meerdere kleuren waardoor ook enkele morfologische operaties nodig zijn wat erg dure operaties zijn.
 
-Dat de berekening van thresholds bij de complexe sc\'ene langer duurt is waarschijnlijk eerder toeval dan iets anders aangezien het aantal legoblokken hier totaal geen effect op zou moeten hebben.
-
-TODO: HERBEREKENING PERFORMANTIE HIER! %TODO
+We zien ook dat de berekening van de threshold in beide gevallen ongeveer even lang duurt: dit komt omdat een threshold berekenen onafhankelijk is van het aantal legoblokken dat wordt gedetecteerd. Het updaten van de lemmings duurt echter significant langer bij de complexe sc\`ene. Dit is normaal omdat het pad van de lemming dan langer is waardoor er dus meerdere nodes worden ge\"exploreerd en dus ook meer die van 3D naar 2D moeten worden omgezet.
 
 \subsection{Besluit}
 Deze vereenvoudiging maakte het algoritme veel simpeler en loste ook enkele nadelen op. Helaas is dit algoritme wel erg traag en laat het ons helemaal niet toe om legoconstructies met meerdere niveau's te gebruiken.
 
-Om het performantieprobleem te verhelpen breiden we in de volgende sectie dit algoritme nog eenmaal uit. In deze uitbreiding vervangen we het A* algoritme met Tree Adaptive A* om paden te zoeken in de virtuele wereld. In deze uitbreiding zullen grote delen van reeds berekende paden herbruikbaar zijn waardoor al deze gridnodes niet opnieuw van 3D naar 2D moeten worden omgezet.
+Om het performantieprobleem te verhelpen breiden we in de volgende sectie dit algoritme nog eenmaal uit. In deze uitbreiding vervangen we het A* algoritme met Tree Adaptive A* om paden te zoeken in de virtuele wereld. In deze uitbreiding zullen grote delen van reeds berekende paden herbruikbaar zijn waardoor per frame minder nodes van 3D naar 2D moeten worden omgezet.
  
-\section{Uitbreiding: Tree Adaptive A*}
+\section{Uitbreiding: Tree Adaptive A*} \label{sec:naive_uitbr}
 In deze sectie leggen we uit hoe Tree Adaptive A* (Tree-AA*) werkt en in welke mate het de performantie heeft verhoogd. Dit algoritme is in dieper detail uitgelegd in~\cite{hernandez2011tree}.
 
 \subsection{Algoritme}
@@ -367,10 +374,6 @@ We zetten onze uitleg nog kracht bij met het voorbeeld dat ook werd aangehaald i
 
 Het grote voordeel aan dit algoritme voor een AR spel is dat deze \textit{herbruikbare boom} kan gedeeld worden tussen lemmingen. Dus als de wereld niet veranderd moeten weinig stukjes pad herberekend worden.
 
-\subsection{Implementatie} \label{naive_vereenv_impl}
-
-TODO %TODO 
-
 \subsection{Performantie}
 
 \begin{figure}
@@ -382,13 +385,14 @@ TODO %TODO
 
 Figuur \ref{fig:naive_uitbr_perf} toont de gemiddelde performantie van de uitbreiding op de vereenvoudiging van het na\"ieve algoritme voor de simpele scene (links) en complexe scene (rechts). Opnieuw stelt de gele blok de totale tijd voor en de gekleurde blokken zijn de onderverdelingen van de totale tijd.
 
-We zien dat de totale tijd is afgenomen ten opzichte van de niet-uitgebreide versie van het algoritme. De performantie is echter wel nog steeds lager dan bij de oorspronkelijke versie. Dit wordt veroorzaakt door de tijd die de morfologische operaties nodig hebben (zoals eerder aangegeven in sectie \ref{sec:naive_vereenv_res}). Het is wel zo dat de tijd om een pad te zoeken van de lemming zoals verwacht sterk is afgenomen.
+We zien dat de totale tijd is afgenomen ten opzichte van de niet-uitgebreide versie van het algoritme. De performantie is echter wel nog steeds lager dan bij de oorspronkelijke versie. Dit wordt veroorzaakt door de tijd die de morfologische operaties nodig hebben (zoals eerder aangegeven in sectie \ref{sec:naive_vereenv_res}). Het is wel zo dat de tijd om een pad te zoeken van de lemming zoals verwacht sterk is afgenomen. Het is zelfs zo sterk afgenomen dat het berekenen van de threshold veel langer duurt dan alle andere operaties.
 
-TODO %TODO
+Het is bovendien opmerkelijk dat er geen significante verhoging is van de performantie tussen de simpele en complexe sc\`ene. Erg onlogisch is dit natuurlijk niet voor de berekening van de camera pose, omzetten van YUV naar RGB of berekenen van de threshold aangezien dit onafhankelijk is van het aantal gedetecteerde legoblokken. Bij het updaten van de lemming is dit echter wel opmerkelijker aangezien het pad langer is maar door het gebruik van Tree Adaptive A* duurt het gemiddeld gezien telkens even lang. Dit toont aan dat dit algoritme robuust is tegen een verhoging van het aantal legoblokken in de sc\`ene.
 
-\section{Besluit}
-TODO %TODO 
+\section{Besluit} \label{sec:naive_besl}
+In dit hoofdstuk werd een na\"ief algoritme voorgesteld dat op basis van een kleurthreshold en geometrische eigenschappen legoblokken detecteert. Dit algoritme had echter een heleboel nadelen: oa. konden legoblokken niet in een hoek tegen elkaar staan, konden enkel rode legoblokken worden gedetecteerd en was de performantie erg laag. Daarom werd een vereenvoudiging van dit algoritme voorgesteld waarin de pose van een legoblok niet expliciet werd berekent. In plaats daarvan werd het 3D grid van de virtuele wereld over de threshold gelegd om te bepalen welke nodes ontoegankelijk waren. Het probleem was echter dat de performantie nog lager was dan het oorspronkelijke algoritme. Daarom werd het Tree Adaptive A* algoritme ingevoerd maar hoewel de performantie wel een heel stuk beter was, was het nog steeds niet te vergelijken met de performantie van het oorspronkelijke algoritme (voornamelijk door de morfologische operaties). Een ander nadeel van het vereenvoudigde algoritme was dat nu helemaal niet meer in de hoogte kon worden gebouwd omdat dit de fout van dit algoritme enkel groter maakt.
 
+In het volgende hoofdstuk gaan we op zoek naar een methode waarmee ook legoconstructies met meerdere niveau's gedetecteerd kunnen worden. Om dit te verwezenlijken proberen we alle geometrische informatie te gebruiken die een legoblok bevat (niet slechts enkele eigenschappen zoals dit algoritme deed). 
 
 %%% Local Variables: 
 %%% mode: latex

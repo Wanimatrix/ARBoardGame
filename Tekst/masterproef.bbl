@@ -47,6 +47,11 @@ Carlos Hern{\'a}ndez, Xiaoxun Sun, Sven Koenig, and Pedro Meseguer.
   Multiagent Systems-Volume 1}, pages 123--130. International Foundation for
   Autonomous Agents and Multiagent Systems, 2011.
 
+\bibitem[Its15]{opencv}
+Itseez.
+\newblock {OpenCV} library, 2015.
+\newblock [Online; accessed 24-April-2015].
+
 \bibitem[Joa99]{joachims1999svmlight}
 Thorsten Joachims.
 \newblock Svmlight: Support vector machine.

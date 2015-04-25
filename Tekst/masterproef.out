@@ -9,4 +9,11 @@
 \BOOKMARK [1][-]{section.3.4}{Vereenvoudiging: blokdetectie met behulp van een 2D grid}{chapter.3}% 16
 \BOOKMARK [1][-]{section.3.5}{Uitbreiding: Tree Adaptive A*}{chapter.3}% 17
 \BOOKMARK [1][-]{section.3.6}{Besluit}{chapter.3}% 18
-\BOOKMARK [0][-]{section*.14}{Bibliografie}{}% 29
+\BOOKMARK [0][-]{chapter.4}{Legoblokdetectie op basis van CAD modellen}{}% 19
+\BOOKMARK [1][-]{section.4.1}{Begrippen en algoritme}{chapter.4}% 20
+\BOOKMARK [1][-]{section.4.2}{Features}{chapter.4}% 21
+\BOOKMARK [1][-]{section.4.3}{Evaluatie features}{chapter.4}% 22
+\BOOKMARK [1][-]{section.4.4}{Classificatie methodes}{chapter.4}% 23
+\BOOKMARK [1][-]{section.4.5}{Evaluatie classifier methodes}{chapter.4}% 24
+\BOOKMARK [1][-]{section.4.6}{Discussie / Besluit}{chapter.4}% 25
+\BOOKMARK [0][-]{section*.25}{Bibliografie}{}% 29

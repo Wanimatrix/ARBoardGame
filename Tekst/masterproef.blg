@@ -12,45 +12,45 @@ A level-1 auxiliary file: app-n.aux
 The style file: alpha.bst
 Database file #1: referenties.bib
 Warning--I didn't find a database entry for "h2g2"
-You've used 15 entries,
+You've used 16 entries,
             2543 wiz_defined-function locations,
-            667 strings with 7687 characters,
-and the built_in function-call counts, 7689 in all, are:
-= -- 816
-> -- 343
-< -- 14
-+ -- 125
-- -- 120
-* -- 542
-:= -- 1188
-add.period$ -- 54
-call.type$ -- 15
-change.case$ -- 101
-chr.to.int$ -- 15
-cite$ -- 15
-duplicate$ -- 314
-empty$ -- 560
-format.name$ -- 134
-if$ -- 1651
+            672 strings with 7751 characters,
+and the built_in function-call counts, 7954 in all, are:
+= -- 841
+> -- 351
+< -- 15
++ -- 127
+- -- 122
+* -- 553
+:= -- 1229
+add.period$ -- 57
+call.type$ -- 16
+change.case$ -- 106
+chr.to.int$ -- 16
+cite$ -- 16
+duplicate$ -- 325
+empty$ -- 585
+format.name$ -- 138
+if$ -- 1707
 int.to.chr$ -- 1
 int.to.str$ -- 0
 missing$ -- 15
-newline$ -- 79
-num.names$ -- 45
-pop$ -- 100
+newline$ -- 84
+num.names$ -- 48
+pop$ -- 110
 preamble$ -- 1
-purify$ -- 116
+purify$ -- 122
 quote$ -- 0
-skip$ -- 275
+skip$ -- 286
 stack$ -- 0
-substring$ -- 505
-swap$ -- 101
-text.length$ -- 14
-text.prefix$ -- 2
+substring$ -- 512
+swap$ -- 102
+text.length$ -- 15
+text.prefix$ -- 3
 top$ -- 0
-type$ -- 120
+type$ -- 128
 warning$ -- 0
-while$ -- 80
-width$ -- 18
-write$ -- 210
+while$ -- 82
+width$ -- 19
+write$ -- 222
 (There was 1 warning)

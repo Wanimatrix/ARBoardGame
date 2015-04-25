@@ -17,26 +17,28 @@
 \contentsline {figure}{\numberline {3.3}{\ignorespaces Resultaat van het na\"ieve algoritme bij veel schaduw.}}{11}{figure.3.3}
 \contentsline {figure}{\numberline {3.4}{\ignorespaces Resultaat van het na\"ieve algoritme bij rode tint in het beeld.}}{11}{figure.3.4}
 \contentsline {figure}{\numberline {3.5}{\ignorespaces Simpele (links) en complexe scene (rechts) voor performantie evaluatie van na\"ieve blokdetectie.}}{11}{figure.3.5}
-\contentsline {figure}{\numberline {3.6}{\ignorespaces Gemiddelde performantie van het eerste na\"ieve algoritme.}}{12}{figure.3.6}
-\contentsline {figure}{\numberline {3.7}{\ignorespaces Ruis in threshold v\'o\'or morfologische operaties werden toegepast.}}{15}{figure.3.7}
-\contentsline {figure}{\numberline {3.8}{\ignorespaces Fout van het vereenvoudigde na\"ieve algoritme in de vorm van schaduw.}}{15}{figure.3.8}
-\contentsline {figure}{\numberline {3.9}{\ignorespaces Resultaat van het tweede na\"ieve algoritme.}}{16}{figure.3.9}
-\contentsline {figure}{\numberline {3.10}{\ignorespaces Gemiddelde performantie van de vereenvoudiging van het na\"ieve algoritme.}}{17}{figure.3.10}
-\contentsline {figure}{\numberline {3.11}{\ignorespaces Voorbeeld van het Tree Adaptive A* algoritme (uit~\cite {hernandez2011tree}).}}{18}{figure.3.11}
-\contentsline {figure}{\numberline {3.12}{\ignorespaces Gemiddelde performantie van de uitbreiding op de vereenvoudiging van het na\"ieve algoritme.}}{20}{figure.3.12}
+\contentsline {figure}{\numberline {3.6}{\ignorespaces Gemiddelde performantie van het na\"ieve algoritme.}}{12}{figure.3.6}
+\contentsline {figure}{\numberline {3.7}{\ignorespaces Gemiddelde performantie van het "Lemming updaten" onderdeel van het na\"ieve algoritme.}}{13}{figure.3.7}
+\contentsline {figure}{\numberline {3.8}{\ignorespaces Ruis in threshold v\'o\'or morfologische operaties werden toegepast.}}{16}{figure.3.8}
+\contentsline {figure}{\numberline {3.9}{\ignorespaces Fout van het vereenvoudigde na\"ieve algoritme in de vorm van schaduw.}}{16}{figure.3.9}
+\contentsline {figure}{\numberline {3.10}{\ignorespaces Resultaat van het tweede na\"ieve algoritme.}}{18}{figure.3.10}
+\contentsline {figure}{\numberline {3.11}{\ignorespaces Gemiddelde performantie van de vereenvoudiging van het na\"ieve algoritme.}}{18}{figure.3.11}
+\contentsline {figure}{\numberline {3.12}{\ignorespaces Voorbeeld van het Tree Adaptive A* algoritme (uit~\cite {hernandez2011tree}).}}{20}{figure.3.12}
+\contentsline {figure}{\numberline {3.13}{\ignorespaces Gemiddelde performantie van de uitbreiding op de vereenvoudiging van het na\"ieve algoritme.}}{21}{figure.3.13}
 \addvspace {10pt}
-\contentsline {figure}{\numberline {4.1}{\ignorespaces Pose van het CAD model van een 2x2 legoblokje.}}{20}{figure.4.1}
-\contentsline {figure}{\numberline {4.2}{\ignorespaces Uitgebreide Haar-like featureset~\cite {lienhart2002extended}.}}{22}{figure.4.2}
-\contentsline {figure}{\numberline {4.3}{\ignorespaces Een 9x9 MB-LBP operator: elk blok bestaat uit 9 pixels~\cite {liao2007learning}.}}{23}{figure.4.3}
-\contentsline {figure}{\numberline {4.4}{\ignorespaces De 20 afbeeldingen die als testset werden gebruikt.}}{26}{figure.4.4}
-\contentsline {figure}{\numberline {4.5}{\ignorespaces Feature performantie tijdens detectie.}}{27}{figure.4.5}
-\contentsline {figure}{\numberline {4.6}{\ignorespaces Feature robuustheid.}}{28}{figure.4.6}
-\contentsline {figure}{\numberline {4.7}{\ignorespaces Robuustheid classifier methodes.}}{32}{figure.4.7}
-\contentsline {figure}{\numberline {4.8}{\ignorespaces Classifier methodes performantie tijdens detectie.}}{32}{figure.4.8}
-\contentsline {figure}{\numberline {4.9}{\ignorespaces Impact schaalfactor op performantie en robuustheid van HOG feature.}}{33}{figure.4.9}
-\contentsline {figure}{\numberline {4.10}{\ignorespaces Een voorbeeld van een legoblokconstructie waarin het groen omlijnde vlak het enige is wat we van die legoblok zien.}}{34}{figure.4.10}
-\contentsline {figure}{\numberline {4.11}{\ignorespaces De vergroting van een rand in een muur van legoblokken.}}{34}{figure.4.11}
+\contentsline {figure}{\numberline {4.1}{\ignorespaces Pose van het CAD model van een 2x2 legoblokje.}}{24}{figure.4.1}
+\contentsline {figure}{\numberline {4.2}{\ignorespaces Uitgebreide Haar-like featureset~\cite {lienhart2002extended}.}}{26}{figure.4.2}
+\contentsline {figure}{\numberline {4.3}{\ignorespaces Een 9x9 MB-LBP operator: elk blok bestaat uit 9 pixels~\cite {liao2007learning}.}}{27}{figure.4.3}
+\contentsline {figure}{\numberline {4.4}{\ignorespaces De 20 afbeeldingen die als testset werden gebruikt.}}{30}{figure.4.4}
+\contentsline {figure}{\numberline {4.5}{\ignorespaces Feature performantie tijdens detectie.}}{31}{figure.4.5}
+\contentsline {figure}{\numberline {4.6}{\ignorespaces Feature robuustheid.}}{32}{figure.4.6}
+\contentsline {figure}{\numberline {4.7}{\ignorespaces Robuustheid classifier methodes.}}{36}{figure.4.7}
+\contentsline {figure}{\numberline {4.8}{\ignorespaces Classifier methodes performantie tijdens detectie.}}{36}{figure.4.8}
+\contentsline {figure}{\numberline {4.9}{\ignorespaces Impact schaalfactor op performantie en robuustheid van HOG feature.}}{37}{figure.4.9}
+\contentsline {figure}{\numberline {4.10}{\ignorespaces Een voorbeeld van een legoblokconstructie waarin het groen omlijnde vlak het enige is wat we van die legoblok zien.}}{38}{figure.4.10}
+\contentsline {figure}{\numberline {4.11}{\ignorespaces De vergroting van een rand in een muur van legoblokken.}}{38}{figure.4.11}
 \addvspace {10pt}
+\contentsline {figure}{\numberline {5.1}{\ignorespaces Deze figuur toont hoe de calibratiefase met twee kleuren verloopt.}}{42}{figure.5.1}
 \addvspace {10pt}
 \addvspace {10pt}
 \addvspace {10pt}
