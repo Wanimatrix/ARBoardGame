@@ -109,6 +109,7 @@ public class Lemming {
 		while(todoDistance > 0) {
 			
 			if(path.size() == 1) {
+				Log.d(TAG, "Lemming path was of size 1.");
 				newLocationX = path.get(0).x;
 				newLocationY = path.get(0).y;
 				break;
@@ -142,7 +143,7 @@ public class Lemming {
 				newLocationX += Math.signum(to.x-newLocationX)*distance;
 			} 
 			else {
-				throw new IllegalStateException("A Lemming cannot go diagonal! Slope was "+slope);
+				throw new IllegalStateException("A Lemming cannot go diagonal! He was going from ("+newLocationX+","+newLocationY+") to "+to.x+","+to.y+" Slope was "+slope);
 			}
 		}
 		if(AppConfig.DEBUG_TIMING) Log.d(TAG, "Moved lemming in "+(System.nanoTime()-startMoving)/1000000L+"ms");
@@ -152,11 +153,13 @@ public class Lemming {
 		locationY = newLocationY;
 		
 		if(AppConfig.DEBUG_LOGGING) Log.d(TAG, "Amount of stars: "+w.getStars().size());
-		for (Star s : w.getStars()) {
-			if(MathUtilities.distance(locationX, locationY, s.getPosition().x, s.getPosition().y)
-					< WorldConfig.STAR_PERIMETER) {
-				w.removeStar(s);
-				speed = WorldConfig.LEMMINGS_SPEED_NO_STARS;
+		if(WorldConfig.ENABLE_STARS) {
+			for (Star s : w.getStars()) {
+				if(MathUtilities.distance(locationX, locationY, s.getPosition().x, s.getPosition().y)
+						< WorldConfig.STAR_PERIMETER) {
+					w.removeStar(s);
+					speed = WorldConfig.LEMMINGS_SPEED_NO_STARS;
+				}
 			}
 		}
 		

@@ -56,6 +56,12 @@ public class ReusableTree {
 	}
 	
 	public void setGenerated(PathNode n, int generated) {
+		for (PathNode pn : this.generated.keySet()) {
+			if(pn.equals(n)) {
+				Log.d("PATHFINDER", "Given coord: "+n.accessGridNode().getCoordinate()+", previous Coordinate: "+pn.accessGridNode().getCoordinate());
+			}
+		}
+		Log.d("PATHFINDER", "Generated is set for "+n.accessGridNode().getCoordinate());
 		this.generated.put(n, generated);
 	}
 	

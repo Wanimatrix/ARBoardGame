@@ -84,17 +84,24 @@ public class Pathfinder {
 			
 			closed.add(current);
 			
-			if(AppConfig.DEBUG_LOGGING) Log.d("PATHFINDER", "Fetching and processing neighbours of "+ current.accessGridNode().getCoordinate()+" ...");
+			if(AppConfig.DEBUG_LOGGING) Log.d("PATHFINDER", "Fetching and processing neighbours of "+ current.accessGridNode().getCoordinate()+"; HASH: "+current.hashCode()+" ...");
 			for (PathNode nb : current.getAccessibleNeighbours()) {
+				Log.d("PATHFINDER", "Nb hashcode: "+nb.hashCode());
 				tree.initState(nb, goal);
 				if(nb.getGScore() > current.getGScore()+current.accessGridNode().getCoordinate().distance(nb.accessGridNode().getCoordinate())) {
 					nb.setGScore(current.getGScore()+current.accessGridNode().getCoordinate().distance(nb.accessGridNode().getCoordinate()));
+					Log.d("PATHFINDER", "New G-score: "+nb.getGScore());
 					nb.setPreviousNode(current);
 					if(open.contains(nb))
 						open.remove(nb);
 //					nb.setFScore(nb.getGScore()+nb.getHScore());
 					open.add(nb);
 				}
+			}
+			
+			Log.d("PATHFINDER", "CURRENT OPENLIST");
+			for (PathNode pathNode : open) {
+				Log.d("PATHFINDER", "Node: "+pathNode.accessGridNode().getCoordinate().toString()+"; G: "+pathNode.gScore+"; H: "+pathNode.hScore+"; F: "+pathNode.getFScore()+"; HASH: "+pathNode.hashCode());
 			}
 		}
 		return false;
@@ -224,7 +231,7 @@ public class Pathfinder {
 			path.add(current.accessGridNode().getCoordinate());
 			current = tree.getParent(current);
 			if(AppConfig.DEBUG_LOGGING) Log.d("PATHFINDER", "Current path node's parent "+current.accessGridNode().getCoordinate()+".");
-			if(AppConfig.DEBUG_LOGGING) Log.d("PATHFINDER", "Current path node's parent has id "+tree.getId(current)+" and this Id has Hmax "+tree.getHmax(tree.getId(current)));
+			if(AppConfig.DEBUG_LOGGING) Log.d("PATHFINDER", "Current path node's parent has id "+tree.getId(current)+" and this Id has Hmax "+tree.getHmax(tree.getId(current))+", hScore: "+current.getHScore());
 		}
 		path.add(current.accessGridNode().getCoordinate());
 	}

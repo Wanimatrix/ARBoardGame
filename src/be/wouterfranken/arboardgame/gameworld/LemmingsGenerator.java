@@ -95,7 +95,7 @@ public class LemmingsGenerator extends Tracker{
 		synchronized (lock) {
 			synchronized (amountLock) {
 				if(amount == 0) return;
-				w.addStars();
+				if(WorldConfig.ENABLE_STARS) w.addStars();
 				lemmings.add(l);
 				amount--;
 			}
