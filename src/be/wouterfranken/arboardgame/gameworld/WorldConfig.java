@@ -13,6 +13,7 @@ public class WorldConfig {
 	public final static float BRICK_PERIMETER = 0.5f;
 	
 	// Star configuration options
+	public static final boolean ENABLE_STARS = false;
 	public final static float STAR_PERIMETER = 2;
 	public final static float STAR_SIZE = 1f;
 	public final static float[][] STAR_GENERATION_AREA = 
@@ -34,4 +35,5 @@ public class WorldConfig {
 	//  * Generate a new lemming after the previous one has a certain distance of the start.
 	public final static boolean ONE_PER_ONE = true;
 	public final static float LEMMING_DISTANCE = 10f;
+	
 }

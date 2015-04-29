@@ -103,7 +103,7 @@ public class LemmingsGenerator extends Tracker{
 		synchronized (lock) {
 			synchronized (amountLock) {
 				if(amount == 0) return;
-				w.addStars();
+				if(WorldConfig.ENABLE_STARS) w.addStars();
 				lemmings.add(new Lemming(WorldConfig.LEMMINGS_SIZE, WorldConfig.LEMMING_HEIGHT, start.x, start.y, System.nanoTime(), path, WorldConfig.LEMMINGS_SPEED_WITH_STARS, WorldConfig.LEMMINGS_COLOR));
 //				lemmings.add(l);
 				amount--;

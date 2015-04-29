@@ -46,9 +46,12 @@ public class WorldCoordinate {
 	
 	@Override
 	public int hashCode() {
-		int xToInt = (int) (x*10);
-		int yToInt = (int) (y*10);
-	    return (xToInt * 31) ^ yToInt;
+		float tmpX = x - WorldConfig.BORDER.getXStart();
+		float tmpY = y - WorldConfig.BORDER.getYStart();
+		int xToInt = (int) (tmpX*10/(WorldConfig.NODE_DISTANCE*10));
+		int yToInt = (int) (tmpY*10/(WorldConfig.NODE_DISTANCE*10));
+		return xToInt * 1000 + yToInt;
+//	    return (xToInt * 31) ^ yToInt;
 	 }
 	
 	@Override

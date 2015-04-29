@@ -169,11 +169,13 @@ public class Lemming {
 		locationY = newLocationY;
 		
 		if(AppConfig.DEBUG_LOGGING) Log.d(TAG, "Amount of stars: "+w.getStars().size());
-		for (Star s : w.getStars()) {
-			if(MathUtilities.distance(locationX, locationY, s.getPosition().x, s.getPosition().y)
-					< WorldConfig.STAR_PERIMETER) {
-				w.removeStar(s);
-				speed = WorldConfig.LEMMINGS_SPEED_NO_STARS;
+		if(WorldConfig.ENABLE_STARS) {
+			for (Star s : w.getStars()) {
+				if(MathUtilities.distance(locationX, locationY, s.getPosition().x, s.getPosition().y)
+						< WorldConfig.STAR_PERIMETER) {
+					w.removeStar(s);
+					speed = WorldConfig.LEMMINGS_SPEED_NO_STARS;
+				}
 			}
 		}
 		
