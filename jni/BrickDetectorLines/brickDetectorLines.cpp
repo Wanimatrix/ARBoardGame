@@ -230,6 +230,8 @@ void BrickDetectorLines::TrackBricks(Mat& frame, float upAngle, double apdp, Mat
       if(currentLower < lowerbounds[i])
         if(i == 2) {
           lowerbounds[i] = max(18,currentLower);
+        } else if(i == 1) {
+          lowerbounds[i] = min(170,currentLower);
         } else {
           lowerbounds[i] = max(0,currentLower);
         }
@@ -391,7 +393,8 @@ void BrickDetectorLines::TrackBricks(Mat& frame, float upAngle, double apdp, Mat
 
   double startCanny = getRealTime();
   // Detect edges using canny
-  Canny( gray, canny_out, 180, 200, 3 );
+  // Canny( gray, canny_out, 180, 200, 3 );
+  canny_out = gray;
   __android_log_print(ANDROID_LOG_DEBUG,"BrickDetectTime","Canny time: %f\n",((float)(getRealTime() - startCanny))*1000.0);
 
   Mat out;
@@ -707,7 +710,7 @@ void BrickDetectorLines::TrackBricks(Mat& frame, float upAngle, double apdp, Mat
   // LOGIMG("bin",  bin);
 
   // LOGD("LOG BINARY DONE...");
-  // LOGIMG( "bricksCut",  bricksCutFromImg);
+  LOGIMG( "bricksCut",  bricksCutFromImg);
   // LOGIMG( "external",  out);
   o.str("");
   o << currentFrame;

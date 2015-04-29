@@ -493,6 +493,7 @@ private static final String TAG = LegoBrickTracker.class.getSimpleName();
 						} else {
 							lb.voteRemoval();
 							if(lb.getRemovalVotes() >= BrickTrackerConfigFactory.getConfiguration().getNecessRemovalVotes(lb.getPercentCompleted())) {
+								currentWorld.addRemovedBrick(lb);
 								lcIterator.remove();
 								Log.d(TAG, "Brick removed in frame "+frameCount+" with "+lb.getPercentCompleted()+"% completeness and "+overlap[counter]+" amount overlap.");
 								

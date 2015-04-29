@@ -15,7 +15,7 @@ public class BrickTrackerConfig extends Configuration {
 			new ConfigurationItem<Double>("REMV_B", "NECESS_REMOVAL_VOTES_BASE", "Removal Votes base", 100.0),
 			new ConfigurationItem<Double>("REMV_PS", "NECESS_REMOVAL_VOTES_POWSUBT", "Removal Votes subtracted power", 0.5),
 			new ConfigurationItem<Double>("REMV_A", "NECESS_REMOVAL_VOTES_ADD", "Removal Votes addition", 3.0),
-			new ConfigurationItem<Double>("APDP", "APPROX_POLY_DP_PARAM", "Approx PolyDP parameter", 0.003)
+			new ConfigurationItem<Double>("APDP", "APPROX_POLY_DP_PARAM", "Approx PolyDP parameter", 0.02)
 		};
 	
 	public BrickTrackerConfig() {

@@ -703,13 +703,13 @@ public class LegoBrickTracker extends Tracker{
 				if(k >= acceptedBrickCandidates.size()+currentWorld.getCandidateBricks().size()) {
 					LegoBrick b = tmpBricksArray.get(k);
 					Log.d("REALBRICKREMOVAL", "Realbrick, overlap check: "+overlap[counter]);
-					if(overlap[counter] < 0.5f) {
-						b.voteRemoval();
-						if(b.getRemovalVotes() >= 3) {
-							Log.d("REALBRICKREMOVAL", "Real brick was removed!");
-							currentWorld.removeBrick(b);
-						}
-					}
+//					if(overlap[counter] < 0.5f) {
+//						b.voteRemoval();
+//						if(b.getRemovalVotes() >= 3) {
+//							Log.d("REALBRICKREMOVAL", "Real brick was removed!");
+//							currentWorld.removeBrick(b);
+//						}
+//					}
 					counter++;
 				} else {
 					boolean isNewDetected = (k < acceptedBrickCandidates.size());

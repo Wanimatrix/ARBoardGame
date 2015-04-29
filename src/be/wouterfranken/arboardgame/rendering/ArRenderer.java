@@ -237,7 +237,8 @@ public class ArRenderer implements Renderer, PreviewCallback {
 		
 //		
 		synchronized (renderedFrame) {
-			readPixels(0, 0, texW, texH, GLES30.GL_RGBA, GLES30.GL_UNSIGNED_BYTE, renderedFrame.getNativeObjAddr());
+			if(cameraPose.cameraPoseFound())
+				readPixels(0, 0, texW, texH, GLES30.GL_RGBA, GLES30.GL_UNSIGNED_BYTE, renderedFrame.getNativeObjAddr());
 		}
 //		
 //		Log.d(TAG, "PixelRead size: "+result.size()+", channels: "+result.channels()+", type: "+result.type());

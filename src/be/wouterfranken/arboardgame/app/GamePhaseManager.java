@@ -295,33 +295,43 @@ public class GamePhaseManager implements AfterLoadingColorCalibListener {
 		protected List<LegoBrick> doInBackground(Mat... params) {;
 			long startFind = System.nanoTime();
 			
+			w.resetRemovedBricks();
 			try {
 				legoBrickTracker.findLegoBrick(params[0], modelView, orientation, colorCalibration.getCalibrationResult(), trackingCallback, w);
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
 			Log.d(TAG, "Find brick time: "+(System.nanoTime() - startFind)/1000000.0+"ms");
+			
+			
 			List<LegoBrickContainer> newBrickCand = legoBrickTracker.getNewBrickCandidates();
 			
 			List<LegoBrick> newCandidateBricks = new ArrayList<LegoBrick>();
 			List<LegoBrick> oldAcceptedBricks = new ArrayList<LegoBrick>();
 			List<LegoBrick> oldCandidateBricks = new ArrayList<LegoBrick>();
+			List<LegoBrick> removed = new ArrayList<LegoBrick>(Arrays.asList(w.getRemovedBricks()));
+			
 			if(ar != null) {
 				oldAcceptedBricks.addAll(w.getBricks());
 				for (LegoBrickContainer legoBrickContainer : w.getCandidateBricks()) {
 					oldCandidateBricks.addAll(legoBrickContainer);
 				}
+				oldCandidateBricks.addAll(removed);
 				
 				for (LegoBrickContainer legoBrickContainer : newBrickCand) {
 					newCandidateBricks.addAll(legoBrickContainer);
 				}
 			}
 			
+//			Log.d(TAG, "Removed size: "+removed.size());
+//			
+//			Log.d(TAG, "Removed size: "+removed.size());
+			
 			w.addBricks(newBrickCand.toArray(new LegoBrickContainer[newBrickCand.size()]), count);
 //			bricksToRender.clear();
 			List<LegoBrick> bricks = new ArrayList<LegoBrick>();
 			
-			if(ar != null) {
+			if(ar != null && AppConfig.DRAW_ALGORITHM) {
 				
 				if(previousAlgoImg != null ) {
 					Mat renderedFrame = ar.getRenderedFrame();
@@ -380,6 +390,12 @@ public class GamePhaseManager implements AfterLoadingColorCalibListener {
 					
 					Color c = legoBrick.getColor();
 					Core.rectangle(algoImg, new Point(currentCol,currentRow), new Point(currentCol+50,currentRow+50), new Scalar(c.b*255, c.g*255, c.r*255),Core.FILLED);
+					Log.d(TAG, "Removed size F: "+removed.size());
+					if(removed.contains(legoBrick)) {
+						Log.d(TAG, "REMOVED contains this brick");
+						Core.line(algoImg, new Point(currentCol+5,currentRow+5), new Point(currentCol+45,currentRow+45), new Scalar(255,255,255), 3);
+						Core.line(algoImg, new Point(currentCol+5,currentRow+45), new Point(currentCol+45,currentRow+5), new Scalar(255,255,255), 3);
+					}
 					oldBrickLocations.add(new Point(currentCol+25,currentRow+25));
 					
 					currentCol += 60;
@@ -424,7 +440,7 @@ public class GamePhaseManager implements AfterLoadingColorCalibListener {
 				for (Pair<Point, Point> pair : mergeLines) {
 					if(pair.second.x == -1)
 						pair = new Pair<Point, Point>(pair.first, oldBrickLocations.get((int)pair.second.y));
-					Core.line(algoImg, pair.first, pair.second, new Scalar(255,255,255));
+					Core.line(algoImg, pair.first, pair.second, new Scalar(255,255,255), 3);
 				}
 				
 				Highgui.imwrite("/sdcard/arbg/renderedFrame.png",ar.getRenderedFrame());

@@ -26,6 +26,7 @@ public class WorldLines {
 	private Object brickLock = new Object();
 //	private Map<WorldCoordinate,WorldNode> theWorld = new HashMap<WorldCoordinate,WorldNode>();
 	private boolean worldGenerated = false;
+	private List<LegoBrick> removedBricks = new ArrayList<LegoBrick>();
 	
 	private final Grid worldGrid;
 	
@@ -365,6 +366,18 @@ public class WorldLines {
 				if(maxOverlapDistance > 0) Log.d("CLEAN", "Overlap3DDistance: "+maxOverlapDistance);
 			}
 		}
+	}
+	
+	public void addRemovedBrick(LegoBrick b) {
+		removedBricks.add(b);
+	}
+	
+	public LegoBrick[] getRemovedBricks() {
+		return removedBricks.toArray(new LegoBrick[removedBricks.size()]);
+	}
+	
+	public void resetRemovedBricks() {
+		removedBricks.clear();
 	}
 	
 //	public WorldNode getNode(WorldCoordinate co) {
