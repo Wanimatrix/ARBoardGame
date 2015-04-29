@@ -7,6 +7,7 @@ import android.util.Log;
 import android.view.MotionEvent;
 import android.view.SurfaceHolder;
 import android.view.SurfaceHolder.Callback;
+import be.wouterfranken.arboardgame.rendering.ArRenderer;
 import be.wouterfranken.arboardgame.rendering.CameraViewRenderer;
 import be.wouterfranken.experiments.TimerManager;
 
@@ -62,6 +63,7 @@ public class CameraView extends CardboardView implements Callback{
 	public boolean onTouchEvent(MotionEvent event) {
 		if(AppConfig.DEBUG_LOGGING) Log.d(TAG, "Touch noticed");
 		TimerManager.saveAll();
+		ArRenderer.distanceCollect.save("/sdcard/timerData", "");
 		AppConfig.TOUCH_EVENT = true;
 		return super.onTouchEvent(event);
 	}

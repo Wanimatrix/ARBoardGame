@@ -134,11 +134,17 @@ private static final String TAG = PathFinderOrig.class.getSimpleName();
 //				coord2D.put(1, i, ;
 //				int row = ;
 //				int col = ;
-				double threshValue = brickThreshold.get(
+				if(coord2D == null) Log.e(TAG, "THRESHOLD ERROR: coord2d == null");
+				if(brickThreshold == null) Log.e(TAG, "THRESHOLD ERROR: brickThreshold == null");
+				if(coord2D.get(0,i) == null) Log.e(TAG, "THRESHOLD ERROR: coord2D.get(0,i) == null");
+				if(coord2D.get(1,i) == null) Log.e(TAG, "THRESHOLD ERROR: coord2D.get(1,i) == null");
+				if(coord2D.get(2,i) == null) Log.e(TAG, "THRESHOLD ERROR: coord2D.get(2,i) == null");
+				
+				double[] threshValue = brickThreshold.get(
 						(int)(coord2D.get(1,i)[0]*Math.pow(coord2D.get(2,i)[0],-1)),
-						(int)(coord2D.get(0,i)[0]*Math.pow(coord2D.get(2,i)[0],-1)))[0];
+						(int)(coord2D.get(0,i)[0]*Math.pow(coord2D.get(2,i)[0],-1)));
 //				Log.d(TAG, "treshValue: "+threshValue);
-				if(brickThreshold.empty() || threshValue == 0) {
+				if(brickThreshold.empty() || threshValue == null || threshValue[0] == 0) {
 					result.add(new PathNode(nbs.get(i)));
 				}
 			}
@@ -202,7 +208,7 @@ private static final String TAG = PathFinderOrig.class.getSimpleName();
 		PriorityQueue<PathNode> open = new PriorityQueue<PathNode>();
 //		Map<WorldCoordinate, PathNode> openNodes = new HashMap<WorldCoordinate, PathNode>();
 //		Map<GridNode, Pair<float[],GridNode>> fgPrevMap = new HashMap<GridNode, Pair<float[],GridNode>>();
-		Mat brickThreshold = w.getBrickThreshold();
+		Mat brickThreshold = w.getBrickThreshold().clone();
 		CameraPoseTracker cameraPose = w.getCameraPoseTracker();
 		Mat mv = cameraPose.getMvMat();
 		if(mv == null || mv.empty() || brickThreshold == null || brickThreshold.empty()) return null;
