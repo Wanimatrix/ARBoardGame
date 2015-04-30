@@ -109,6 +109,7 @@ public class LegoBrickTracker extends Tracker{
 		    float[] point3D1;
 		    float[] point3D;
 	    	bricks = new LegoBrick[ocvContours.length];
+	    	Log.d(TAG, "Amount of contours: "+ocvContours.length);
 	    	for (int k = 0; k < ocvContours.length; k++) {
 		    	corners3D = new float[(ocvContours[k].length-1)/3][4];
 		    	corners3D1 = new float[(ocvContours[k].length-1)/3][4];

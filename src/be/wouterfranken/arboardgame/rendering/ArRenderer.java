@@ -41,7 +41,9 @@ import be.wouterfranken.arboardgame.rendering.tracking.CameraPoseTracker;
 import be.wouterfranken.arboardgame.rendering.tracking.FrameTrackingCallback;
 import be.wouterfranken.arboardgame.rendering.tracking.LegoBrickTracker;
 import be.wouterfranken.arboardgame.utilities.Color;
+import be.wouterfranken.arboardgame.utilities.MathUtilities;
 import be.wouterfranken.arboardgame.utilities.RenderingUtils;
+import be.wouterfranken.experiments.NumberCollection;
 import be.wouterfranken.experiments.TimerManager;
 
 public class ArRenderer implements Renderer, PreviewCallback {
@@ -457,6 +459,8 @@ public class ArRenderer implements Renderer, PreviewCallback {
 //		previousFrameTime = (System.nanoTime()-start)/1000000L;
 	}
 	
+	public static NumberCollection distanceCollect = new NumberCollection("distance", "");
+	
 	private class ParallelTask extends AsyncTask<byte[], Void, Void> {
 
 //		private byte[] frameData = null;
@@ -489,6 +493,11 @@ public class ArRenderer implements Renderer, PreviewCallback {
 //					if(AppConfig.DEBUG_TIMING) Log.d(TAG, "Totaltime in "+(System.nanoTime()-start)/1000000L+"ms");
 				}
 			}
+			
+			double distance = MathUtilities.norm(MathUtilities.vector(new float[]{0,0,0}, cameraPose.getCameraPosition()));
+			Log.d(TAG, "Distance to camera: "+distance);
+			distanceCollect.add(distance);
+			
 			if(AppConfig.LEGO_TRACKING && cameraPose.cameraPoseFound()) legoBrick.findLegoBrick(colFrameImg);
 			
 			if(AppConfig.LEMMING_RENDERING && cameraPose.cameraPoseFound()) {
