@@ -34,14 +34,28 @@ public class FrameTrackingCallback {
 		this.timerStart = timerStart;
 	}
 	
+	public static void unRegister(Class<? extends Tracker> c) {
+		registeredTrackers.remove(c);
+	}
+	
 	public void trackingDone(Class<? extends Tracker> c) {
+		
+		Log.d(TAG, "Amount of trackers: "+doneTrackers.size());
+		
+		for (Class<? extends Tracker> class1 : doneTrackers) {
+			Log.d(TAG, "Tracker: "+class1.getSimpleName());
+		}
+		
 		if(doneTrackers.isEmpty())
 			throw new IllegalStateException("All trackers are done already!");
 		if(!doneTrackers.remove(c)) {
 			throw new IllegalArgumentException("The tracker "+c.getSimpleName()+" was already removed or was not registered.");
 		}
+		
+		Log.d(TAG, "Tracker "+c.getSimpleName()+" removed, amount of not-done trackers: "+doneTrackers.size());
 		if(doneTrackers.isEmpty()) {
 			camera.addCallbackBuffer(frameData);
+			Log.d(TAG, "All trackers removed, callbackbuffer returned.");
 //			TimerManager.stop();
 			if(AppConfig.DEBUG_TIMING) Log.d(TAG, "Totaltime in "+(System.nanoTime()-timerStart)/1000000L+"ms");
 		}

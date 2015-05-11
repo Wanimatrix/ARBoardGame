@@ -18,6 +18,9 @@ public class AppConfig {
 	
 	public static final boolean VR_MODE = false;
 	
+	public static final boolean USE_SAVED_FRAMES = false;
+	public static final boolean SAVE_FRAMES = false;
+	
 	public final static boolean DEBUG_LOGGING = false;
 	public final static boolean DEBUG_TIMING = true;
 	

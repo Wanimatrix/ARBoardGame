@@ -40,7 +40,7 @@ public class LemmingsGenerator extends Tracker{
 	}
 	
 	@SuppressWarnings("unused")
-	public void frameTick(LegoBrick[] bricks) {
+	public void frameTick(LegoBrick[] bricks, String savedPath) {
 		if(!w.isWorldGenerated()) return;
 		
 		synchronized (lock) {
@@ -56,12 +56,12 @@ public class LemmingsGenerator extends Tracker{
 //		synchronized (brickLock) {
 		if(AppConfig.DEBUG_LOGGING) Log.d(TAG, "BrickAmount: "+bricks.length);
 		Log.d(TAG, "Start adding bricks");
-		TimerManager.start("BrickDetection", "addBricks", "/sdcard/arbg/oldTimeAddBricks.txt");
+		TimerManager.start("BrickDetection", "addBricks", savedPath);
 		w.addBricks(bricks);
 		TimerManager.stop();
 	
 		// Generate Lemmings
-		TimerManager.start("BrickDetection", "lemmingUpdate", "/sdcard/arbg/oldTimeUpdateLemming.txt");
+		TimerManager.start("BrickDetection", "lemmingUpdate", savedPath);
 		synchronized (lock) {
 			boolean noLemmings = lemmings.isEmpty();
 			if(noLemmings && amount != 0) {

@@ -1,5 +1,6 @@
 package be.wouterfranken.arboardgame.rendering;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.Buffer;
 import java.nio.IntBuffer;
@@ -9,13 +10,19 @@ import java.util.List;
 import javax.microedition.khronos.egl.EGLConfig;
 import javax.microedition.khronos.opengles.GL10;
 
+import org.opencv.android.Utils;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
+import org.opencv.highgui.Highgui;
 import org.opencv.imgproc.Imgproc;
 
 import android.app.Activity;
 import android.content.Context;
+import android.graphics.Bitmap;
+import android.graphics.Canvas;
 import android.graphics.ImageFormat;
+import android.graphics.Paint;
+import android.graphics.Rect;
 import android.graphics.SurfaceTexture;
 import android.hardware.Camera;
 import android.hardware.Camera.PreviewCallback;
@@ -27,6 +34,7 @@ import android.opengl.GLSurfaceView.Renderer;
 import android.opengl.Matrix;
 import android.os.AsyncTask;
 import android.util.Log;
+import android.view.Surface;
 import be.wouterfranken.arboardgame.app.AppConfig;
 import be.wouterfranken.arboardgame.gameworld.LegoBrick;
 import be.wouterfranken.arboardgame.gameworld.LemmingsGenerator;
@@ -196,6 +204,7 @@ public class ArRenderer implements Renderer, PreviewCallback {
 		if(AppConfig.DEBUG_LOGGING) Log.d(TAG, "Starting camera setup...");
 		
 	    setupCamera();
+	    surface = new Surface(st2);
 		
 	    if(AppConfig.DEBUG_LOGGING) Log.d(TAG, "Camera setup done...");
 	}
@@ -208,7 +217,8 @@ public class ArRenderer implements Renderer, PreviewCallback {
 	
 	@Override
 	public void onDrawFrame(GL10 unused) {
-		st.updateTexImage();
+		if(!AppConfig.USE_SAVED_FRAMES) st.updateTexImage();
+		else st2.updateTexImage();
 		
 		GLES20.glViewport(0, 0, this.texW, this.texH);
 		
@@ -392,6 +402,28 @@ public class ArRenderer implements Renderer, PreviewCallback {
 //	long previousFrameTime = 0;
 //	int frameWaitAmount = 0;
 	private ParallelTask plt = null;
+	private int[] distances = new int[]{20,25,30,35,40,45,50,55,60,65,70,75};
+	private int currentDistance = 0;
+	private int count = 0;
+	private Mat currentSavedFrame = new Mat();
+	
+	private Surface surface;
+	public void setSurface(Surface s){
+		this.surface = s;
+	}
+	
+	public String getSaveFolderName() {
+		String folderName = "/sdcard/arbg/algo";
+		if(AppConfig.USE_SAVED_FRAMES) {
+			folderName = "/sdcard/arbg/distanceTimingResult/"+distances[currentDistance];
+		}
+		File f = new File(folderName);
+		if(!f.exists()) {
+			Log.e(TAG, "Directory "+folderName+"does not exist!");
+		}
+		Log.d(TAG, "FOLDER NAME: "+folderName);
+		return folderName;
+	}
 	
 	@Override
 	public void onPreviewFrame(byte[] frameData, Camera camera) {
@@ -408,17 +440,60 @@ public class ArRenderer implements Renderer, PreviewCallback {
 		
 //		view.requestRender();
 		
+		if(AppConfig.USE_SAVED_FRAMES) {
+			if(plt != null && plt.getStatus() != AsyncTask.Status.FINISHED && plt.getStatus() != AsyncTask.Status.PENDING) {
+				Log.d(TAG, "PLT IS NOT NULL AND NOT FINISHED AND NOT PENDING");
+				camera.addCallbackBuffer(frameData);
+				return;
+			}
+			Log.d(TAG, "Loading frame "+"/sdcard/arbg/naiveDistFrames/dist"+distances[currentDistance]+"-"+(count+1)+".png");
+			currentSavedFrame = Highgui.imread("/sdcard/arbg/naiveDistFrames/dist"+distances[currentDistance]+"-"+(count+1)+".png",3);
+			if(currentSavedFrame.empty()) {
+//				if(AppConfig.SAVE_TIMING) {
+				TimerManager.saveAll();
+				TimerManager.reset();
+//				}
+				FrameTrackingCallback.unRegister(lemmingsGenerator.getClass());
+				lemmingsGenerator = new LemmingsGenerator(legoBrick, cameraPose);
+				lemmingMeshesToRender.clear();
+				count = 0;
+				if(currentDistance < distances.length-1) {
+					currentDistance++;
+				} else {
+					android.os.Process.killProcess(android.os.Process.myPid());
+				}
+				
+				camera.addCallbackBuffer(frameData);
+				return;
+			}
+			Mat tmp = new Mat();
+			Paint p = new Paint();
+			Imgproc.cvtColor(currentSavedFrame, tmp, Imgproc.COLOR_BGR2RGBA, 4);
+			Bitmap bmp = Bitmap.createBitmap(tmp.cols(), tmp.rows(), Bitmap.Config.ARGB_8888);
+			Utils.matToBitmap(tmp, bmp);
+			Canvas c = null;
+			synchronized (surface) {
+				c = surface.lockCanvas(null);
+				c.drawBitmap(bmp, new Rect(0, 0, bmp.getWidth(), bmp.getHeight()), new Rect(0, 0, c.getWidth(), c.getHeight()), p);
+			}
+			surface.unlockCanvasAndPost(c);
+		}
+		
 		
 		
 		FrameTrackingCallback callback = new FrameTrackingCallback(frameData, camera,start);
 		
 		if(AppConfig.CAMERA_POSE_ESTIMATION && AppConfig.LEGO_TRACKING && AppConfig.LEMMING_RENDERING
-				&& (plt == null || plt.getStatus() == AsyncTask.Status.FINISHED || plt.getStatus() == AsyncTask.Status.PENDING)) {
+				&& (AppConfig.USE_SAVED_FRAMES || plt == null || plt.getStatus() == AsyncTask.Status.FINISHED || plt.getStatus() == AsyncTask.Status.PENDING)) {
+			if(plt != null) Log.d(TAG, "PLT status: "+plt.getStatus());
 			plt = new ParallelTask();
+			plt.callback = callback;
 			plt.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, frameData);
-			callback.trackingDone(CameraPoseTracker.class);
-			callback.trackingDone(LegoBrickTracker.class);
-			callback.trackingDone(LemmingsGenerator.class);
+			if(!AppConfig.USE_SAVED_FRAMES) {
+				callback.trackingDone(CameraPoseTracker.class);
+				callback.trackingDone(LegoBrickTracker.class);
+				callback.trackingDone(LemmingsGenerator.class);
+			}
 		} else if(AppConfig.CAMERA_POSE_ESTIMATION && AppConfig.LEGO_TRACKING && AppConfig.LEMMING_RENDERING) {
 			callback.trackingDone(CameraPoseTracker.class);
 			callback.trackingDone(LegoBrickTracker.class);
@@ -464,30 +539,48 @@ public class ArRenderer implements Renderer, PreviewCallback {
 	private class ParallelTask extends AsyncTask<byte[], Void, Void> {
 
 //		private byte[] frameData = null;
+		private FrameTrackingCallback callback = null;
+		private boolean touch = false;
+		
+		@Override
+				protected void onPreExecute() {
+					touch = AppConfig.TOUCH_EVENT;
+					super.onPreExecute();
+				}
 		
 		@Override
 		protected Void doInBackground(byte[]... params) {
-			TimerManager.start("BrickTracker", "Total", "/sdcard/arbg/oldTimeTotal.txt");
-			TimerManager.start("", "frameTicks", "");
-			cameraPose.frameTick();
-			legoBrick.frameTick();
-			TimerManager.stop();
+			TimerManager.start("BrickTracker", "Total", getSaveFolderName());
+			if(!AppConfig.USE_SAVED_FRAMES) {
+				TimerManager.start("", "frameTicks", getSaveFolderName());
+				cameraPose.frameTick();
+				legoBrick.frameTick();
+				TimerManager.stop();
+			}
 			
-			
-			Size size = camera.getParameters().getPreviewSize();
-			long start2 = System.nanoTime();
-			TimerManager.start("Renderer", "yuv2bgr", "");
 			Mat colFrameImg = new Mat();
-			Mat yuv = new Mat( (int)(size.height*1.5), size.width, CvType.CV_8UC1 );
-			yuv.put( 0, 0, params[0] );
-			Imgproc.cvtColor( yuv, colFrameImg, Imgproc.COLOR_YUV2BGR_NV21, 3);
-			TimerManager.stop();
-			if(AppConfig.DEBUG_TIMING) Log.d(TAG, "YUV2RGB (OpenCV) in "+(System.nanoTime()-start2)/1000000L+"ms");
+			Size size = camera.getParameters().getPreviewSize();
+			if(!AppConfig.USE_SAVED_FRAMES) {
+				long start2 = System.nanoTime();
+				TimerManager.start("Renderer", "yuv2bgr", getSaveFolderName());
+				Mat yuv = new Mat( (int)(size.height*1.5), size.width, CvType.CV_8UC1 );
+				yuv.put( 0, 0, params[0] );
+				Imgproc.cvtColor( yuv, colFrameImg, Imgproc.COLOR_YUV2BGR_NV21, 3);
+				if(AppConfig.SAVE_FRAMES && touch) Highgui.imwrite(getSaveFolderName()+"/frames/frame-"+count+".png", colFrameImg);
+				TimerManager.stop();
+				if(AppConfig.DEBUG_TIMING) Log.d(TAG, "YUV2RGB (OpenCV) in "+(System.nanoTime()-start2)/1000000L+"ms");
+			} else {
+				colFrameImg = currentSavedFrame.clone();
+				Log.d(TAG, "CURRENTFRAME CHANNELS: "+currentSavedFrame.channels());
+			}
 			
 			if(AppConfig.CAMERA_POSE_ESTIMATION) { 
-				cameraPose.updateCameraPose(colFrameImg);
+				cameraPose.updateCameraPose(colFrameImg, getSaveFolderName());
 				if(!cameraPose.cameraPoseFound()) {
-					camera.addCallbackBuffer(params[0]);
+					Log.d(TAG, "Camerapose NOT FOUND");
+					if(!AppConfig.USE_SAVED_FRAMES) {
+						camera.addCallbackBuffer(params[0]);
+					}
 					TimerManager.stop();
 					return null;
 //					if(AppConfig.DEBUG_TIMING) Log.d(TAG, "Totaltime in "+(System.nanoTime()-start)/1000000L+"ms");
@@ -496,9 +589,9 @@ public class ArRenderer implements Renderer, PreviewCallback {
 			
 			double distance = MathUtilities.norm(MathUtilities.vector(new float[]{0,0,0}, cameraPose.getCameraPosition()));
 			Log.d(TAG, "Distance to camera: "+distance);
-			distanceCollect.add(distance);
+			if(touch) distanceCollect.add(distance);
 			
-			if(AppConfig.LEGO_TRACKING && cameraPose.cameraPoseFound()) legoBrick.findLegoBrick(colFrameImg);
+			if(AppConfig.LEGO_TRACKING && cameraPose.cameraPoseFound()) legoBrick.findLegoBrick(colFrameImg, getSaveFolderName());
 			
 			if(AppConfig.LEMMING_RENDERING && cameraPose.cameraPoseFound()) {
 				long lemmingStart = System.nanoTime();
@@ -507,10 +600,10 @@ public class ArRenderer implements Renderer, PreviewCallback {
 //				lgt.setupFrameTrackingCallback(callback);
 //				lgt.start = lemmingStart;
 //				lgt.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
-				TimerManager.start("", "getLegobricks", "");
+				TimerManager.start("", "getLegobricks", getSaveFolderName());
 				LegoBrick[] lbs = legoBrick.getLegoBricks(cameraPose);
 				TimerManager.stop();
-				lemmingsGenerator.frameTick(lbs);
+				lemmingsGenerator.frameTick(lbs, getSaveFolderName());
 				if(AppConfig.DEBUG_TIMING) Log.d(TAG, "Lemming frameUpdate in "+(System.nanoTime()-lemmingStart)/1000000L+"ms");
 //				callback.trackingDone(LemmingsGenerator.class);
 				long lemmingMeshUpd = System.nanoTime();
@@ -526,6 +619,18 @@ public class ArRenderer implements Renderer, PreviewCallback {
 			return null;
 		}
 		
+		@Override
+		protected void onPostExecute(Void result) {
+			count++;
+			if(AppConfig.USE_SAVED_FRAMES) {
+				callback.trackingDone(CameraPoseTracker.class);
+				callback.trackingDone(LegoBrickTracker.class);
+				callback.trackingDone(LemmingsGenerator.class);
+			}
+			if(touch) AppConfig.TOUCH_EVENT = false;
+			super.onPostExecute(result);
+		}
+		
 	}
 	
 	private class LemmingGeneratorTask extends AsyncTask<Void, Void, Void> {
@@ -536,7 +641,7 @@ public class ArRenderer implements Renderer, PreviewCallback {
 		protected Void doInBackground(Void... params) {
 			if(AppConfig.DEBUG_TIMING) Log.d(TAG, "Lemming Preprocessing in "+(System.nanoTime()-start)/1000000L+"ms");
 			start = System.nanoTime();
-			lemmingsGenerator.frameTick(null);//legoBrick.getLegoBricks(cameraPose)
+			lemmingsGenerator.frameTick(null, getSaveFolderName());//legoBrick.getLegoBricks(cameraPose)
 			return null;
 		}
 		
@@ -611,6 +716,8 @@ public class ArRenderer implements Renderer, PreviewCallback {
 	    if(AppConfig.DEBUG_LOGGING) Log.d(TAG, "Renderhandlers init done...");
 	}
 
+	private SurfaceTexture st2;
+	
 	private void setupCameraTex() {
 		if(AppConfig.DEBUG_LOGGING) Log.d(TAG, "Starting camera texture setup...");
 		
@@ -622,6 +729,10 @@ public class ArRenderer implements Renderer, PreviewCallback {
 	    GLES20.glTexParameteri(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, GLES20.GL_TEXTURE_MIN_FILTER, GLES20.GL_NEAREST);
 	    GLES20.glTexParameteri(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, GLES20.GL_TEXTURE_MAG_FILTER, GLES20.GL_NEAREST);
 		st = new SurfaceTexture(tex[0]);
+		st.setDefaultBufferSize(1920, 1080);
+		st2 = new SurfaceTexture(tex[0]);
+		st2.setDefaultBufferSize(1920, 1080);
+		
 //		st.setOnFrameAvailableListener(this);
 		
 		startCamera();

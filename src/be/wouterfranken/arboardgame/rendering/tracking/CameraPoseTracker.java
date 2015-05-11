@@ -75,9 +75,9 @@ public class CameraPoseTracker extends Tracker{
 		}
 	}
 	
-	public void updateCameraPose(Mat colFrameImg) {
+	public void updateCameraPose(Mat colFrameImg, String savedPath) {
 		long start = System.nanoTime();
-		TimerManager.start("BrickDetection", "camerapose", "/sdcard/arbg/oldTimeCamPose.txt");
+		TimerManager.start("BrickDetection", "camerapose", savedPath);
 		
 		Mat grayImg = new Mat();
 		Imgproc.cvtColor(colFrameImg, grayImg, Imgproc.COLOR_BGR2GRAY);
@@ -304,13 +304,15 @@ public class CameraPoseTracker extends Tracker{
 	
 	private void setMv(Mat newMv) {
 		synchronized (lock) {
-			newMv.copyTo(mv);
+			if(AppConfig.USE_SAVED_FRAMES) newMv.copyTo(mvExtern);
+			else newMv.copyTo(mv);
 		}
 	}
 	
 	private void setProj(Mat newProj) {
 		synchronized (lock) {
-			newProj.copyTo(proj);
+			if(AppConfig.USE_SAVED_FRAMES) newProj.copyTo(projExtern);
+			else newProj.copyTo(proj);
 		}
 	}
 	

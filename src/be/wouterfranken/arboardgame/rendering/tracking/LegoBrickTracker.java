@@ -11,6 +11,7 @@ import android.util.Log;
 import be.wouterfranken.arboardgame.app.AppConfig;
 import be.wouterfranken.arboardgame.gameworld.LegoBrick;
 import be.wouterfranken.arboardgame.gameworld.WorldConfig;
+import be.wouterfranken.arboardgame.rendering.ArRenderer;
 import be.wouterfranken.arboardgame.utilities.Color;
 import be.wouterfranken.arboardgame.utilities.DebugUtilities;
 import be.wouterfranken.arboardgame.utilities.MathUtilities;
@@ -27,11 +28,11 @@ public class LegoBrickTracker extends Tracker{
 	private Object lock = new Object();
 	private Object lockExtern = new Object();
 	
-	public void findLegoBrick(Mat yuvFrameImage) {
+	public void findLegoBrick(Mat yuvFrameImage, String savedPath) {
 		if(AppConfig.DEBUG_LOGGING) Log.d(TAG,"Legobrick tracking ...");
 		
 		long start = System.nanoTime();
-		TimerManager.start("BrickDetection", "BrickTracking", "/sdcard/arbg/oldTimeBrickTrack.txt");
+		TimerManager.start("BrickDetection", "BrickTracking", savedPath);
 		Mat threshold = new Mat();
 		Mat contour = new Mat();
 //		FindLegoBrick task = new FindLegoBrick();
@@ -273,7 +274,8 @@ public class LegoBrickTracker extends Tracker{
 	
 	private void setContour(Mat contour) {
 		synchronized (lock) {
-			contour.copyTo(this.contour);
+			if(AppConfig.USE_SAVED_FRAMES) contour.copyTo(this.contourExtern);
+			else contour.copyTo(this.contour);
 		}
 	}
 	
