@@ -13,6 +13,18 @@ public class AppConfig {
 	
 	public static final boolean TREE_ADAPTIVE_ASTAR = true;
 	
+	public static final boolean DRAW_ALGORITHM = true;
+	public static final boolean SAVE_FRAMES = false;
+	
+	public static final boolean SAVE_TIMING = false;
+	
+	public static final boolean USE_SAVED_FRAMES = false;
+	public static final boolean PARAMS = false;
+	public static final boolean DISTANCES = false;
+	public static final boolean LIGHT = false;
+	public static final String LIGHT_DIR = "brightFrames";
+//	public static String SAVED_FRAMES_DIRECTORY = "/sdcard/arbg/parameterComplexFrames";
+	
 	public static final boolean CAMERA_POSE_ESTIMATION = true;
 	public static final boolean LEMMING_RENDERING = true;
 	public static final boolean LEGO_TRACKING = true;
@@ -56,5 +68,4 @@ public class AppConfig {
 	public final static float[] BOARD_SIZE = new float[]{21f,29f}; // A4: 21,29.7
 	
 	public static final float[] LIGHT_POSITION = new float[]{AppConfig.BOARD_SIZE[0]/2,AppConfig.BOARD_SIZE[1]/2,50};
-	public static final boolean DRAW_ALGORITHM = true;
 }

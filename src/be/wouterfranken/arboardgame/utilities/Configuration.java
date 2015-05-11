@@ -81,7 +81,11 @@ public abstract class Configuration {
 	
 	protected void setAllItems(ConfigurationItem<?>... items) {
 		for (ConfigurationItem<?> configurationItem : items) {
-			this.items.put(configurationItem.getShortName(), configurationItem);
+			try {
+				this.items.put(configurationItem.getShortName(), (ConfigurationItem<?>)configurationItem.clone());
+			} catch (CloneNotSupportedException e) {
+				e.printStackTrace();
+			}
 		}
 	}
 	

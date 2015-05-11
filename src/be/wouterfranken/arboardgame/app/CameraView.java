@@ -11,6 +11,7 @@ import android.view.SurfaceHolder;
 import android.view.SurfaceHolder.Callback;
 import android.view.ViewConfiguration;
 import android.view.Window;
+import be.wouterfranken.arboardgame.rendering.ArRenderer;
 import be.wouterfranken.arboardgame.rendering.CameraViewRenderer;
 import be.wouterfranken.arboardgame.rendering.tracking.CameraPoseTracker;
 
@@ -75,8 +76,9 @@ public class CameraView extends CardboardView implements Callback{
 		if(event.getAction() == MotionEvent.ACTION_UP && event.getEventTime()-event.getDownTime() < ViewConfiguration.getLongPressTimeout()) {
 			if(AppConfig.DEBUG_LOGGING) Log.d(TAG, "Touch noticed!");
 			gpManager.goToNextPhase();
+//			GamePhaseManager.distanceCollect.save("/sdcard/arbg/distances", "");
+			AppConfig.TOUCH_EVENT = true;
 		}
-		AppConfig.TOUCH_EVENT = true;
 		return super.onTouchEvent(event);
 	}
 	

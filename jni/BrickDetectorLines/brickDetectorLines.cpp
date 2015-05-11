@@ -127,7 +127,41 @@ int currentFrame = 0;
 //   LOGD("Thresholding done...");
 // }
 
-void BrickDetectorLines::TrackBricks(Mat& frame, float upAngle, double apdp, Mat& colorCalibration, Mat& result, Mat& origContoursMat)
+std::string convert (float number){
+    std::ostringstream buff;
+    buff<<number;
+    return buff.str();   
+}
+
+std::string convert (bool boolean){
+    std::ostringstream buff;
+    buff<<boolean;
+    return buff.str();   
+}
+
+inline bool angleInDirectionalRange(float angle, float begin, float end) {
+    if(begin < 0) {
+      return angleInDirectionalRange(angle, 0, end) || angleInDirectionalRange(angle, 180+begin, 180);
+    } else if(end > 180) {
+      return angleInDirectionalRange(angle, begin, 180) || angleInDirectionalRange(angle, 0, end-180);
+    }
+    std::ostringstream buff;
+    buff << "CHECKING IF ANGLE " << convert(angle) << " IS WITHIN " << convert(begin) << " AND " << convert(end) << ": " << convert(angle < end && angle > begin);
+    LOGD("%s",buff.str().c_str());
+    return angle < end && angle > begin;
+  }
+
+inline bool angleOutDirectionalRange(float angle, float begin, float end) {
+    if(begin < 0) {
+      return angleOutDirectionalRange(angle, 0, end) && angleOutDirectionalRange(angle, 180+begin, 180);
+    } else if(end > 180) {
+      return angleOutDirectionalRange(angle, begin, 180) && angleOutDirectionalRange(angle, 0, end-180);
+    }
+
+    return angle > end || angle < begin;
+  }
+
+void BrickDetectorLines::TrackBricks(Mat& frame, float upAngle, double apdp, Mat& colorCalibration, Mat& result, Mat& origContoursMat, Mat& contoursMat)
 {
   Mat hsv;
   originalContourThresholds.clear();
@@ -298,7 +332,7 @@ void BrickDetectorLines::TrackBricks(Mat& frame, float upAngle, double apdp, Mat
 
   lowerbounds[0] = 0;
   upperbounds[0] = 255;
-  upperbounds[2] = 255;
+  // upperbounds[2] = 255;
 
   LOGD("Lowerbound: %d,%d,%d",lowerbounds[0],lowerbounds[1],lowerbounds[2]);
   LOGD("Upperbound: %d,%d,%d",upperbounds[0],upperbounds[1],upperbounds[2]);
@@ -479,7 +513,7 @@ void BrickDetectorLines::TrackBricks(Mat& frame, float upAngle, double apdp, Mat
   vector<vector<float> > contourAngles;
   vector<vector<float> > sideLengths;
   for( int c = 0; c< contours.size(); c++ ) {
-    if(contourArea(contours[c]) > maxArea/100 && contours[c].size() > 3 && hierarchy[c][2] < 0) {
+    if(contourArea(contours[c]) > maxArea/100 && contours[c].size() > 3) {
       vector<Point> contour = contours[c];
 
       vector<Point> betterContour;
@@ -502,8 +536,11 @@ void BrickDetectorLines::TrackBricks(Mat& frame, float upAngle, double apdp, Mat
       contourAngles.push_back(vector<float>(0));
       sideLengths.push_back(vector<float>(0));
       for(int pidx = 0; pidx< contours[c].size(); pidx++) {
-        if(DIR_ANGLE(curAngle[pidx]) < (DIR_ANGLE(curAngle[CIRC_IDX(pidx-1,curAngle.size())])-35 % 180)
-          || DIR_ANGLE(curAngle[pidx]) > (DIR_ANGLE(curAngle[CIRC_IDX(pidx-1,curAngle.size())])+35 % 180)) {
+        if(angleOutDirectionalRange(DIR_ANGLE(curAngle[pidx]), DIR_ANGLE(curAngle[CIRC_IDX(pidx-1,curAngle.size())])-35, 
+              DIR_ANGLE(curAngle[CIRC_IDX(pidx-1,curAngle.size())])+35)) {
+
+        // if(DIR_ANGLE(curAngle[pidx]) < (DIR_ANGLE(curAngle[CIRC_IDX(pidx-1,curAngle.size())])-35 % 180)
+        //   || DIR_ANGLE(curAngle[pidx]) > (DIR_ANGLE(curAngle[CIRC_IDX(pidx-1,curAngle.size())])+35 % 180)) {
           betterContour.push_back(contour[pidx]);
           contourAngles.back().push_back(curAngle[pidx]);
           
@@ -608,7 +645,9 @@ void BrickDetectorLines::TrackBricks(Mat& frame, float upAngle, double apdp, Mat
         float angleDeg = contourAngles[c][CIRC_IDX(startpidx+pidx, goodContours[c].size())];
         LOGD("Direction angle: %f",angleDeg);
 
-        if(DIR_ANGLE(angleDeg) > (DIR_ANGLE(upAngle)-25  % 180) && DIR_ANGLE(angleDeg) < (DIR_ANGLE(upAngle)+25 % 180)) {
+        if(angleInDirectionalRange(DIR_ANGLE(angleDeg),DIR_ANGLE(upAngle)-25,DIR_ANGLE(upAngle)+25)) {
+
+          // DIR_ANGLE(angleDeg) > (DIR_ANGLE(upAngle)-25  % 180) && DIR_ANGLE(angleDeg) < (DIR_ANGLE(upAngle)+25 % 180)) {
           up = pidx;
         }
 
@@ -626,7 +665,8 @@ void BrickDetectorLines::TrackBricks(Mat& frame, float upAngle, double apdp, Mat
         }
         
         for(int i = 0; i< angles.size(); i++) {
-          if(DIR_ANGLE(angleDeg) > (DIR_ANGLE(angles[i])-35  % 180) && DIR_ANGLE(angleDeg) < (DIR_ANGLE(angles[i])+35 % 180)) {
+          if(angleInDirectionalRange(DIR_ANGLE(angleDeg),DIR_ANGLE(angles[i])-35,DIR_ANGLE(angles[i])+35)) {
+          // if(DIR_ANGLE(angleDeg) > (DIR_ANGLE(angles[i])-35  % 180) && DIR_ANGLE(angleDeg) < (DIR_ANGLE(angles[i])+35 % 180)) {
             LOGD("This is not a brick! %f vs %f",DIR_ANGLE(angleDeg),DIR_ANGLE(angles[i]));
             isBrick = false;
             break;
@@ -683,15 +723,15 @@ void BrickDetectorLines::TrackBricks(Mat& frame, float upAngle, double apdp, Mat
     }
   }
 
-
-  currentFrameNonZero = countNonZero(currentFrameThreshold);
-  __android_log_print(ANDROID_LOG_DEBUG,"BrickDetectTime","Contour filter+conversion time: %f\n",((float)(getRealTime() - start))*1000.0);
-
-
   for( int c = 0; c< goodContours.size(); c++ ) {
     Scalar color = Scalar( 0, 255,0);
     drawContours( out, goodContours, c, color, 2, 3, hierarchy[c], 0, Point() );
   }
+
+  contoursMat = out.clone();
+
+  // currentFrameNonZero = countNonZero(currentFrameThreshold);
+  __android_log_print(ANDROID_LOG_DEBUG,"BrickDetectTime","Contour filter+conversion time: %f\n",((float)(getRealTime() - start))*1000.0);
 
   // /// Drawing a circle around corners
   // for( int j = 0; j < corners.size() ; j++ )
@@ -710,13 +750,14 @@ void BrickDetectorLines::TrackBricks(Mat& frame, float upAngle, double apdp, Mat
   // LOGIMG("bin",  bin);
 
   // LOGD("LOG BINARY DONE...");
-  LOGIMG( "bricksCut",  bricksCutFromImg);
+  // LOGIMG( "bricksCut",  bricksCutFromImg);
   // LOGIMG( "external",  out);
-  o.str("");
-  o << currentFrame;
-  imwrite("/sdcard/arbg/algo/contours"+o.str()+".png", out);
+  // o.str("");
+  // o << currentFrame;
+  // imwrite("/sdcard/arbg/algo/contours"+o.str()+".png", out);
   // LOGIMG( "frameThreshold",  currentFrameThreshold);
 
+  
 
   currentFrame++;
   return;
@@ -751,6 +792,8 @@ void BrickDetectorLines::CheckOverlap(Mat& inputPoints, int origContourIdx, floa
   origOverlapResult = resultNonZero/(float)origNonZero;
   LOGD("Contour with orig idx %d: inputRatio(%f) origRatio(%f)", origContourIdx, inputOverlapResult, origOverlapResult);
 }
+
+// int overlapCounter = 0;
 
 void BrickDetectorLines::CheckCurrFrameOverlap(Mat& inputPoints, float& inputOverlapResult, int index) {
   vector<vector<Point >> inputContours(1);
@@ -798,10 +841,11 @@ void BrickDetectorLines::CheckCurrFrameOverlap(Mat& inputPoints, float& inputOve
   __android_log_print(ANDROID_LOG_DEBUG,"PERFORMANCE_ANALYSIS","Contours drawn in %f ms...",((float)(getRealTime() - start))*1000.0);
 
 
-  LOGD("Bounded input");
+  
   Mat inputBounded = Mat(inputPtsThreshold, bound);
-  LOGD("Bounded frame");
   Mat frameBounded = Mat(currentFrameThreshold, bound);
+  LOGD("Bounded input size: (%d, %d)",inputBounded.rows,inputBounded.cols);
+  LOGD("Bounded frame size: (%d, %d)",frameBounded.rows,frameBounded.cols);
 
   start = getRealTime();
   double start2 = getRealTime();
@@ -819,7 +863,7 @@ void BrickDetectorLines::CheckCurrFrameOverlap(Mat& inputPoints, float& inputOve
   __android_log_print(ANDROID_LOG_DEBUG,"PERFORMANCE_ANALYSIS","CountNonZero frame in %f ms...",((float)(getRealTime() - start2))*1000.0);
   Mat result(inputBounded.size(), CV_8UC1);
   start2 = getRealTime();
-  bitwise_and(inputBounded, frameBounded, result, inputBounded);
+  bitwise_and(inputBounded, frameBounded, result);
   __android_log_print(ANDROID_LOG_DEBUG,"PERFORMANCE_ANALYSIS","And thresholds in %f ms...",((float)(getRealTime() - start2))*1000.0);
 
   // LOGIMG( "inputT",  inputPtsThreshold);
@@ -828,8 +872,8 @@ void BrickDetectorLines::CheckCurrFrameOverlap(Mat& inputPoints, float& inputOve
   // Mat debug;
   // Mat result2;
   // // bitwise_or(inputBounded/2, frameBounded/2, debug);
-  // bitwise_and(inputPtsThreshold, currentFrameThreshold, result2, inputPtsThreshold);
-  // bitwise_or(inputPtsThreshold/2, currentFrameThreshold/2, debug);
+  // bitwise_and(inputBounded, frameBounded, debug);
+  // bitwise_or(inputBounded/2, frameBounded/2, debug);
   // bitwise_or(debug,result2,debug);
 
   start2 = getRealTime();
@@ -849,9 +893,18 @@ void BrickDetectorLines::CheckCurrFrameOverlap(Mat& inputPoints, float& inputOve
   //   ostr << currentFrameAreas[i];
   //   putText(debug, ostr.str(), Point(50,100+50*i), 0.5, 1, Scalar(255,255,255));
   // }
-  // if(inputOverlapResult < 0.75) LOGIMG( "overlapDebug",  debug);
+
+  // ostringstream o;
+  // o.str("");
+  // o << overlapCounter;
+
+  // imwrite("/sdcard/arbg/overlapProblems/result"+o.str()+".png",result);
+  // imwrite("/sdcard/arbg/overlapProblems/input"+o.str()+".png",inputBounded);
+  // imwrite("/sdcard/arbg/overlapProblems/frame"+o.str()+".png",frameBounded);
+  // overlapCounter++;
+  // LOGIMG( "overlapDebug",  debug);
 
 
-  LOGD("inputRatio(%f)", inputOverlapResult);
+  LOGD("resultNonZero(%d)/inputNonZero(%d) = inputRatio(%f)",resultNonZero, inputNonZero, inputOverlapResult);
   
 }

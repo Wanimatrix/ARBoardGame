@@ -32,6 +32,7 @@ import be.wouterfranken.arboardgame.utilities.MathUtilities;
 public class LegoBrick {
 	
 	private static final String TAG = LegoBrick.class.getSimpleName();
+	private static long idGenerator = 0;
 	
 //	private float[][] corners3D;
 	private float[] centerPoint;
@@ -51,6 +52,7 @@ public class LegoBrick {
 	
 	private int addedFrame;
 	private int acceptedFrame = -1;
+	private long id = 0;
 	
 	private List<LegoBrick> mergedBricksThisFrame = new ArrayList<LegoBrick>();
 	private int frameCounter = -1;
@@ -60,6 +62,9 @@ public class LegoBrick {
 	}
 	
 	public LegoBrick(float[] centerPoint, float[][] halfSideVectors, float orientation, int addedFrame) {
+		
+		this.id = (idGenerator++);
+		
 		this.centerPoint = centerPoint;
 		this.halfSideVectors = halfSideVectors;
 		this.addedFrame = addedFrame;
@@ -160,11 +165,11 @@ public class LegoBrick {
 			float angleDeg2o = MathUtilities.angleToDirectionalAngle(MathUtilities.angleUnityCircle(other.halfSideVectors[2]));
 			
 			
-			if(angleDeg1o > angleDeg1t-25 && angleDeg1o < angleDeg1t+25) {
+			if(MathUtilities.angleInDirectionalRange(angleDeg1o, angleDeg1t-25, angleDeg1t+25)) {
 				Log.d(TAG, "Halfside check: "+(angleDeg1t-25)+" < "+angleDeg1o+" < "+(angleDeg1t+25));
 				poseMap.put(1, 1);
 				poseMap.put(2, 2);
-			} else if(angleDeg2o > angleDeg1t-25 && angleDeg2o < angleDeg1t+25) {
+			} else if(MathUtilities.angleInDirectionalRange(angleDeg2o, angleDeg1t-25, angleDeg1t+25)) {
 				Log.d(TAG, "Halfside check: "+(angleDeg1t-25)+" < "+angleDeg2o+" < "+(angleDeg1t+25));
 				poseMap.put(1, 2);
 				poseMap.put(2, 1);
@@ -255,6 +260,7 @@ public class LegoBrick {
 	
 	public LegoBrickContainer[] mergeCheck(LegoBrickContainer[] others, int frameCount) {
 		List<LegoBrickContainer> result = new ArrayList<LegoBrickContainer>(Arrays.asList(others));
+		int counter = 0;
 		Iterator<LegoBrickContainer> it = result.iterator();
 		while(it.hasNext()) {
 			LegoBrickContainer lc = it.next();
@@ -264,10 +270,13 @@ public class LegoBrick {
 			for (Integer idx : mergeIdxes) {
 				Log.d("INDEX_TEST", "Remove index: "+idx);
 				lc.remove(idx-i++);
-				if(lc.size() == 0) it.remove();
+				if(lc.size() == 0) {
+					it.remove();
+					counter++;
+				}
 			}
 		}
-		
+		Log.d(TAG, "Amount of new bricks removed due to merge with accepted bricks: "+counter);
 		return result.toArray(new LegoBrickContainer[result.size()]);
 	}
 	
@@ -690,6 +699,10 @@ public class LegoBrick {
 	
 	public List<LegoBrick> getMergedBricksThisFrame() {
 		return mergedBricksThisFrame;
+	}
+	
+	public long getId() {
+		return id;
 	}
 	
 	private native float[] checkCurrentOverlap(long inputPoints);

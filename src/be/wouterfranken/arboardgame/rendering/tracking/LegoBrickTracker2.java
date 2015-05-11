@@ -21,6 +21,7 @@ import org.opencv.core.MatOfFloat4;
 import org.opencv.core.MatOfPoint;
 import org.opencv.core.Point;
 import org.opencv.core.Scalar;
+import org.opencv.highgui.Highgui;
 
 import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.Table;
@@ -82,15 +83,20 @@ private static final String TAG = LegoBrickTracker.class.getSimpleName();
 		}
 	}
 	
-	int frameCount = 0;
+	public int frameCount = 0;
 	
 	public void findLegoBrick(Mat yuvFrameImage, Mat modelView, float orientation, Mat colorCalibration, FrameTrackingCallback trackingCallback,
-			WorldLines currentWorld) throws IOException {
+			WorldLines currentWorld, String savedFolderName) throws IOException {
 		
 		if(AppConfig.DEBUG_LOGGING) Log.d(TAG,"Legobrick tracking ...");
 		
-		File f = new File("/sdcard/arbg/algo/removalReason"+frameCount+".txt");
-		BufferedWriter writer = new BufferedWriter(new FileWriter(f));
+//		TimerManager.start("BrickDetection", "Total", savedFolderName, BrickTrackerConfigFactory.getConfiguration().toString());
+		
+		BufferedWriter writer = null;
+		if(AppConfig.DRAW_ALGORITHM) {
+			File f = new File(savedFolderName+"/removalReason"+frameCount+".txt");
+			writer = new BufferedWriter(new FileWriter(f));
+		}
 		long start = System.nanoTime();
 	
 		Log.d(TAG,"LINES...");
@@ -104,7 +110,7 @@ private static final String TAG = LegoBrickTracker.class.getSimpleName();
 		
 		// Calculate global UpVector
 //		long startTrackLines = System.nanoTime();
-		TimerManager.start("BrickDetection", "UpVectorCalc", BrickTrackerConfigFactory.getConfiguration().toString());
+//		TimerManager.start("BrickDetection", "UpVectorCalc", savedFolderName, BrickTrackerConfigFactory.getConfiguration().toString());
 		Mat coord3D = Mat.ones(4, 2, CvType.CV_32FC1);
 		coord3D.put(0, 0, 0);
 		coord3D.put(1, 0, 0);
@@ -114,6 +120,7 @@ private static final String TAG = LegoBrickTracker.class.getSimpleName();
 		coord3D.put(2, 1, 0);
 		
 		DebugUtilities.logMat("COORD3D", coord3D);
+		Mat contoursOutput = new Mat();
 		
 		Mat coord2D = CameraPoseTracker.get2DPointFrom3D(coord3D, modelView);
 		
@@ -127,18 +134,18 @@ private static final String TAG = LegoBrickTracker.class.getSimpleName();
 		Log.d(TAG, "UpAngle: "+upAngle);
         upAngle = (coord2D.get(1,0)[0] > coord2D.get(1,1)[0]) ? (upAngle*-1) : upAngle;
         Log.d(TAG, "UpAngle: "+upAngle);
-        TimerManager.stop();
+//        TimerManager.stop();
         
-        TimerManager.start("BrickDetection", "C++Part", BrickTrackerConfigFactory.getConfiguration().toString());
+        TimerManager.start("BrickDetection", "DetectLegoWalls", savedFolderName, BrickTrackerConfigFactory.getConfiguration().toString());
         // Find legobrick contours
-		findLegoBrickLines(yuvFrameImage.getNativeObjAddr(), upAngle, (Double)BrickTrackerConfigFactory.getConfiguration().getItem("APDP"), colorCalibration.getNativeObjAddr(), brickPositionData.getNativeObjAddr(), originalContours.getNativeObjAddr());
+		findLegoBrickLines(yuvFrameImage.getNativeObjAddr(), upAngle, (Double)BrickTrackerConfigFactory.getConfiguration().getItem("APDP"), colorCalibration.getNativeObjAddr(), brickPositionData.getNativeObjAddr(), originalContours.getNativeObjAddr(), contoursOutput.getNativeObjAddr());
 		TimerManager.stop();
 		
 		long startJava = System.nanoTime();
-		TimerManager.start("BrickDetection", "JavaPart", BrickTrackerConfigFactory.getConfiguration().toString());
+//		TimerManager.start("BrickDetection", "JavaPart", savedFolderName, BrickTrackerConfigFactory.getConfiguration().toString());
 		
 		// Convert contours to appropriate data types
-		TimerManager.start("BrickDetection", "ConvertC++Contours", BrickTrackerConfigFactory.getConfiguration().toString());
+//		TimerManager.start("BrickDetection", "ConvertC++Contours", savedFolderName, BrickTrackerConfigFactory.getConfiguration().toString());
 		List<MatOfPoint> contours = new ArrayList<MatOfPoint>();
 		List<float[]> angles = new ArrayList<float[]>();
 		List<Integer> idxes = new ArrayList<Integer>();
@@ -157,13 +164,14 @@ private static final String TAG = LegoBrickTracker.class.getSimpleName();
 			angles.add(tmpAngles);
 		}
 		Log.d(TAG, "Contour size: "+contours.size());
-		TimerManager.stop();
-		
-		writer.append(contours.size()+" possible collections of bricks found.");
-		writer.newLine();
+//		TimerManager.stop();
+		if(AppConfig.DRAW_ALGORITHM) {
+			writer.append(contours.size()+" possible collections of bricks found.");
+			writer.newLine();
+		}
 		
 		// Filter contours and convert to 3D LegoBricks
-		TimerManager.start("BrickDetection", "FilterContours", BrickTrackerConfigFactory.getConfiguration().toString());
+		TimerManager.start("BrickDetection", "FilterContoursJava", savedFolderName, BrickTrackerConfigFactory.getConfiguration().toString());
 		Iterator<MatOfPoint> it = contours.iterator();
 		List<Integer> contourOrigIdx = new ArrayList<Integer>(); // Holds the original indexes of accepted contours
 		List<ContourInformation> acceptedContours = new ArrayList<ContourInformation>();  // Holds the accepted contours
@@ -187,44 +195,48 @@ private static final String TAG = LegoBrickTracker.class.getSimpleName();
 					new CameraPoseTracker.XYMapper2D3D(z0Pt[0],z0Pt[1]));
 			if(z1Pt[2] > 0) {
 				anchorPtIdx = upVIdx[0];
+				Core.circle(contoursOutput, pts[upVIdx[0]], 4, new Scalar(255,0,0),-1);
+				Core.circle(contoursOutput, pts[upVIdx[1]], 4, new Scalar(0,0,255),-1);
 			} else {
 				z0Pt = CameraPoseTracker.get3DPointFrom2D(modelView, (float)pts[upVIdx[1]].x, (float)pts[upVIdx[1]].y, new CameraPoseTracker.ZMapper2D3D(0));
 				z1Pt = CameraPoseTracker.get3DPointFrom2D(modelView, (float)pts[upVIdx[0]].x, (float)pts[upVIdx[0]].y, 
 						new CameraPoseTracker.XYMapper2D3D(z0Pt[0],z0Pt[1]));
 				anchorPtIdx = upVIdx[1];
+				Core.circle(contoursOutput, pts[upVIdx[0]], 4, new Scalar(0,0,255),-1);
+				Core.circle(contoursOutput, pts[upVIdx[1]], 4, new Scalar(255,0,0),-1);
 			}
 			
-			// Get the directional angle of the up edge
-			float dirAngleLs = MathUtilities.angleToDirectionalAngle(angles.get(i)[upVIdx[0]]);
-			
-			// Get the directional angle of the global up vector, on the same place as the up-edge
-			float[] pt3D2 = new float[]{z0Pt[0],z0Pt[1],z0Pt[2]+1};
-			
-			coord3D = Mat.ones(4, 1, CvType.CV_32FC1);
-			coord3D.put(0, 0, pt3D2[0]);
-			coord3D.put(1, 0, pt3D2[1]);
-			coord3D.put(2, 0, pt3D2[2]);
-			coord2D = CameraPoseTracker.get2DPointFrom3D(coord3D, modelView);
-			
-			float[] pt2D2 = new float[]{(float) (coord2D.get(0,0)[0]/coord2D.get(2,0)[0]),(float) (coord2D.get(1,0)[0]/coord2D.get(2,0)[0])};
-			vec = new float[]{(float) (pt2D2[0]-pts[upVIdx[0]].x),(float) (pt2D2[1]-pts[upVIdx[0]].y)};
-			norm = (float) Math.sqrt(vec[0]*vec[0]+vec[1]*vec[1]);
-			vec = new float[]{vec[0]/norm,vec[1]/norm};
-			
-			float angleDeg = (float) (Math.acos(vec[0])*(180.0f/Math.PI)); 
-			angleDeg = (pt2D2[1] > pts[upVIdx[0]].y) ? (angleDeg*-1) : angleDeg;
-			float dirAngleUp = MathUtilities.angleToDirectionalAngle(angleDeg);
-			
-			// Reject brick contours that have an up-edge that does not closely match the global up-vector
-			if(dirAngleLs > (dirAngleUp-10  % 180) && dirAngleLs < (dirAngleUp+10 % 180)) {
-				Core.line(check, pts[upVIdx[0]], pts[upVIdx[1]], new Scalar(0,0,255));
-		    } else {
-		    	writer.append("Brick collection removed. Reason: no good 'up-edge' found.");
-		    	writer.newLine();
-		    	it.remove();
-		    	idxes.remove(newIdx);
-		    	continue;
-		    }
+//			// Get the directional angle of the up edge
+//			float dirAngleLs = MathUtilities.angleToDirectionalAngle(angles.get(i)[upVIdx[0]]);
+//			
+//			// Get the directional angle of the local up vector, by placing the global up-vector on the same place as the up-edge
+//			float[] pt3D2 = new float[]{z0Pt[0],z0Pt[1],z0Pt[2]+1};
+//			
+//			coord3D = Mat.ones(4, 1, CvType.CV_32FC1);
+//			coord3D.put(0, 0, pt3D2[0]);
+//			coord3D.put(1, 0, pt3D2[1]);
+//			coord3D.put(2, 0, pt3D2[2]);
+//			coord2D = CameraPoseTracker.get2DPointFrom3D(coord3D, modelView);
+//			
+//			float[] pt2D2 = new float[]{(float) (coord2D.get(0,0)[0]/coord2D.get(2,0)[0]),(float) (coord2D.get(1,0)[0]/coord2D.get(2,0)[0])};
+//			vec = new float[]{(float) (pt2D2[0]-pts[upVIdx[0]].x),(float) (pt2D2[1]-pts[upVIdx[0]].y)};
+//			norm = (float) Math.sqrt(vec[0]*vec[0]+vec[1]*vec[1]);
+//			vec = new float[]{vec[0]/norm,vec[1]/norm};
+//			
+//			float angleDeg = (float) (Math.acos(vec[0])*(180.0f/Math.PI)); 
+//			angleDeg = (pt2D2[1] > pts[upVIdx[0]].y) ? (angleDeg*-1) : angleDeg;
+//			float dirAngleUp = MathUtilities.angleToDirectionalAngle(angleDeg);
+//			
+//			// Reject brick contours that have an up-edge that does not closely match the local up-vector
+//			if(dirAngleLs > (dirAngleUp-15  % 180) && dirAngleLs < (dirAngleUp+15 % 180)) {
+//				Core.line(check, pts[upVIdx[0]], pts[upVIdx[1]], new Scalar(0,0,255));
+//		    } else {
+//		    	writer.append("Brick collection removed. Reason: no good 'up-edge' found. "+dirAngleLs+" was too different from "+dirAngleUp+"; UP-VECTOR: ");
+//		    	writer.newLine();
+//		    	it.remove();
+//		    	idxes.remove(newIdx);
+//		    	continue;
+//		    }
 
 			// Calculate the size of the up-edge. If too small, reject the contour
 			int upSize;
@@ -233,8 +245,10 @@ private static final String TAG = LegoBrickTracker.class.getSimpleName();
 					|| Math.abs(3.8-z1Pt[2]) < 0.4) {
 				upSize = Math.round(z1Pt[2]/0.95f);
 			} else {
-				writer.append("Brick collection removed. Reason: 'up-edge' has no correct size.");
-				writer.newLine();
+				if(AppConfig.DRAW_ALGORITHM) {
+					writer.append("Brick collection removed. Reason: 'up-edge' has no correct size.");
+					writer.newLine();
+				}
 				it.remove();
 				idxes.remove(newIdx);
 		    	continue;
@@ -253,17 +267,17 @@ private static final String TAG = LegoBrickTracker.class.getSimpleName();
 			Log.d(TAG, "UpVector Idxes: "+upVIdx[0]+","+upVIdx[1]);
 		}
 		
-		TimerManager.stop();
+//		TimerManager.stop();
 		
 		List<LegoBrickContainer> acceptedBrickCandidates = new ArrayList<LegoBrickContainer>();
 		
 //		long startCILoop = System.nanoTime();
-		TimerManager.start("BrickDetection", "CILoop", BrickTrackerConfigFactory.getConfiguration().toString());
+//		TimerManager.start("BrickDetection", "CILoop", savedFolderName, BrickTrackerConfigFactory.getConfiguration().toString());
 		
 		for (ContourInformation ci : acceptedContours) {
 			
 			// Calculate sizes and vectors of all sides.
-			TimerManager.start("BrickDetection", "Size&VectorCalcs", BrickTrackerConfigFactory.getConfiguration().toString());
+//			TimerManager.start("BrickDetection", "Size&VectorCalcs", savedFolderName, BrickTrackerConfigFactory.getConfiguration().toString());
 			int[] allSizes = new int[3];
 			float[][] sideVectors = new float[3][];
 			int j = 1;
@@ -289,32 +303,82 @@ private static final String TAG = LegoBrickTracker.class.getSimpleName();
 				
 				if(ptIdx < ci.anchorIdx) {
 					sideVectors[j] = MathUtilities.multiply(sideVectors[j], -1);
+				} else {
 				}
 				j++;
 			}
 			
 			// Make sure all vectors have angle of 90 degrees
 			float[] tmpSideVec = MathUtilities.cross(sideVectors[0], sideVectors[1]);
-			if(Math.signum(tmpSideVec[0]) != Math.signum(sideVectors[2][0]) || Math.signum(tmpSideVec[1]) != Math.signum(sideVectors[2][1]))
+			Log.d(TAG, "NORM OF CROSS: "+MathUtilities.norm(MathUtilities.vector(
+					MathUtilities.vectorsToPoint(new float[]{0,0,0}, sideVectors[2]),MathUtilities.vectorsToPoint(new float[]{0,0,0}, tmpSideVec))));
+			float distance = MathUtilities.norm(MathUtilities.vector(
+					MathUtilities.vectorsToPoint(new float[]{0,0,0}, sideVectors[2]),MathUtilities.vectorsToPoint(new float[]{0,0,0}, tmpSideVec)));
+			if(distance > 1.8)
 				sideVectors[2] = MathUtilities.multiply(tmpSideVec, -1);
-			else
+			else if(distance < 0.2)
 				sideVectors[2] = tmpSideVec;
+			else {
+//				TimerManager.stop();
+				if(AppConfig.DRAW_ALGORITHM) {
+					writer.append("Brick collection removed. Reason: Sidevectors were not close enough to 90 degrees.");
+					writer.newLine();
+				}
+				continue;
+			}
 			sideVectors[2][2] = 0;
-			TimerManager.stop();
+//			TimerManager.stop();
 			
-			TimerManager.start("BrickDetection", "SplitBrick", BrickTrackerConfigFactory.getConfiguration().toString());
+//			j = 1;
+//			for(int ptIdx = 0;ptIdx < ci.points.length-1;ptIdx++) {
+//				Mapper2D3D mapper;
+//				if(ptIdx == ci.upVIdx[0]) {
+//					continue;
+//				}
+//				else if(   (ptIdx < ci.upVIdx[0] && ci.upVIdx[0] == ci.anchorIdx)
+//						|| (ptIdx > ci.upVIdx[0] && ci.upVIdx[0] != ci.anchorIdx)) {
+//					mapper = new ZMapper2D3D(0);
+//				} else {
+//					mapper = new ZMapper2D3D(ci.upSize*0.95f);
+//				}
+//				float[] p1 = CameraPoseTracker.get3DPointFrom2D(modelView, (float)ci.points[ptIdx].x, (float)ci.points[ptIdx].y, mapper);
+//				float[] sideVecEnd = MathUtilities.vectorToPoint(MathUtilities.resize(sideVectors[j],allSizes[j]*1.6f), p1);
+//				
+//				coord3D = Mat.ones(4, 1, CvType.CV_32FC1);
+//				coord3D.put(0, 0, sideVecEnd[0]);
+//				coord3D.put(1, 0, sideVecEnd[1]);
+//				coord3D.put(2, 0, sideVecEnd[2]);
+//				coord2D = CameraPoseTracker.get2DPointFrom3D(coord3D, modelView);
+//				Point sideVecEnd2D = new Point((coord2D.get(0,0)[0]/coord2D.get(2,0)[0]),(coord2D.get(1,0)[0]/coord2D.get(2,0)[0]));
+//				
+//				if(ptIdx < ci.anchorIdx) {
+//					Core.circle(check, ci.points[ptIdx], 4, new Scalar(255,255,255));
+//					Core.circle(check, sideVecEnd2D, 6, new Scalar(0,0,255));
+//				} else {
+//					Core.circle(check, ci.points[ptIdx], 4, new Scalar(0,0,255));
+//					Core.circle(check, sideVecEnd2D, 6, new Scalar(255,255,255));
+//				}
+//				j++;
+//			}
+			
+			
+//			TimerManager.start("BrickDetection", "SplitBrick", savedFolderName, BrickTrackerConfigFactory.getConfiguration().toString());
 			Log.d("Timer", "AllSizes: {"+allSizes[0]+","+allSizes[1]+","+allSizes[2]+"}");
 			int amountOfBricks = allSizes[1]*allSizes[2]*allSizes[0];
 			if(amountOfBricks == 0) {
-				TimerManager.stop();
-				writer.append("Brick collection removed. Reason: Amount of bricks in the collection equals 0.");
-				writer.newLine();
+//				TimerManager.stop();
+				if(AppConfig.DRAW_ALGORITHM) {
+					writer.append("Brick collection removed. Reason: Amount of bricks in the collection equals 0.");
+					writer.newLine();
+				}
 				continue;
 			}
 			Log.d(TAG, "Amount Of Bricks: "+amountOfBricks+": ("+allSizes[0]+","+allSizes[1]+","+allSizes[2]+")");
 			
-			writer.append("Accepted brick collection has "+amountOfBricks+" bricks.");
-			writer.newLine();
+			if(AppConfig.DRAW_ALGORITHM) {
+				writer.append("Accepted brick collection has "+amountOfBricks+" bricks.");
+				writer.newLine();
+			}
 			
 			float[][][] cuboids = new float[1][][];
 			sideVectors[0] = MathUtilities.resize(sideVectors[0],0.95f);
@@ -381,7 +445,7 @@ private static final String TAG = LegoBrickTracker.class.getSimpleName();
 				acceptedBrickCandidates.addAll(tmpBricks);
 			}
 			
-			TimerManager.stop();
+//			TimerManager.stop();
 		}
 		
 		TimerManager.stop();
@@ -389,7 +453,7 @@ private static final String TAG = LegoBrickTracker.class.getSimpleName();
 		
 		
 		if((Boolean)BrickTrackerConfigFactory.getConfiguration().getItem("FB")) {
-			TimerManager.start("BrickDetection", "FalseBrick", BrickTrackerConfigFactory.getConfiguration().toString());
+//			TimerManager.start("BrickDetection", "FalseBrick", savedFolderName, BrickTrackerConfigFactory.getConfiguration().toString());
 			Iterator<LegoBrickContainer> candIt = acceptedBrickCandidates.iterator();
 			while (candIt.hasNext()) {
 				LegoBrickContainer legoBrickContainer = candIt.next();
@@ -406,11 +470,11 @@ private static final String TAG = LegoBrickTracker.class.getSimpleName();
 				}
 				if(legoBrickContainer.isEmpty()) candIt.remove();
 			}
-			TimerManager.stop();
+//			TimerManager.stop();
 		}
 		
 //		long start2 = System.nanoTime();
-		TimerManager.start("BrickDetection", "CHECKPOINT1", BrickTrackerConfigFactory.getConfiguration().toString());
+		TimerManager.start("BrickDetection", "OverlapTest", savedFolderName, BrickTrackerConfigFactory.getConfiguration().toString());
 		// Check new containers for overlap and add them to the brickCandidates
 		List<LegoBrick> tmpBricksArray = new ArrayList<LegoBrick>();
 		for (LegoBrickContainer legoBrickContainer : acceptedBrickCandidates) {
@@ -424,10 +488,10 @@ private static final String TAG = LegoBrickTracker.class.getSimpleName();
 //		tmpBricksArray.addAll(currentWorld.getBricks());
 		
 //		Log.d("PERFORMANCE_ANALYSIS", "CHECKPOINT1 time: "+(System.nanoTime() - start2)/1000000.0+"ms");
-		TimerManager.stop();
+//		TimerManager.stop();
 		
 //		start2 = System.nanoTime();
-		TimerManager.start("BrickDetection", "CHECKPOINT2", BrickTrackerConfigFactory.getConfiguration().toString());
+//		TimerManager.start("BrickDetection", "CHECKPOINT2", savedFolderName, BrickTrackerConfigFactory.getConfiguration().toString());
 		coord3D = Mat.ones(4, tmpBricksArray.size()*8, CvType.CV_32FC1);
 		for (int l = 0; l < tmpBricksArray.size(); l++) {
 			LegoBrick b = tmpBricksArray.get(l);
@@ -439,7 +503,7 @@ private static final String TAG = LegoBrickTracker.class.getSimpleName();
 			}
 		}
 //		Log.d("PERFORMANCE_ANALYSIS", "CHECKPOINT2 time: "+(System.nanoTime() - start2)/1000000.0+"ms");
-		TimerManager.stop();
+//		TimerManager.stop();
 		
 //		long startOverlapCalc = System.nanoTime();
 		coord2D = CameraPoseTracker.get2DPointFrom3D(coord3D, modelView);
@@ -447,7 +511,7 @@ private static final String TAG = LegoBrickTracker.class.getSimpleName();
 		
 		Log.d(TAG, "COORD2D size: "+coord2D.cols()+" VS "+tmpBricksArray.size());
 		
-		TimerManager.start("BrickDetection", "CHECKPOINT3", BrickTrackerConfigFactory.getConfiguration().toString());
+//		TimerManager.start("BrickDetection", "CHECKPOINT3", savedFolderName, BrickTrackerConfigFactory.getConfiguration().toString());
 		Mat bricksMat = new Mat(tmpBricksArray.size(),8*2, CvType.CV_32FC1);
 		for (int l = 0; l < tmpBricksArray.size(); l++) {
 			for (int m = 0; m < 8; m++) {
@@ -459,11 +523,11 @@ private static final String TAG = LegoBrickTracker.class.getSimpleName();
 		float[] overlap = getOverlap(bricksMat.getNativeObjAddr());
 		
 //		Log.d("PERFORMANCE_ANALYSIS", "CHECKPOINT3 time: "+(System.nanoTime() - start2)/1000000.0+"ms");
-		TimerManager.stop();
+//		TimerManager.stop();
 		
 		
 //		start2 = System.nanoTime();
-		TimerManager.start("BrickDetection", "CHECKPOINT4", BrickTrackerConfigFactory.getConfiguration().toString());
+//		TimerManager.start("BrickDetection", "CHECKPOINT4", savedFolderName, BrickTrackerConfigFactory.getConfiguration().toString());
 		int counter = 0;
 		for (int k = 0; k < overlap.length; k++) {
 //			if(k >= acceptedBrickCandidates.size()+currentWorld.getCandidateBricks().size()) {
@@ -488,8 +552,10 @@ private static final String TAG = LegoBrickTracker.class.getSimpleName();
 						if(isNewDetected) {
 							Log.d(TAG, "New detection removed");
 							lcIterator.remove();
-							writer.append("Brick removed. Reason: does not conform to frame threshold.");
-							writer.newLine();
+							if(AppConfig.DRAW_ALGORITHM) {
+								writer.append("Brick removed. Reason: does not conform to frame threshold.");
+								writer.newLine();
+							}
 						} else {
 							lb.voteRemoval();
 							if(lb.getRemovalVotes() >= BrickTrackerConfigFactory.getConfiguration().getNecessRemovalVotes(lb.getPercentCompleted())) {
@@ -540,9 +606,16 @@ private static final String TAG = LegoBrickTracker.class.getSimpleName();
 //		if(AppConfig.DEBUG_TIMING) Log.d(TAG, "LegoBrick found in "+(System.nanoTime()-start)/1000000L+"ms");
 //		if(AppConfig.DEBUG_TIMING) Log.d(TAG, "LegoBrick (Java-part) found in "+(System.nanoTime()-startJava)/1000000L+"ms");
 		
-		TimerManager.stop();
+		if(AppConfig.DRAW_ALGORITHM) {
+			Highgui.imwrite(savedFolderName+"/checker"+frameCount+".png", check);
+			Highgui.imwrite(savedFolderName+"/contours"+frameCount+".png", contoursOutput);
+		}
 		
-		writer.close();
+//		TimerManager.stop();
+		
+		if(AppConfig.DRAW_ALGORITHM) {
+			writer.close();
+		}
 		
 		frameCount++;
 	}
@@ -552,7 +625,7 @@ private static final String TAG = LegoBrickTracker.class.getSimpleName();
 	}
 	
 	public native float[] getOverlap(long bricksPointer);
-	private native void findLegoBrickLines(long bgrPointer, float upAngle, double apdp, long colorCalibrationPtr, long resultMatPtr, long origContMatPtr);
+	private native void findLegoBrickLines(long bgrPointer, float upAngle, double apdp, long colorCalibrationPtr, long resultMatPtr, long origContMatPtr, long contoursOutputPtr);
 	private native float[] checkOverlap(long inputPoints, int idx);
 	private native void getConvexHull(long bricksPointer, long convexThreshPtr, long currFrameThreshPtr);
 }

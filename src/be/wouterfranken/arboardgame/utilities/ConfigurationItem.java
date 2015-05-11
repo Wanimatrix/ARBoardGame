@@ -40,4 +40,9 @@ public class ConfigurationItem<T> {
 	private void setValue(T value) {
 		this.value = value;
 	}
+	
+	@Override
+	protected Object clone() throws CloneNotSupportedException {
+		return new ConfigurationItem<T>(shortName, longName, description, value);
+	}
 }

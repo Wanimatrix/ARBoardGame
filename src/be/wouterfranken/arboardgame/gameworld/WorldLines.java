@@ -167,9 +167,14 @@ public class WorldLines {
 //				if(mergeIdx != -1) bricksToAdd[mergeIdx] = null;
 			}
 			
+			int previousAmount = bricksToAdd.length;
+			int removed = 0;
 			for (LegoBrick legoBrick : bricks) {
+				int tmp = bricksToAdd.length;
 				bricksToAdd = legoBrick.mergeCheck(bricksToAdd, frameCount);
+				removed += tmp - bricksToAdd.length;
 			}
+			Log.d("MERGEACCEPTED", "REMOVED BY MERGE WITH ACCEPTED: "+(bricksToAdd.length-previousAmount)+" == "+removed);
 			
 			// TODO: Newly added bricks also need to be merged with each other!
 			ArrayList<LegoBrickContainer> bricksToAddList = new ArrayList<LegoBrickContainer>(Arrays.asList(bricksToAdd));

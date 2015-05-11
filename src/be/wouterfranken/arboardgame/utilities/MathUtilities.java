@@ -130,4 +130,13 @@ public class MathUtilities {
 	public static float angleToDirectionalAngle(float angle) {
 		return (angle < 0) ? angle+180 : angle;
 	}
+	
+	public static boolean angleInDirectionalRange(float angle, float begin, float end) {
+		if(begin < 0) {
+			return angleInDirectionalRange(angle, 0, end) || angleInDirectionalRange(angle, 180+begin, 180);
+		} else if(end > 180) {
+			return angleInDirectionalRange(angle, begin, 180) || angleInDirectionalRange(angle, 0, end-180);
+		}
+		return angle < end && angle > begin;
+	}
 }

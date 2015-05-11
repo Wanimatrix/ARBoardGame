@@ -82,7 +82,7 @@ extern "C"
 			(JNIEnv *env, jobject object, jstring renderImgsPath);
 
 	JNIEXPORT void JNICALL Java_be_wouterfranken_arboardgame_rendering_tracking_LegoBrickTracker2_findLegoBrickLines
-			(JNIEnv *env, jobject object, jlong bgrPointer, jfloat upAngle, jdouble apdp, jlong colorCalibrationPtr, jlong resultMatPtr, jlong origContMatPtr);
+			(JNIEnv *env, jobject object, jlong bgrPointer, jfloat upAngle, jdouble apdp, jlong colorCalibrationPtr, jlong resultMatPtr, jlong origContMatPtr, jlong contoursOutputPtr);
 
 	JNIEXPORT jfloatArray JNICALL Java_be_wouterfranken_arboardgame_rendering_tracking_LegoBrickTracker2_checkOverlap
 			(JNIEnv *env, jobject object, jlong inputPoints, jint idx);
@@ -669,8 +669,8 @@ JNIEXPORT void JNICALL Java_be_wouterfranken_arboardgame_rendering_tracking_Lego
 	__android_log_print(ANDROID_LOG_DEBUG,TAG,"Closing time: %f\n",((float)(getRealTime() - start))*1000.0);
 	#endif
 
-	imwrite("/sdcard/arbg/thresholded.png", *thresholded);
-	imwrite("/sdcard/arbg/bgr.png", bgr);
+	// imwrite("/sdcard/arbg/thresholded.png", *thresholded);
+	// imwrite("/sdcard/arbg/bgr.png", bgr);
 }
 
 void morphology_operations(Mat src, Mat dst) {
@@ -974,14 +974,15 @@ JNIEXPORT void JNICALL Java_be_wouterfranken_arboardgame_rendering_tracking_Lego
 /**
 * Find Lego Bricks Algorithm 4: Using LINE detection
 */
-JNIEXPORT void JNICALL Java_be_wouterfranken_arboardgame_rendering_tracking_LegoBrickTracker2_findLegoBrickLines(JNIEnv *env, jobject object, jlong bgrPointer, jfloat upAngle, jdouble apdp, jlong colorCalibrationPtr, jlong resultMatPtr, jlong origContMatPtr) {
+JNIEXPORT void JNICALL Java_be_wouterfranken_arboardgame_rendering_tracking_LegoBrickTracker2_findLegoBrickLines(JNIEnv *env, jobject object, jlong bgrPointer, jfloat upAngle, jdouble apdp, jlong colorCalibrationPtr, jlong resultMatPtr, jlong origContMatPtr, jlong contoursOutputPtr) {
 	Mat frame = *(Mat *)bgrPointer;
 	Mat *result = (Mat *)resultMatPtr;
 	Mat *origContMat = (Mat *)origContMatPtr;
 	Mat colorCalibration = *(Mat *)colorCalibrationPtr;
+	Mat *contoursMat = (Mat *) contoursOutputPtr;
 
-	long start = getRealTime();
-	BrickDetectorLines::TrackBricks(frame, upAngle, apdp, colorCalibration, *result, *origContMat);
+	double start = getRealTime();
+	BrickDetectorLines::TrackBricks(frame, upAngle, apdp, colorCalibration, *result, *origContMat, *contoursMat);
 	LOGD("BrickDetection time (C++ part): %f\n",(float)((getRealTime()-start)*1000.0f));
 }
 

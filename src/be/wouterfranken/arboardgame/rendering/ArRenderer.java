@@ -30,6 +30,7 @@ import android.opengl.GLSurfaceView;
 import android.opengl.GLSurfaceView.Renderer;
 import android.opengl.Matrix;
 import android.util.Log;
+import android.view.Surface;
 import be.wouterfranken.arboardgame.app.AppConfig;
 import be.wouterfranken.arboardgame.app.GamePhaseManager;
 import be.wouterfranken.arboardgame.gameworld.LegoBrick;
@@ -196,6 +197,10 @@ public class ArRenderer implements Renderer, PreviewCallback {
 	    setupCamera();
 		
 	    if(AppConfig.DEBUG_LOGGING) Log.d(TAG, "Camera setup done...");
+	    
+	    Surface s = new Surface(st2);
+	    gpMan.setSurface(s);
+	    
 	}
 
 	/**
@@ -206,7 +211,8 @@ public class ArRenderer implements Renderer, PreviewCallback {
 	
 	@Override
 	public void onDrawFrame(GL10 unused) {
-		st.updateTexImage();
+		if(!AppConfig.USE_SAVED_FRAMES) st.updateTexImage();
+		else st2.updateTexImage();
 		
 		GLES20.glViewport(0, 0, this.texW, this.texH);
 		
@@ -577,6 +583,8 @@ public class ArRenderer implements Renderer, PreviewCallback {
 	    if(AppConfig.DEBUG_LOGGING) Log.d(TAG, "Renderhandlers init done...");
 	}
 
+	private SurfaceTexture st2;
+	
 	private void setupCameraTex() {
 		if(AppConfig.DEBUG_LOGGING) Log.d(TAG, "Starting camera texture setup...");
 		
@@ -588,7 +596,10 @@ public class ArRenderer implements Renderer, PreviewCallback {
 	    GLES20.glTexParameteri(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, GLES20.GL_TEXTURE_MIN_FILTER, GLES20.GL_NEAREST);
 	    GLES20.glTexParameteri(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, GLES20.GL_TEXTURE_MAG_FILTER, GLES20.GL_NEAREST);
 		st = new SurfaceTexture(tex[0]);
+		st.setDefaultBufferSize(1920, 1080);
 //		st.setOnFrameAvailableListener(this);
+		st2 = new SurfaceTexture(tex[0]);
+		st2.setDefaultBufferSize(1920, 1080);
 		
 		startCamera();
 		

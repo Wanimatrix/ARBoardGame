@@ -1,6 +1,7 @@
 package be.wouterfranken.arboardgame.app;
 
 import java.io.File;
+import java.io.IOException;
 import java.text.ParseException;
 
 import org.opencv.android.OpenCVLoader;
@@ -65,6 +66,13 @@ public class MainActivity extends CardboardActivity implements OnSharedPreferenc
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_main);
 		registerForContextMenu(findViewById(R.id.arView));
+		
+		File log = new File("/sdcard/arbg/log.txt");
+		try {
+			if(log.exists()) log.delete();
+			log.createNewFile();
+		} catch (IOException e) {
+		}
 		
 		if(!(Thread.getDefaultUncaughtExceptionHandler() instanceof CustomExceptionHandler)) {
 		    Thread.setDefaultUncaughtExceptionHandler(new CustomExceptionHandler("/sdcard/arbg/log.txt"));
