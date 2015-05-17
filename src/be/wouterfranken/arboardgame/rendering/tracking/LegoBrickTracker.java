@@ -27,11 +27,11 @@ public class LegoBrickTracker extends Tracker{
 	private Object lock = new Object();
 	private Object lockExtern = new Object();
 	
-	public void findLegoBrick(Mat yuvFrameImage, FrameTrackingCallback trackingCallback) {
+	public void findLegoBrick(Mat yuvFrameImage, FrameTrackingCallback trackingCallback, String savedPath) {
 		if(AppConfig.DEBUG_LOGGING) Log.d(TAG,"Legobrick tracking ...");
 		
 		long start = System.nanoTime();
-		TimerManager.start("", "BrickTracking", "");
+		TimerManager.start("", "BrickTracking", savedPath);
 		
 		if(AppConfig.PARALLEL_LEGO_TRACKING) {
 			FindLegoBrick task = new FindLegoBrick();
@@ -275,13 +275,15 @@ public class LegoBrickTracker extends Tracker{
 	
 	private void setContour(Mat contour) {
 		synchronized (lock) {
-			contour.copyTo(this.contour);
+			if(AppConfig.USE_SAVED_FRAMES) contour.copyTo(this.contourExtern);
+			else contour.copyTo(this.contour);
 		}
 	}
 	
 	private void setThreshold(Mat threshold) {
 		synchronized (lock) {
-			threshold.copyTo(this.threshold);
+			if(AppConfig.USE_SAVED_FRAMES) threshold.copyTo(this.thresholdExtern);
+			else threshold.copyTo(this.threshold);
 		}
 	}
 	

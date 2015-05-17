@@ -38,7 +38,7 @@ public class LemmingsGenerator extends Tracker{
 	}
 	
 	@SuppressWarnings("unused")
-	public void frameTick() {
+	public void frameTick(String savedPath) {
 		if(!w.isWorldGenerated() || w.getBrickThreshold() == null || w.getBrickThreshold().empty()) return;
 		
 		synchronized (lock) {
@@ -52,7 +52,7 @@ public class LemmingsGenerator extends Tracker{
 		
 		// Generate Lemmings
 		synchronized (lock) {
-			TimerManager.start("", "lemmingUpdate", "");
+			TimerManager.start("", "lemmingUpdate", savedPath);
 			boolean noLemmings = lemmings.isEmpty();
 			if(noLemmings && amount != 0) {
 				generateNewLemming();

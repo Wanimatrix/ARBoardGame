@@ -21,6 +21,9 @@ public class AppConfig {
 	public static final boolean PARALLEL_LEMMING_UPDATES = false;
 	public static final boolean PARALLEL_LEGO_TRACKING = false;
 	
+	public static final boolean USE_SAVED_FRAMES = true;
+	public static final boolean SAVE_FRAMES = false;
+	
 	public final static boolean DEBUG_LOGGING = true;
 	public final static boolean DEBUG_TIMING = true;
 	

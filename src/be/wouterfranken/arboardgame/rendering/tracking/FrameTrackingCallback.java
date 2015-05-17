@@ -34,6 +34,10 @@ public class FrameTrackingCallback {
 		this.timerStart = timerStart;
 	}
 	
+	public static void unRegister(Class<? extends Tracker> c) {
+	    registeredTrackers.remove(c);
+	}
+	
 	public void trackingDone(Class<? extends Tracker> c) {
 		if(doneTrackers.isEmpty())
 			throw new IllegalStateException("All trackers are done already!");
