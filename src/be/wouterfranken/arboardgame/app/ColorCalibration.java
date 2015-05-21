@@ -25,6 +25,7 @@ import android.os.Bundle;
 import android.util.Log;
 import be.wouterfranken.arboardgame.rendering.tracking.CameraPoseTracker;
 import be.wouterfranken.arboardgame.utilities.AndroidUtils;
+import be.wouterfranken.experiments.TimerManager;
 
 public class ColorCalibration {
 	
@@ -47,6 +48,7 @@ public class ColorCalibration {
 	public void colorCalibration(Mat frame, int amountOfRandomSeeds, float errorDelta, Mat mv) {
 		
 		Log.d(TAG, "CALIBRATION STARTS ...");
+//		TimerManager.start("CALIBRATION", "calibrationTotal", "/sdcard/arbg");
 		
 		Point3[] seedPoints = new Point3[]{new Point3(7.3f+errorDelta,6.45f-errorDelta,0),new Point3(7.3f+errorDelta,-5.45f-errorDelta,0)};
 		
@@ -280,6 +282,8 @@ public class ColorCalibration {
 //		Highgui.imwrite("/sdcard/arbg/mask.png",fullMask);
 //		Highgui.imwrite("/sdcard/arbg/segmented.png",result);
 //		Highgui.imwrite("/sdcard/arbg/calib.png", dbgCalibration);
+//		TimerManager.stop();
+//		TimerManager.save("calibrationTotal");
 		
 		Log.d(TAG, "CALIBRATION ENDS ...");
 	}
