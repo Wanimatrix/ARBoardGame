@@ -339,10 +339,10 @@ public class ArRenderer implements Renderer, PreviewCallback {
 				}
 			}
 			
-			List<MeshObject> starMeshes = gpMan.getStarsToRender();
-			for (int i = 0; i< starMeshes.size();i++) {
-				renderMesh(starMeshes.get(i), meshesToRender.size());
-			}
+//			List<MeshObject> starMeshes = gpMan.getStarsToRender();
+//			for (int i = 0; i< starMeshes.size();i++) {
+//				renderMesh(starMeshes.get(i), meshesToRender.size());
+//			}
 			
 			
 			

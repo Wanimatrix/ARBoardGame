@@ -813,7 +813,7 @@ public class GamePhaseManager implements AfterLoadingColorCalibListener {
 						}
 						lemmingsGenerator.generatePath();
 						for (LegoBrick legoBrick : w.getBricks()) {
-							bricksToRender.add(legoBrick.getMesh(new RenderOptions(true, legoBrick.getColor(), false)));
+//							bricksToRender.add(legoBrick.getMesh(new RenderOptions(true, legoBrick.getColor(), false)));
 						}
 						return null;
 					}
@@ -835,7 +835,7 @@ public class GamePhaseManager implements AfterLoadingColorCalibListener {
 										@Override
 										public void onClick(DialogInterface dialog, int which) {
 //											goToNextPhase();
-											if(!view.getVRMode())view.setVRModeEnabled(true);
+//											if(!view.getVRMode())view.setVRModeEnabled(true);
 											setGamePhase(GamePhase.PLAY);
 										}
 						   		   });
