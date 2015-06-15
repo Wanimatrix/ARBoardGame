@@ -456,6 +456,11 @@ void BrickDetectorLines::TrackBricks(Mat& frame, float upAngle, double apdp, Mat
 
   // imshow("Harris",harrisResponse_norm);
 
+  o.str("");
+  o << currentFrame;
+  imwrite("/sdcard/arbg/algo/thresholdPure"+o.str()+".png",canny_out);
+
+
   start = getRealTime();
 
   cvtColor(canny_out, out, CV_GRAY2BGR);
@@ -738,6 +743,10 @@ void BrickDetectorLines::TrackBricks(Mat& frame, float upAngle, double apdp, Mat
      // { 
             // circle( bricksCutFromImg, corners[j], 5,  Scalar(0), 2, 8, 0 );
      // }
+
+  o.str("");
+  o << currentFrame;
+  imwrite("/sdcard/arbg/algo/contoursNoPoints"+o.str()+".png",out);
 
   
 
